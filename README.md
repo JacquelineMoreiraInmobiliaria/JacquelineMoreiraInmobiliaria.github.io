@@ -11,3 +11,7 @@ Generador estático de presentaciones visuales para propiedades destacadas.
 5. Publicar solo al aprobar y fusionar en `main`.
 
 La configuración predeterminada de contacto está en `src/data/settings/moreira.yaml`.
+
+## Preview
+
+La rama `setup-template-foundation` ejecuta automáticamente el workflow de preview para comprobar el build y el despliegue de GitHub Pages.
