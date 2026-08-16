@@ -1,0 +1,92 @@
+---
+import "../styles/master.css";
+
+const { property, settings } = Astro.props;
+const features = [...property.features].sort((a, b) =>
+  a.category === b.category ? 0 : a.category === "structural" ? -1 : 1
+);
+const shownStats = property.summary.filter((item) => item.show);
+const showGallery = property.gallery.enabled && property.gallery.images.length > 0;
+const showLocation = property.location.enabled && property.location.latitude !== undefined && property.location.longitude !== undefined;
+const showDistances = property.distances.enabled && property.distances.items.length > 0;
+const whatsapp = property.contact.useDefault ? settings.whatsapp : property.contact.whatsapp;
+const email = property.contact.useDefault ? settings.email : property.contact.email;
+const inquiry = encodeURIComponent(`Hola, estoy interesado en la propiedad ${property.name}.`);
+const mapBounds = showLocation
+  ? `${property.location.longitude - 0.04}%2C${property.location.latitude - 0.03}%2C${property.location.longitude + 0.04}%2C${property.location.latitude + 0.03}`
+  : "";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={property.property.headline || property.name} />
+    <title>{property.name} | Moreira Inmobiliaria</title>
+  </head>
+  <body>
+    <nav class="nav">
+      <a href={settings.website} target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img class="brand-logo" src={settings.logo} alt="Moreira Inmobiliaria" />
+      </a>
+      <div class="navlinks">
+        <a href="#propiedad">LA PROPIEDAD</a>
+        {showGallery && <a href="#galeria">GALERÍA</a>}
+        {features.length > 0 && <a href="#caracteristicas">CARACTERÍSTICAS</a>}
+        {showLocation && <a href="#ubicacion">UBICACIÓN</a>}
+        <a href="#contacto">CONTACTO</a>
+        {whatsapp && <a class="wa" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">WHATSAPP</a>}
+      </div>
+    </nav>
+
+    <header class="hero">
+      {property.hero.video.enabled && property.hero.video.source ? (
+        <video autoplay muted loop playsinline>
+          <source src={property.hero.video.source} type="video/mp4" />
+        </video>
+      ) : (
+        <img class="hero-image" src={property.hero.coverImage} alt={property.name} />
+      )}
+      <div class="hero-content">
+        {property.hero.subtitle && <div class="eyebrow">{property.hero.subtitle}</div>}
+        <h1>{property.name}</h1>
+        {property.property.headline && <div class="hero-sub">{property.property.headline}</div>}
+        {shownStats.length > 0 && <div class="hero-stats">{shownStats.map((item) => <div class="hero-stat"><strong>{item.value}</strong><span>{item.label}</span></div>)}</div>}
+        <a class="button" href="#propiedad">CONOCER LA PROPIEDAD ↓</a>
+      </div>
+    </header>
+
+    {(property.property.sectionTitle || property.property.headline || property.property.paragraphs.length > 0) && <section id="propiedad" class="split">
+      <div class="split-copy">
+        {property.property.sectionTitle && <div class="kicker">{property.property.sectionTitle}</div>}
+        {property.property.headline && <h2>{property.property.headline}</h2>}
+        {property.property.paragraphs.map((paragraph) => <p class="copy">{paragraph}</p>)}
+        {showGallery && <a class="button" href="#galeria">VER GALERÍA ↗</a>}
+      </div>
+      <div class="split-media"><img src={property.hero.coverImage} alt={property.name} /></div>
+    </section>}
+
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item) => <div class="statbox"><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
+
+    {showGallery && <section id="galeria" class="section gallery">
+      <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
+      <div class="grid">{property.gallery.images.map((image) => <div class="tile"><img src={image.source} alt={image.alt || property.name} /></div>)}</div>
+    </section>}
+
+    {features.length > 0 && <section id="caracteristicas" class="features">
+      <div class="features-copy"><div class="kicker">Características</div><h2>Confort, diseño y naturaleza.</h2><div class="checks">{features.map((feature) => <div class="check">{feature.label}</div>)}</div></div>
+    </section>}
+
+    {showLocation && <section id="ubicacion" class="location">
+      <div class="location-copy"><div class="kicker">Ubicación</div>{property.location.visibleName && <h2>{property.location.visibleName}</h2>}{property.location.address && <p class="copy">{property.location.address}</p>}
+      <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${property.location.latitude},${property.location.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
+      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${property.location.latitude}%2C${property.location.longitude}`}></iframe></div>
+    </section>}
+
+    {showDistances && <section class="section distances"><div class="gallery-head"><div class="kicker">Distancias</div><h2>Todo cerca.</h2></div><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.destination}</strong><span>{item.distance}</span></div>)}</div></section>}
+
+    <section id="contacto" class="contact"><div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
+    <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>
+  </body>
+</html>
