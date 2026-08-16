@@ -1,0 +1,102 @@
+slug: atardecer-y-vides
+name: Atardecer y Vides
+price: USD 850.000
+
+hero:
+  subtitle: Piriápolis · Maldonado · Uruguay
+  description: 10 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.
+  coverImage: /media/atardecer-y-vides/hero.jpg
+  video:
+    enabled: true
+    source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/video-atardecer.mp4
+
+summary:
+  - label: Superficie total
+    value: 10 ha
+    show: true
+  - label: Residencia
+    value: 1 planta
+    show: true
+  - label: Dormitorios
+    value: "4"
+    show: true
+  - label: Baños
+    value: "3"
+    show: true
+  - label: Eléctrica
+    value: Losa radiante
+    show: true
+  - label: Piscina + jacuzzi
+    value: Climatizada
+    show: true
+
+property:
+  sectionTitle: La propiedad
+  headline: Las vistas como protagonistas.
+  paragraphs:
+    - Ubicada en la zona alta de Piriápolis, dentro de un entorno de chacras de categoría y residencias de gran porte, esta propiedad combina privacidad, naturaleza y una residencia de altísimo nivel.
+    - A solo 2 kilómetros de la playa y de todos los servicios, ofrece una vista franca de 180° al mar y atardeceres únicos durante todo el año.
+
+gallery:
+  enabled: true
+  images:
+    - source: /media/atardecer-y-vides/hero.jpg
+      alt: Vista desde la propiedad hacia el mar
+    - source: /media/atardecer-y-vides/atardecer.jpg
+      alt: Atardecer sobre la propiedad
+    - source: /media/atardecer-y-vides/piscina.jpg
+      alt: Piscina con vista al mar
+    - source: /media/atardecer-y-vides/campo.jpg
+      alt: Campo y entorno natural
+    - source: /media/atardecer-y-vides/living.jpg
+      alt: Living principal
+    - source: /media/atardecer-y-vides/cocina.jpg
+      alt: Cocina
+    - source: /media/atardecer-y-vides/dormitorio-1.jpg
+      alt: Dormitorio
+    - source: /media/atardecer-y-vides/living-4.jpg
+      alt: Living y comedor
+
+features:
+  - label: Paredes dobles
+    category: structural
+  - label: Aberturas de aluminio con DVH
+    category: structural
+  - label: 4 dormitorios
+    category: structural
+  - label: 3 baños
+    category: structural
+  - label: Living-comedor con estufa a leña
+    category: structural
+  - label: Barbacoa integrada
+    category: structural
+  - label: Pisos de porcelanato
+    category: structural
+  - label: Losa radiante eléctrica independiente
+    category: structural
+  - label: Vista panorámica de 180° al mar
+    category: exterior
+  - label: Piscina climatizada con jacuzzi
+    category: exterior
+  - label: Viñedo de 4 años
+    category: exterior
+  - label: Tajamar
+    category: exterior
+  - label: Dos accesos independientes
+    category: exterior
+  - label: Cochera
+    category: exterior
+
+location:
+  enabled: true
+  visibleName: Piriápolis, Playa Hermosa.
+  address: Calle 29 y Vecinal a la Bodega, en la zona alta de Piriápolis.
+  latitude: -34.83216094970703
+  longitude: -55.2911491394043
+
+distances:
+  enabled: false
+  items: []
+
+contact:
+  useDefault: true
