@@ -1,0 +1,17 @@
+---
+import { getCollection } from "astro:content";
+import PropertyLayout from "../../layouts/PropertyLayout.astro";
+import settings from "../../data/settings/moreira.yaml";
+
+export async function getStaticPaths() {
+  const properties = await getCollection("properties");
+  return properties.map((property) => ({
+    params: { slug: property.data.slug },
+    props: { property: property.data }
+  }));
+}
+
+const { property } = Astro.props;
+---
+
+<PropertyLayout property={property} settings={settings} />
