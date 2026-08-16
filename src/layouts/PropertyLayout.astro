@@ -51,7 +51,7 @@ const mapBounds = showLocation
       <div class="hero-content">
         {property.hero.subtitle && <div class="eyebrow">{property.hero.subtitle}</div>}
         <h1>{property.name}</h1>
-        {property.property.headline && <div class="hero-sub">{property.property.headline}</div>}
+        {property.hero.description && <div class="hero-sub">{property.hero.description}</div>}
         {shownStats.length > 0 && <div class="hero-stats">{shownStats.map((item) => <div class="hero-stat"><strong>{item.value}</strong><span>{item.label}</span></div>)}</div>}
         <a class="button" href="#propiedad">CONOCER LA PROPIEDAD ↓</a>
       </div>
