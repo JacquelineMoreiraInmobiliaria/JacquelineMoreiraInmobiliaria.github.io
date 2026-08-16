@@ -14,6 +14,7 @@ const properties = defineCollection({
     price: z.string().optional(),
     hero: z.object({
       subtitle: z.string().optional(),
+      description: z.string().optional(),
       coverImage: z.string().min(1),
       video: z.object({
         enabled: z.boolean().default(false),
