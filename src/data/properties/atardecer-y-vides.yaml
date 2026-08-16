@@ -5,7 +5,7 @@ price: USD 850.000
 hero:
   subtitle: Piriápolis · Maldonado · Uruguay
   description: 10 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.
-  coverImage: /media/atardecer-y-vides/hero.jpg
+  coverImage: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg
   video:
     enabled: true
     source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/video-atardecer.mp4
@@ -40,21 +40,21 @@ property:
 gallery:
   enabled: true
   images:
-    - source: /media/atardecer-y-vides/hero.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg
       alt: Vista desde la propiedad hacia el mar
-    - source: /media/atardecer-y-vides/atardecer.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/atardecer.jpg
       alt: Atardecer sobre la propiedad
-    - source: /media/atardecer-y-vides/piscina.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/piscina.jpg
       alt: Piscina con vista al mar
-    - source: /media/atardecer-y-vides/campo.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/campo.jpg
       alt: Campo y entorno natural
-    - source: /media/atardecer-y-vides/living.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/living.jpg
       alt: Living principal
-    - source: /media/atardecer-y-vides/cocina.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/cocina.jpg
       alt: Cocina
-    - source: /media/atardecer-y-vides/dormitorio-1.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/dormitorio-1.jpg
       alt: Dormitorio
-    - source: /media/atardecer-y-vides/living-4.jpg
+    - source: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/living-4.jpg
       alt: Living y comedor
 
 features:
