@@ -1,0 +1,16 @@
+---
+import { getCollection } from "astro:content";
+
+const properties = await getCollection("properties");
+---
+
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Moreira Inmobiliaria</title></head>
+  <body>
+    <main>
+      <h1>Presentaciones de propiedades</h1>
+      <ul>{properties.map((property) => <li><a href={`/${property.data.slug}/`}>{property.data.name}</a></li>)}</ul>
+    </main>
+  </body>
+</html>
