@@ -1,0 +1,344 @@
+---
+const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Administrador guiado de presentaciones de propiedades" />
+    <title>Presentaciones de propiedades | Moreira Inmobiliaria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles/admin.css" />
+  </head>
+  <body>
+    <header class="admin-header">
+      <a class="admin-brand" href="/administrador/" aria-label="Volver a Presentaciones de propiedades">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <span class="admin-label">Administrador</span>
+    </header>
+
+    <main>
+      <section id="property-list" class="screen" aria-labelledby="list-title">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Moreira Inmobiliaria</p>
+            <h1 id="list-title">Presentaciones de propiedades</h1>
+            <p class="intro">Creá y editá las presentaciones de tus propiedades desde un formulario simple.</p>
+          </div>
+          <button id="new-property" class="button button-primary" type="button">+ Nueva propiedad</button>
+        </div>
+
+        <div id="property-cards" class="property-grid">
+          <article class="property-card" data-card="atardecer-y-vides">
+            <div class="property-thumb">
+              <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg" alt="" />
+            </div>
+            <div class="property-content">
+              <div>
+                <h2 data-card-name>Atardecer y Vides</h2>
+                <p data-card-subtitle>Piriápolis · Maldonado</p>
+                <p class="property-price" data-card-price>USD 850.000</p>
+              </div>
+              <div class="card-actions">
+                <button class="button button-secondary" type="button" data-edit="atardecer-y-vides">Editar</button>
+                <button class="button button-quiet" type="button" data-duplicate>Duplicar</button>
+                <a class="button button-quiet" href={propertyPreviewUrl} target="_blank" rel="noopener">Vista previa</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="editor" class="screen editor-screen" aria-labelledby="editor-title" hidden>
+        <div class="editor-heading">
+          <div>
+            <p id="step-count" class="eyebrow">Paso 1 de 9</p>
+            <h1 id="editor-title">Nueva propiedad</h1>
+            <p id="editor-intro" class="intro">Completá la información básica para empezar.</p>
+          </div>
+          <p id="save-state" class="save-state" aria-live="polite">Los cambios se guardan automáticamente</p>
+        </div>
+
+        <nav class="steps" aria-label="Pasos del formulario">
+          <button class="step active" type="button" data-step="1" aria-current="step"><span>1</span>Información</button>
+          <button class="step" type="button" data-step="2"><span>2</span>Portada</button>
+          <button class="step" type="button" data-step="3"><span>3</span>Propiedad</button>
+          <button class="step" type="button" data-step="4"><span>4</span>Datos</button>
+          <button class="step" type="button" data-step="5"><span>5</span>Galería</button>
+          <button class="step" type="button" data-step="6"><span>6</span>Características</button>
+          <button class="step" type="button" data-step="7"><span>7</span>Ubicación</button>
+          <button class="step" type="button" data-step="8"><span>8</span>Distancias</button>
+          <button class="step" type="button" data-step="9"><span>9</span>Revisión</button>
+        </nav>
+
+        <div class="form-shell">
+          <form id="basic-form" novalidate>
+            <div class="form-heading">
+              <p class="eyebrow">Información básica</p>
+              <h2>Empecemos por identificar la propiedad</h2>
+              <p>Después vas a poder completar las fotografías, características y ubicación.</p>
+            </div>
+
+            <div class="field">
+              <label for="property-name">Nombre de la propiedad <span aria-hidden="true">*</span></label>
+              <input id="property-name" name="name" type="text" autocomplete="off" required placeholder="Escribir nombre" aria-describedby="name-example name-error" />
+              <p id="name-example" class="example">Ejemplo: Atardecer y Vides</p>
+              <p id="name-error" class="field-error" aria-live="polite"></p>
+            </div>
+
+            <div class="field">
+              <label for="property-price">Precio <small>Opcional</small></label>
+              <input id="property-price" name="price" type="text" autocomplete="off" placeholder="Escribir precio" aria-describedby="price-example" />
+              <p id="price-example" class="example">Ejemplo: USD 850.000</p>
+            </div>
+
+            <div class="field">
+              <label for="property-subtitle">Subtítulo <small>Opcional</small></label>
+              <input id="property-subtitle" name="subtitle" type="text" autocomplete="off" placeholder="Escribir ubicación o descripción breve" aria-describedby="subtitle-example" />
+              <p id="subtitle-example" class="example">Ejemplo: Piriápolis · Maldonado · Uruguay</p>
+            </div>
+
+            <div class="form-actions">
+              <button id="cancel" class="button button-quiet" type="button">Cancelar</button>
+              <button id="save-exit" class="button button-secondary" type="button">Guardar y salir</button>
+              <button class="button button-primary" type="submit">Siguiente</button>
+            </div>
+          </form>
+
+          <section id="future-step" class="future-step" hidden>
+            <div class="future-icon" aria-hidden="true">✓</div>
+            <p class="eyebrow">Información guardada</p>
+            <h2>El Paso 1 está completo</h2>
+            <p>La sección <strong>Portada</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
+            <div class="form-actions">
+              <button id="back-to-step-one" class="button button-secondary" type="button">Volver a Información</button>
+              <button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script is:inline>
+      (() => {
+        const storageKey = "moreira-property-admin-drafts-v1";
+        const listScreen = document.querySelector("#property-list");
+        const editorScreen = document.querySelector("#editor");
+        const form = document.querySelector("#basic-form");
+        const futureStep = document.querySelector("#future-step");
+        const title = document.querySelector("#editor-title");
+        const intro = document.querySelector("#editor-intro");
+        const stepCount = document.querySelector("#step-count");
+        const saveState = document.querySelector("#save-state");
+        const nameInput = document.querySelector("#property-name");
+        const priceInput = document.querySelector("#property-price");
+        const subtitleInput = document.querySelector("#property-subtitle");
+        const nameError = document.querySelector("#name-error");
+        const toast = document.querySelector("#toast");
+        let editingId = null;
+        let saveTimer = null;
+
+        const originalProperty = {
+          id: "atardecer-y-vides",
+          slug: "atardecer-y-vides",
+          name: "Atardecer y Vides",
+          price: "USD 850.000",
+          subtitle: "Piriápolis · Maldonado · Uruguay"
+        };
+
+        const slugify = (value) => value
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+
+        const readDrafts = () => {
+          try {
+            return JSON.parse(localStorage.getItem(storageKey) || "{}");
+          } catch {
+            return {};
+          }
+        };
+
+        const writeDrafts = (drafts) => localStorage.setItem(storageKey, JSON.stringify(drafts));
+
+        const currentValues = () => ({
+          id: editingId || ("draft-" + Date.now()),
+          slug: slugify(nameInput.value) || "nueva-propiedad",
+          name: nameInput.value.trim(),
+          price: priceInput.value.trim(),
+          subtitle: subtitleInput.value.trim(),
+          updatedAt: new Date().toISOString()
+        });
+
+        const saveDraft = () => {
+          const values = currentValues();
+          editingId = values.id;
+          const drafts = readDrafts();
+          drafts[values.id] = values;
+          writeDrafts(drafts);
+          saveState.textContent = "Guardado automáticamente";
+          saveState.classList.add("saved");
+          window.setTimeout(() => {
+            saveState.textContent = "Los cambios se guardan automáticamente";
+            saveState.classList.remove("saved");
+          }, 1800);
+          return values;
+        };
+
+        const scheduleSave = () => {
+          saveState.textContent = "Guardando…";
+          window.clearTimeout(saveTimer);
+          saveTimer = window.setTimeout(saveDraft, 500);
+        };
+
+        const showToast = (message) => {
+          toast.textContent = message;
+          toast.hidden = false;
+          window.clearTimeout(toast.hideTimer);
+          toast.hideTimer = window.setTimeout(() => { toast.hidden = true; }, 3200);
+        };
+
+        const showList = () => {
+          listScreen.hidden = false;
+          editorScreen.hidden = true;
+          renderDraftCards();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+
+        const setStep = (step) => {
+          document.querySelectorAll(".step").forEach((item) => {
+            const active = Number(item.dataset.step) === step;
+            item.classList.toggle("active", active);
+            if (active) item.setAttribute("aria-current", "step");
+            else item.removeAttribute("aria-current");
+          });
+          stepCount.textContent = "Paso " + step + " de 9";
+          form.hidden = step !== 1;
+          futureStep.hidden = step === 1;
+        };
+
+        const openEditor = (mode, property = null) => {
+          listScreen.hidden = true;
+          editorScreen.hidden = false;
+          setStep(1);
+          nameError.textContent = "";
+          nameInput.removeAttribute("aria-invalid");
+
+          if (mode === "edit") {
+            const drafts = readDrafts();
+            const saved = drafts[originalProperty.id] || property || originalProperty;
+            editingId = originalProperty.id;
+            title.textContent = "Editar propiedad";
+            intro.textContent = "Revisá y actualizá la información básica.";
+            nameInput.value = saved.name || "";
+            priceInput.value = saved.price || "";
+            subtitleInput.value = saved.subtitle || "";
+          } else {
+            editingId = null;
+            title.textContent = "Nueva propiedad";
+            intro.textContent = "Completá la información básica para empezar.";
+            form.reset();
+          }
+
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          window.setTimeout(() => nameInput.focus(), 200);
+        };
+
+        const renderDraftCards = () => {
+          const drafts = readDrafts();
+          const edited = drafts[originalProperty.id];
+          const originalCard = document.querySelector('[data-card="atardecer-y-vides"]');
+          if (edited && originalCard) {
+            originalCard.querySelector("[data-card-name]").textContent = edited.name || originalProperty.name;
+            originalCard.querySelector("[data-card-price]").textContent = edited.price || "Precio sin completar";
+            originalCard.querySelector("[data-card-subtitle]").textContent = edited.subtitle || "Subtítulo sin completar";
+          }
+
+          document.querySelectorAll("[data-draft-card]").forEach((card) => card.remove());
+          Object.values(drafts).filter((draft) => draft.id !== originalProperty.id && draft.name).forEach((draft) => {
+            const card = document.createElement("article");
+            card.className = "property-card draft-card";
+            card.dataset.draftCard = draft.id;
+            card.innerHTML = `
+              <div class="draft-thumb" aria-hidden="true">Sin portada</div>
+              <div class="property-content">
+                <div>
+                  <h2></h2>
+                  <p class="draft-subtitle"></p>
+                  <p class="property-price"></p>
+                </div>
+                <div class="card-actions">
+                  <button class="button button-secondary" type="button" data-edit-draft>Editar</button>
+                  <button class="button button-quiet" type="button" data-duplicate>Duplicar</button>
+                  <button class="button button-quiet" type="button" disabled>Vista previa</button>
+                </div>
+              </div>`;
+            card.querySelector("h2").textContent = draft.name;
+            card.querySelector(".draft-subtitle").textContent = draft.subtitle || "Subtítulo sin completar";
+            card.querySelector(".property-price").textContent = draft.price || "Precio sin completar";
+            card.querySelector("[data-edit-draft]").addEventListener("click", () => {
+              editingId = draft.id;
+              listScreen.hidden = true;
+              editorScreen.hidden = false;
+              title.textContent = "Editar propiedad";
+              intro.textContent = "Revisá y actualizá la información básica.";
+              nameInput.value = draft.name || "";
+              priceInput.value = draft.price || "";
+              subtitleInput.value = draft.subtitle || "";
+              setStep(1);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+            document.querySelector("#property-cards").appendChild(card);
+          });
+        };
+
+        document.querySelector("#new-property").addEventListener("click", () => openEditor("new"));
+        document.querySelector("[data-edit='atardecer-y-vides']").addEventListener("click", () => openEditor("edit", originalProperty));
+        document.querySelectorAll("[data-duplicate]").forEach((button) => button.addEventListener("click", () => showToast("La duplicación estará disponible en una próxima etapa.")));
+        document.querySelector("#cancel").addEventListener("click", showList);
+        document.querySelector("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        document.querySelector("#future-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        document.querySelector("#back-to-step-one").addEventListener("click", () => setStep(1));
+
+        document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
+          const number = Number(step.dataset.step);
+          if (number === 1) setStep(1);
+          else showToast("Este paso se desarrollará en una próxima etapa.");
+        }));
+
+        [nameInput, priceInput, subtitleInput].forEach((input) => input.addEventListener("input", () => {
+          if (input === nameInput && nameInput.value.trim()) {
+            nameError.textContent = "";
+            nameInput.removeAttribute("aria-invalid");
+          }
+          scheduleSave();
+        }));
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!nameInput.value.trim()) {
+            nameError.textContent = "Escribí el nombre de la propiedad para continuar.";
+            nameInput.setAttribute("aria-invalid", "true");
+            nameInput.focus();
+            return;
+          }
+          saveDraft();
+          setStep(2);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        renderDraftCards();
+      })();
+    </script>
+  </body>
+</html>
