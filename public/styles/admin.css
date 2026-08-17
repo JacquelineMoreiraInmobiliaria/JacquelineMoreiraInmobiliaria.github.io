@@ -381,3 +381,114 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
   .distance-card { padding: 16px; }
   .distance-fields { grid-template-columns: 1fr; gap: 12px; }
 }
+
+
+/* Paso 9 — Revisión */
+.review-property-name {
+  margin: 4px 0 0;
+  color: var(--green);
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-weight: 600;
+}
+.review-general,
+.review-pending {
+  margin: 24px 0;
+  border-radius: 18px;
+}
+.review-general {
+  padding: 28px;
+  background: var(--green);
+  color: #fff;
+}
+.review-general .eyebrow { color: #dce6a8; }
+.review-general h3 { margin: 8px 0; font-size: 1.5rem; }
+.review-general p { margin: 0; line-height: 1.6; }
+.review-section { margin-top: 34px; }
+.review-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.review-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(35, 48, 31, .05);
+}
+.review-card > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-card h3,
+.review-pending h3 { margin: 0; color: var(--ink); font-size: 1.16rem; }
+.review-card-copy { margin-top: 16px; color: var(--muted); font-size: .88rem; line-height: 1.55; }
+.review-card-copy p { margin: 5px 0; }
+.review-card .button { width: 100%; margin-top: auto; padding: 12px 16px; }
+.review-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: .69rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+.review-status.is-ok { color: #245b36; background: #e4f3e7; }
+.review-status.is-pending { color: #8a5311; background: #fff0d6; }
+.review-status.is-neutral { color: #59625a; background: #edf0eb; }
+.review-pending-ok,
+.review-pending-list {
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.review-pending-ok p { margin: 10px 0 0; color: #245b36; }
+.review-pending-list { border-color: #ebc477; background: #fffaf0; }
+.review-pending-list ul { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.review-pending-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #684b1d;
+  line-height: 1.45;
+}
+.review-pending-list button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #b88a39;
+  border-radius: 8px;
+  color: #6a4b1a;
+  background: #fff;
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.review-primary { min-width: min(100%, 270px); }
+
+@media (max-width: 760px) {
+  .review-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .review-general,
+  .review-pending-ok,
+  .review-pending-list { padding: 20px; }
+  .review-card { padding: 18px; }
+  .review-card > div:first-child { flex-direction: column; }
+  .review-pending-list li { align-items: flex-start; flex-direction: column; }
+  .review-pending-list button { width: 100%; }
+  .review-primary { width: 100%; }
+}
