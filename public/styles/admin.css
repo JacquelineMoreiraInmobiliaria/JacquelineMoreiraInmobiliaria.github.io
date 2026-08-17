@@ -303,3 +303,53 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
 .feature-category-field{margin:23px 0 0;padding:0;border:0}
 .feature-category-field legend{margin-bottom:10px;color:var(--green);font-size:.75rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 @media(max-width:760px){.feature-category-group{padding:18px}.feature-fields{grid-template-columns:1fr}.feature-card-header{align-items:flex-start;flex-wrap:wrap}.feature-card-header .order-actions{margin-left:auto}.feature-card-header .remove-data{width:100%}.feature-category-field .choice-grid{grid-template-columns:1fr}.feature-category-field .choice-card span{padding:12px;text-align:center}}
+
+
+/* Paso 7 — Ubicación */
+.coordinates-section,
+.map-preview-section {
+  margin-top: 28px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.coordinates-section h3,
+.map-preview-section h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.55rem;
+}
+.coordinates-grid { margin-top: 18px; }
+.location-map-preview {
+  min-height: 270px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #eef0e9;
+}
+.location-map-preview iframe {
+  display: block;
+  width: 100%;
+  min-height: 270px;
+  border: 0;
+}
+.map-preview-empty {
+  display: grid;
+  min-height: 270px;
+  place-items: center;
+  padding: 28px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+#location-fields[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .coordinates-section,
+  .map-preview-section { padding: 20px; }
+  .location-map-preview,
+  .location-map-preview iframe,
+  .map-preview-empty { min-height: 230px; }
+}
