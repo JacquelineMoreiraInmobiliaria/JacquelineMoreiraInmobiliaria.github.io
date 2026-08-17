@@ -99,6 +99,28 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
 .example { margin: 9px 0 0; color: var(--muted); font-size: .78rem; }
 .field-error { min-height: 20px; margin: 8px 0 0; color: var(--danger); font-size: .78rem; font-weight: 600; }
 .field-help { max-width: 680px; margin: 0 0 14px; color: var(--muted); font-size: .82rem; line-height: 1.6; }
+.repository-media { margin: 34px 0 6px; padding: 24px; border: 1px solid #cfd6c8; border-radius: 12px; background: #f7f9f4; }
+.repository-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.repository-heading h3, .media-status h3 { margin: 0; color: var(--green); font-size: 1rem; }
+.repository-heading code {
+  max-width: 100%; padding: 10px 13px; overflow-wrap: anywhere; border: 1px solid #d3d9ce; border-radius: 7px;
+  color: var(--green); background: #fff; font-family: Montserrat, Arial, sans-serif; font-size: .78rem; font-weight: 700;
+}
+.repository-media > .field-help { margin: 14px 0 22px; }
+.media-status { padding: 20px; border-radius: 10px; background: #fff; }
+.media-status h3 { margin-bottom: 13px; }
+.media-status dl { margin: 0; border-top: 1px solid var(--line); }
+.media-status dl > div { display: grid; grid-template-columns: minmax(140px, 1fr) 1.3fr; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.media-status dt { color: var(--muted); font-size: .78rem; }
+.media-status dd { margin: 0; font-size: .78rem; font-weight: 700; text-align: right; }
+.media-status .general-status { margin-top: 7px; border-bottom: 0; }
+.status-success { color: #507224; }
+.status-warning { color: #a05b18; }
+.status-neutral { color: var(--muted); }
+.missing-files { margin-top: 12px; padding: 14px 16px; border-left: 4px solid #c9822f; border-radius: 4px; color: #754515; background: #fff6e8; font-size: .78rem; }
+.missing-files ul { margin: 7px 0 0; padding-left: 20px; line-height: 1.7; }
+.external-note { margin: 13px 0 0; padding: 12px 14px; border-radius: 7px; color: #48601f; background: #eef5df; font-size: .76rem; line-height: 1.5; }
+.temporary-help { margin: 12px 0 0; padding: 11px 13px; border-radius: 7px; color: #6b5a32; background: #fff8e8; font-size: .74rem; line-height: 1.5; }
 .media-field, .choice-field { min-width: 0; margin: 38px 0 0; padding: 0; border: 0; }
 .media-field legend, .choice-field legend, .field-label {
   margin-bottom: 10px; color: var(--green); font-size: .78rem; font-weight: 700;
@@ -162,6 +184,10 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
   .card-actions .button:first-child { grid-column: 1 / -1; }
   .save-state { margin: 0; }
   .form-shell { padding: 28px 20px; }
+  .repository-heading { align-items: flex-start; flex-direction: column; }
+  .repository-heading code { width: 100%; }
+  .media-status dl > div { grid-template-columns: 1fr; gap: 5px; }
+  .media-status dd { text-align: left; }
   .media-preview { grid-template-columns: 1fr; }
   .media-preview img { height: 210px; min-height: 210px; }
   .media-info { padding: 22px; }
