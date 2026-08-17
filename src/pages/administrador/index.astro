@@ -305,15 +305,52 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
           </form>
 
-          <section id="future-step" class="future-step" hidden>
-            <div class="future-icon" aria-hidden="true">✓</div>
-            <p class="eyebrow">Datos guardados</p>
-            <h2>Los pasos 1 a 4 están completos</h2>
-            <p>La sección <strong>Galería</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
-            <div class="form-actions">
-              <button id="back-to-data" class="button button-secondary" type="button">Volver a Datos</button>
-              <button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button>
+          <form id="gallery-form" novalidate hidden>
+            <div class="form-heading">
+              <p class="eyebrow">Galería</p>
+              <h2>Prepará las fotos de la propiedad</h2>
+              <p>Elegí el orden y las descripciones. Las fotos se subirán manualmente a GitHub cuando la propiedad esté lista.</p>
             </div>
+            <fieldset class="choice-field">
+              <legend>¿Mostrar galería en la presentación?</legend>
+              <div class="choice-grid">
+                <label class="choice-card"><input type="radio" name="galleryEnabled" value="yes" /><span>Sí</span></label>
+                <label class="choice-card"><input type="radio" name="galleryEnabled" value="no" /><span>No</span></label>
+              </div>
+              <p class="field-help">Si elegís No, la sección de galería no aparecerá en la presentación.</p>
+              <p id="gallery-hidden-note" class="temporary-help" hidden>La configuración y las fotos se conservan en este borrador, pero la galería no aparecerá.</p>
+            </fieldset>
+            <div id="gallery-controls">
+              <section class="repository-media" aria-labelledby="gallery-files-title">
+                <div class="repository-heading"><div><p class="eyebrow">Archivos de esta propiedad</p><h3 id="gallery-files-title">Carpeta de esta propiedad</h3></div><code id="gallery-folder">public/media/nueva-propiedad/</code></div>
+                <p class="field-help">Fotos detectadas en GitHub: <strong id="gallery-detected-count">0</strong>. La detección ocurre durante el build: para actualizar este estado es necesario generar una nueva preview.</p>
+                <p id="original-gallery-note" class="external-note" hidden>Galería actual disponible desde la presentación original.</p>
+                <p id="gallery-empty-note" class="missing-files">Todavía no hay fotos de galería subidas.</p>
+                <div id="gallery-detected-list" class="detected-file-list"></div>
+              </section>
+              <section class="gallery-preparation" aria-labelledby="gallery-preparation-title">
+                <div class="paragraphs-heading"><div><h3 id="gallery-preparation-title">Preparar nuevas fotos</h3><p>Podés seleccionar varias imágenes o arrastrarlas. El orden que ves aquí será el orden de la galería.</p></div></div>
+                <input id="gallery-input" class="visually-hidden" type="file" accept="image/*" multiple />
+                <div id="gallery-dropzone" class="gallery-dropzone" tabindex="0" role="button"><div class="upload-icon" aria-hidden="true">↑</div><strong>Arrastrá fotos hasta aquí</strong><span>o</span><button id="gallery-select" class="button button-secondary" type="button">Seleccionar fotos</button></div>
+                <p class="temporary-help">Las fotos seleccionadas aquí todavía no están subidas a GitHub. Cuando la propiedad esté lista, deberán cargarse en la carpeta indicada.</p>
+              </section>
+              <section class="gallery-order-section" aria-labelledby="gallery-order-title">
+                <div class="paragraphs-heading"><div><h3 id="gallery-order-title">Orden de galería</h3><p>Arrastrá las fotos o usá Subir y Bajar. La persona no necesita decidir los nombres internos.</p></div></div>
+                <p class="field-help">Foto principal actual: <strong id="gallery-cover-name">portada.jpg</strong> <span id="gallery-cover-status"></span></p>
+                <div id="gallery-list" class="gallery-editor-list"></div>
+                <p id="gallery-warning" class="missing-files" hidden>Todavía no hay fotos de galería subidas.</p>
+              </section>
+            </div>
+            <div class="form-actions">
+              <button id="gallery-back" class="button button-quiet" type="button">Atrás</button>
+              <button id="gallery-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
+              <button class="button button-primary" type="submit">Siguiente</button>
+            </div>
+          </form>
+          <section id="future-step" class="future-step" hidden>
+            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Características</h2>
+            <p>Este paso se desarrollará en una próxima etapa.</p>
+            <div class="form-actions"><button id="back-to-gallery" class="button button-secondary" type="button">Volver a Galería</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
           </section>
         </div>
       </section>
@@ -331,7 +368,21 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const coverForm = document.querySelector("#cover-form");
         const propertyForm = document.querySelector("#property-form");
         const dataForm = document.querySelector("#data-form");
+        const galleryForm = document.querySelector("#gallery-form");
         const futureStep = document.querySelector("#future-step");
+        const galleryControls = document.querySelector("#gallery-controls");
+        const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
+        const galleryFolder = document.querySelector("#gallery-folder");
+        const galleryDetectedCount = document.querySelector("#gallery-detected-count");
+        const galleryDetectedList = document.querySelector("#gallery-detected-list");
+        const galleryEmptyNote = document.querySelector("#gallery-empty-note");
+        const originalGalleryNote = document.querySelector("#original-gallery-note");
+        const galleryInput = document.querySelector("#gallery-input");
+        const galleryDropzone = document.querySelector("#gallery-dropzone");
+        const galleryList = document.querySelector("#gallery-list");
+        const galleryWarning = document.querySelector("#gallery-warning");
+        const galleryCoverName = document.querySelector("#gallery-cover-name");
+        const galleryCoverStatus = document.querySelector("#gallery-cover-status");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
         const stepCount = document.querySelector("#step-count");
@@ -377,6 +428,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let videoRemoved = false;
         const sessionMedia = new Map();
         let draggedDataCard = null;
+        let galleryItems = [];
+        let selectedFutureCoverId = null;
+        let draggedGalleryItem = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -415,7 +469,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             { icon: "bath", label: "Baños", value: "3", show: true },
             { icon: "temperature", label: "Eléctrica", value: "Losa radiante", show: true },
             { icon: "pool", label: "Piscina + jacuzzi", value: "Climatizada", show: true }
-          ]
+          ],
+          galleryEnabled: true,
+          galleryItems: [
+            "hero.jpg", "atardecer.jpg", "piscina.jpg", "campo.jpg", "living.jpg", "cocina.jpg", "dormitorio-1.jpg", "living-4.jpg"
+          ].map((name, index) => ({ id: "original-" + (index + 1), name, originalName: name, source: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + name, status: "uploaded", external: true, description: "" })),
+          futureCoverId: null
         };
 
         const slugify = (value) => value
@@ -448,7 +507,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
           videoName: selectedVideo?.name || videoName.textContent || "",
           videoSource: editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : "",
-          galleryEnabled: editingId === originalProperty.id,
+          galleryEnabled: document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no",
+          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 })),
+          futureCoverId: selectedFutureCoverId,
           sectionName: sectionNameInput.value.trim(),
           propertyHeadline: propertyHeadlineInput.value.trim(),
           paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
@@ -517,7 +578,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           coverForm.hidden = step !== 2;
           propertyForm.hidden = step !== 3;
           dataForm.hidden = step !== 4;
-          futureStep.hidden = step !== 5;
+          galleryForm.hidden = step !== 5;
+          futureStep.hidden = step < 6;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -777,6 +839,75 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           items.forEach((item) => addDataCard(item));
         };
 
+
+        const currentGalleryEnabled = () => document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no";
+        const galleryFileName = (index) => "foto-" + String(index + 1).padStart(2, "0") + ".jpg";
+        const slugForGallery = () => slugify(nameInput.value) || "nueva-propiedad";
+        const detectedGalleryItems = () => {
+          const slug = slugForGallery();
+          const detected = detectedMedia[slug]?.gallery || [];
+          return detected.map((name, index) => ({ id: "uploaded-" + name, name, originalName: name, source: "/media/" + slug + "/" + name, status: "uploaded", external: false, description: "", position: index + 1 }));
+        };
+        const serializeGallery = () => galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 }));
+        const moveGalleryItem = (item, direction) => {
+          const index = galleryItems.indexOf(item);
+          const target = index + direction;
+          if (target < 0 || target >= galleryItems.length) return;
+          galleryItems.splice(index, 1); galleryItems.splice(target, 0, item);
+          renderGallery(); scheduleSave();
+        };
+        const renderGallery = () => {
+          const slug = slugForGallery();
+          const detected = detectedMedia[slug]?.gallery || [];
+          galleryFolder.textContent = "public/media/" + slug + "/";
+          galleryDetectedCount.textContent = detected.length;
+          galleryDetectedList.replaceChildren(...detected.map((name) => { const item = document.createElement("span"); item.textContent = name; return item; }));
+          galleryEmptyNote.hidden = detected.length > 0 || editingId === originalProperty.id;
+          originalGalleryNote.hidden = editingId !== originalProperty.id;
+          galleryControls.hidden = !currentGalleryEnabled();
+          galleryHiddenNote.hidden = currentGalleryEnabled();
+          galleryWarning.hidden = !(currentGalleryEnabled() && !galleryItems.some((item) => item.status === "uploaded" || item.external));
+          galleryCoverStatus.textContent = (detectedMedia[slug]?.cover || editingId === originalProperty.id) ? "✓ Subida" : "⚠ Falta";
+          galleryList.replaceChildren(...galleryItems.map((item, index) => {
+            const card = document.createElement("article");
+            card.className = "gallery-editor-card";
+            card.draggable = true;
+            card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
+            const thumb = card.querySelector(".gallery-thumb");
+            if (item.source) { const image = document.createElement("img"); image.src = item.source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
+            card.querySelector(".gallery-internal").textContent = (index + 1) + " → " + galleryFileName(index);
+            const status = card.querySelector(".gallery-status");
+            status.textContent = item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "○ Preparada, todavía no subida";
+            status.className = "gallery-status " + (item.status === "missing" ? "status-warning" : item.status === "uploaded" || item.external ? "status-success" : "status-neutral");
+            const description = card.querySelector("input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
+            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; renderGallery(); scheduleSave(); });
+            card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === galleryItems.length - 1;
+            card.querySelector("[data-up]").addEventListener("click", () => moveGalleryItem(item, -1)); card.querySelector("[data-down]").addEventListener("click", () => moveGalleryItem(item, 1));
+            card.querySelector("[data-remove]").addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
+            card.addEventListener("dragstart", () => { draggedGalleryItem = item; card.classList.add("dragging"); });
+            card.addEventListener("dragend", () => { draggedGalleryItem = null; card.classList.remove("dragging"); scheduleSave(); });
+            card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedGalleryItem || draggedGalleryItem === item) return; const from = galleryItems.indexOf(draggedGalleryItem); const to = galleryItems.indexOf(item); galleryItems.splice(from, 1); galleryItems.splice(to, 0, draggedGalleryItem); renderGallery(); });
+            return card;
+          }));
+        };
+        const addTemporaryGalleryFiles = (files) => {
+          [...files].filter((file) => file.type.startsWith("image/")).forEach((file) => {
+            galleryItems.push({ id: "temporary-" + Date.now() + "-" + Math.random().toString(16).slice(2), name: file.name, originalName: file.name, source: URL.createObjectURL(file), status: "temporary", external: false, description: "" });
+          });
+          renderGallery(); scheduleSave();
+        };
+        const loadGalleryValues = (property) => {
+          const savedItems = Array.isArray(property.galleryItems) ? property.galleryItems : null;
+          galleryItems = (savedItems || property.galleryItems || (editingId === originalProperty.id ? originalProperty.galleryItems : detectedGalleryItems())).map((item) => ({
+            ...item,
+            source: item.source || (item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : ""),
+            status: item.status === "missing" ? "missing" : item.status || "uploaded"
+          }));
+          selectedFutureCoverId = property.futureCoverId || null;
+          document.querySelector('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
+          renderGallery();
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -828,6 +959,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
             loadPropertyValues({ ...originalProperty, ...saved });
             loadFeaturedData({ ...originalProperty, ...saved });
+            loadGalleryValues({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -836,6 +968,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadCoverValues({ videoEnabled: false });
             loadPropertyValues({ sectionName: "La propiedad", propertyHeadline: "", paragraphs: [""] });
             loadFeaturedData({ featuredData: [] });
+            loadGalleryValues({ galleryEnabled: true, galleryItems: detectedGalleryItems() });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -886,6 +1019,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               loadCoverValues(draft, draft.id);
               loadPropertyValues(draft);
               loadFeaturedData(draft);
+              loadGalleryValues(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -905,7 +1039,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
         document.querySelector("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
         document.querySelector("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
-        document.querySelector("#back-to-data").addEventListener("click", () => setStep(4));
+        document.querySelector("#gallery-back").addEventListener("click", () => { saveDraft(); setStep(4); });
+        document.querySelector("#gallery-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La galería quedó guardada como borrador."); });
+        document.querySelector("#back-to-gallery").addEventListener("click", () => setStep(5));
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
@@ -1085,12 +1221,18 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         });
 
         dataForm.addEventListener("submit", (event) => {
-          event.preventDefault();
-          saveDraft();
-          setStep(5);
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          event.preventDefault(); saveDraft(); setStep(5); window.scrollTo({ top: 0, behavior: "smooth" });
         });
-
+        galleryForm.addEventListener("submit", (event) => {
+          event.preventDefault(); saveDraft(); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
+        document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
+        galleryDropzone.addEventListener("click", () => galleryInput.click());
+        galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
+        ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
+        ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
+        galleryDropzone.addEventListener("drop", (event) => addTemporaryGalleryFiles(event.dataTransfer.files));
         renderDraftCards();
       })();
     </script>
