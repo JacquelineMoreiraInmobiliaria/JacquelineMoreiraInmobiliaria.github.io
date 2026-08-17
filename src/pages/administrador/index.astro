@@ -281,13 +281,37 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
           </form>
 
+          <form id="data-form" novalidate hidden>
+            <div class="form-heading">
+              <p class="eyebrow">Datos destacados</p>
+              <h2>Resumí lo más importante</h2>
+              <p>Agregá todos los datos que necesites y ordenalos como querés que aparezcan.</p>
+            </div>
+
+            <div class="data-toolbar">
+              <div>
+                <h3>Datos de la propiedad</h3>
+                <p>Los datos incompletos o marcados como “No” se conservarán en el borrador, pero no aparecerán en la futura presentación.</p>
+              </div>
+              <button id="add-featured-data" class="button button-secondary" type="button">+ Agregar dato</button>
+            </div>
+
+            <div id="featured-data-list" class="featured-data-list"></div>
+
+            <div class="form-actions">
+              <button id="data-back" class="button button-quiet" type="button">Atrás</button>
+              <button id="data-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
+              <button class="button button-primary" type="submit">Siguiente</button>
+            </div>
+          </form>
+
           <section id="future-step" class="future-step" hidden>
             <div class="future-icon" aria-hidden="true">✓</div>
-            <p class="eyebrow">Descripción guardada</p>
-            <h2>Los pasos 1, 2 y 3 están completos</h2>
-            <p>La sección <strong>Datos</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
+            <p class="eyebrow">Datos guardados</p>
+            <h2>Los pasos 1 a 4 están completos</h2>
+            <p>La sección <strong>Galería</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
             <div class="form-actions">
-              <button id="back-to-property" class="button button-secondary" type="button">Volver a La propiedad</button>
+              <button id="back-to-data" class="button button-secondary" type="button">Volver a Datos</button>
               <button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button>
             </div>
           </section>
@@ -306,6 +330,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const form = document.querySelector("#basic-form");
         const coverForm = document.querySelector("#cover-form");
         const propertyForm = document.querySelector("#property-form");
+        const dataForm = document.querySelector("#data-form");
         const futureStep = document.querySelector("#future-step");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
@@ -340,6 +365,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const sectionNameInput = document.querySelector("#section-name");
         const propertyHeadlineInput = document.querySelector("#property-headline");
         const paragraphsList = document.querySelector("#paragraphs-list");
+        const featuredDataList = document.querySelector("#featured-data-list");
         const toast = document.querySelector("#toast");
         const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
         let editingId = null;
@@ -350,6 +376,19 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let photoRemoved = false;
         let videoRemoved = false;
         const sessionMedia = new Map();
+        let draggedDataCard = null;
+
+        const iconCatalog = [
+          { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
+          { key: "home", label: "Casa", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg>' },
+          { key: "bed", label: "Dormitorio", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19v-8h18v8M3 15h18M6 11V7h5a3 3 0 0 1 3 3v1M3 21v-2M21 21v-2"/></svg>' },
+          { key: "bath", label: "Baño", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM7 13V6a3 3 0 0 1 6 0M4 22l2-3M20 22l-2-3"/></svg>' },
+          { key: "temperature", label: "Calefacción", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z"/><path d="M10 5v11M8 18h4"/></svg>' },
+          { key: "pool", label: "Piscina", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 16c2 0 2 1.5 4 1.5S8 16 10 16s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M2 20c2 0 2 1.5 4 1.5S8 20 10 20s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M7 16V5a3 3 0 0 1 6 0M7 9h6"/></svg>' },
+          { key: "land", label: "Terreno", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 18 5-7 4 4 3-5 6 8H3Z"/><path d="M3 21h18M18 4v6M15 7h6"/></svg>' },
+          { key: "view", label: "Vista", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>' },
+          { key: "garage", label: "Cochera", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13M6 21v-9h12v9M6 16h12"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>' }
+        ];
 
         const originalProperty = {
           id: "atardecer-y-vides",
@@ -368,6 +407,14 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           paragraphs: [
             "Ubicada en la zona alta de Piriápolis, dentro de un entorno de chacras de categoría y residencias de gran porte, esta propiedad combina privacidad, naturaleza y una residencia de altísimo nivel.",
             "A solo 2 kilómetros de la playa y de todos los servicios, ofrece una vista franca de 180° al mar y atardeceres únicos durante todo el año."
+          ],
+          featuredData: [
+            { icon: "surface", label: "Superficie total", value: "10 ha", show: true },
+            { icon: "home", label: "Residencia", value: "1 planta", show: true },
+            { icon: "bed", label: "Dormitorios", value: "4", show: true },
+            { icon: "bath", label: "Baños", value: "3", show: true },
+            { icon: "temperature", label: "Eléctrica", value: "Losa radiante", show: true },
+            { icon: "pool", label: "Piscina + jacuzzi", value: "Climatizada", show: true }
           ]
         };
 
@@ -405,6 +452,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           sectionName: sectionNameInput.value.trim(),
           propertyHeadline: propertyHeadlineInput.value.trim(),
           paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
+          featuredData: [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
+            icon: card.dataset.icon || "home",
+            label: card.querySelector("[data-field='label']").value.trim(),
+            value: card.querySelector("[data-field='value']").value.trim(),
+            show: card.querySelector("input[type='radio']:checked")?.value !== "no"
+          })),
           updatedAt: new Date().toISOString()
         });
 
@@ -455,7 +508,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             const itemStep = Number(item.dataset.step);
             const active = itemStep === step;
             item.classList.toggle("active", active);
-            item.classList.toggle("completed", itemStep < step && itemStep <= 3);
+            item.classList.toggle("completed", itemStep < step && itemStep <= 4);
             if (active) item.setAttribute("aria-current", "step");
             else item.removeAttribute("aria-current");
           });
@@ -463,7 +516,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           form.hidden = step !== 1;
           coverForm.hidden = step !== 2;
           propertyForm.hidden = step !== 3;
-          futureStep.hidden = step !== 4;
+          dataForm.hidden = step !== 4;
+          futureStep.hidden = step !== 5;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -597,6 +651,132 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           paragraphs.forEach((paragraph) => addParagraph(paragraph));
         };
 
+        const renumberDataCards = () => {
+          const cards = [...featuredDataList.querySelectorAll(".data-card")];
+          cards.forEach((card, index) => {
+            card.querySelector("[data-card-number]").textContent = `Dato ${index + 1}`;
+            card.querySelector("[data-move-up]").disabled = index === 0;
+            card.querySelector("[data-move-down]").disabled = index === cards.length - 1;
+          });
+        };
+
+        const selectDataIcon = (card, iconKey) => {
+          card.dataset.icon = iconKey;
+          card.querySelectorAll("[data-icon-option]").forEach((button) => {
+            const selected = button.dataset.iconOption === iconKey;
+            button.classList.toggle("selected", selected);
+            button.setAttribute("aria-pressed", String(selected));
+          });
+        };
+
+        const moveDataCard = (card, direction) => {
+          if (direction < 0 && card.previousElementSibling) {
+            featuredDataList.insertBefore(card, card.previousElementSibling);
+          } else if (direction > 0 && card.nextElementSibling) {
+            featuredDataList.insertBefore(card.nextElementSibling, card);
+          }
+          renumberDataCards();
+          scheduleSave();
+        };
+
+        const addDataCard = (data = { icon: "home", label: "", value: "", show: true }) => {
+          const card = document.createElement("article");
+          card.className = "data-card";
+          card.draggable = false;
+          card.dataset.icon = data.icon || "home";
+          card.innerHTML = `
+            <header class="data-card-header">
+              <div class="drag-handle" title="Arrastrar para cambiar el orden" aria-label="Arrastrar para cambiar el orden">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+              </div>
+              <strong data-card-number></strong>
+              <div class="order-actions">
+                <button type="button" data-move-up aria-label="Subir este dato">↑ Subir</button>
+                <button type="button" data-move-down aria-label="Bajar este dato">↓ Bajar</button>
+              </div>
+              <button class="remove-data" type="button" data-remove-data>Eliminar</button>
+            </header>
+            <fieldset class="icon-field">
+              <legend>Icono</legend>
+              <div class="icon-options">
+                ${iconCatalog.map((icon) => `
+                  <button type="button" data-icon-option="${icon.key}" aria-pressed="false" title="${icon.label}">
+                    ${icon.svg}<span>${icon.label}</span>
+                  </button>`).join("")}
+              </div>
+            </fieldset>
+            <div class="data-fields">
+              <div class="field compact-field">
+                <label>Etiqueta</label>
+                <input type="text" data-field="label" placeholder="Escribir etiqueta" />
+                <p class="example">Ejemplo: Dormitorios</p>
+              </div>
+              <div class="field compact-field">
+                <label>Valor</label>
+                <input type="text" data-field="value" placeholder="Escribir valor" />
+                <p class="example">Ejemplo: 4</p>
+              </div>
+            </div>
+            <fieldset class="show-field">
+              <legend>Mostrar</legend>
+              <div class="choice-grid compact-choices">
+                <label class="choice-card"><input type="radio" name="show-${Date.now()}-${Math.random()}" value="yes" /><span>Sí</span></label>
+                <label class="choice-card"><input type="radio" name="show-${Date.now()}-${Math.random()}" value="no" /><span>No</span></label>
+              </div>
+            </fieldset>`;
+
+          const radioName = `show-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          card.querySelector(".drag-handle").draggable = true;
+          card.querySelectorAll(".show-field input").forEach((input) => { input.name = radioName; });
+          card.querySelector(`.show-field input[value="${data.show === false ? "no" : "yes"}"]`).checked = true;
+          card.querySelector("[data-field='label']").value = data.label || "";
+          card.querySelector("[data-field='value']").value = data.value || "";
+          card.querySelectorAll("[data-icon-option]").forEach((button) => button.addEventListener("click", () => {
+            selectDataIcon(card, button.dataset.iconOption);
+            scheduleSave();
+          }));
+          card.querySelectorAll("input").forEach((input) => input.addEventListener("input", scheduleSave));
+          card.querySelector("[data-move-up]").addEventListener("click", () => moveDataCard(card, -1));
+          card.querySelector("[data-move-down]").addEventListener("click", () => moveDataCard(card, 1));
+          card.querySelector("[data-remove-data]").addEventListener("click", () => {
+            if (!window.confirm("¿Eliminar este dato?")) return;
+            card.remove();
+            if (!featuredDataList.children.length) addDataCard();
+            renumberDataCards();
+            scheduleSave();
+          });
+          card.addEventListener("dragstart", () => {
+            draggedDataCard = card;
+            card.classList.add("dragging");
+          });
+          card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            draggedDataCard = null;
+            renumberDataCards();
+            scheduleSave();
+          });
+          card.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            if (!draggedDataCard || draggedDataCard === card) return;
+            const bounds = card.getBoundingClientRect();
+            const after = event.clientY > bounds.top + bounds.height / 2;
+            featuredDataList.insertBefore(draggedDataCard, after ? card.nextElementSibling : card);
+          });
+
+          featuredDataList.appendChild(card);
+          selectDataIcon(card, data.icon || "home");
+          renumberDataCards();
+          return card;
+        };
+
+        const loadFeaturedData = (property) => {
+          featuredDataList.replaceChildren();
+          const items = Array.isArray(property.featuredData) && property.featuredData.length
+            ? property.featuredData
+            : [{ icon: "home", label: "", value: "", show: true }];
+          items.forEach((item) => addDataCard(item));
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -647,6 +827,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             subtitleInput.value = saved.subtitle || "";
             loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
             loadPropertyValues({ ...originalProperty, ...saved });
+            loadFeaturedData({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -654,6 +835,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             form.reset();
             loadCoverValues({ videoEnabled: false });
             loadPropertyValues({ sectionName: "La propiedad", propertyHeadline: "", paragraphs: [""] });
+            loadFeaturedData({ featuredData: [] });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -703,6 +885,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               subtitleInput.value = draft.subtitle || "";
               loadCoverValues(draft, draft.id);
               loadPropertyValues(draft);
+              loadFeaturedData(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -717,10 +900,17 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        document.querySelector("#data-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#future-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
         document.querySelector("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
-        document.querySelector("#back-to-property").addEventListener("click", () => setStep(3));
+        document.querySelector("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
+        document.querySelector("#back-to-data").addEventListener("click", () => setStep(4));
+        document.querySelector("#add-featured-data").addEventListener("click", () => {
+          const card = addDataCard();
+          card.querySelector("[data-field='label']").focus();
+          scheduleSave();
+        });
         document.querySelector("#add-paragraph").addEventListener("click", () => {
           const item = addParagraph();
           item.querySelector("textarea").focus();
@@ -759,6 +949,25 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             } else {
               saveDraft();
               setStep(3);
+            }
+          }
+          else if (number === 4) {
+            if (!nameInput.value.trim()) {
+              nameError.textContent = "Escribí el nombre de la propiedad para continuar.";
+              nameInput.setAttribute("aria-invalid", "true");
+              setStep(1);
+              nameInput.focus();
+            } else if (!photoName.textContent) {
+              setStep(2);
+              photoError.textContent = "Seleccioná una foto principal para continuar.";
+              photoDropzone.focus();
+            } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+              setStep(2);
+              videoError.textContent = "Seleccioná un video MP4 o elegí No.";
+              document.querySelector("#select-video").focus();
+            } else {
+              saveDraft();
+              setStep(4);
             }
           }
           else showToast("Este paso se desarrollará en una próxima etapa.");
@@ -875,8 +1084,16 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
+        dataForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          saveDraft();
+          setStep(5);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
         renderDraftCards();
       })();
     </script>
   </body>
 </html>
+
