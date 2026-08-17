@@ -6,6 +6,7 @@ const features = [...property.features].sort((a, b) =>
   a.category === b.category ? 0 : a.category === "structural" ? -1 : 1
 );
 const shownStats = property.summary.filter((item) => item.show);
+const statIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
 const showGallery = property.gallery.enabled && property.gallery.images.length > 0;
 const showLocation = property.location.enabled && property.location.latitude !== undefined && property.location.longitude !== undefined;
 const showDistances = property.distances.enabled && property.distances.items.length > 0;
@@ -67,7 +68,7 @@ const mapBounds = showLocation
       <div class="split-media"><img src={property.hero.coverImage} alt={property.name} /></div>
     </section>}
 
-    {shownStats.length > 0 && <section class="stats">{shownStats.map((item) => <div class="statbox"><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{statIcons[index] || "•"}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
