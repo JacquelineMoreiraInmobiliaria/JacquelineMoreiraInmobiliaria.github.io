@@ -110,13 +110,97 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
             </div>
           </form>
 
+          <form id="cover-form" novalidate hidden>
+            <div class="form-heading">
+              <p class="eyebrow">Portada</p>
+              <h2>Elegí la primera impresión</h2>
+              <p>Definí el texto y el contenido visual que recibirán a quien visite la presentación.</p>
+            </div>
+
+            <div class="field">
+              <label for="cover-description">Descripción corta de portada <small>Opcional</small></label>
+              <p class="field-help">Es el texto breve que aparecerá sobre la imagen o video principal.</p>
+              <textarea id="cover-description" name="coverDescription" rows="5" placeholder="Escribir descripción" aria-describedby="cover-description-example"></textarea>
+              <p id="cover-description-example" class="example">Ejemplo: 10 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.</p>
+            </div>
+
+            <fieldset class="media-field">
+              <legend>Foto principal <span aria-hidden="true">*</span></legend>
+              <p class="field-help">Esta será la imagen principal de la presentación. Más adelante también podrás elegir una foto de la galería como portada.</p>
+              <input id="cover-photo-input" class="visually-hidden" type="file" accept="image/*" />
+              <div id="photo-dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="photo-help photo-error">
+                <div id="photo-empty">
+                  <div class="upload-icon" aria-hidden="true">↑</div>
+                  <strong>Arrastrá una imagen hasta aquí</strong>
+                  <span>o</span>
+                  <button id="select-photo" class="button button-secondary" type="button">Seleccionar foto</button>
+                </div>
+                <div id="photo-preview" class="media-preview" hidden>
+                  <img id="photo-preview-image" src="" alt="Vista previa de la foto principal" />
+                  <div class="media-info">
+                    <strong id="photo-name"></strong>
+                    <span>Foto principal seleccionada</span>
+                    <div class="media-actions">
+                      <button id="change-photo" class="button button-quiet" type="button">Cambiar foto</button>
+                      <button id="remove-photo" class="button button-danger" type="button">Eliminar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p id="photo-help" class="example">Podés elegir una imagen directamente desde tu computadora o teléfono.</p>
+              <p id="photo-error" class="field-error" aria-live="polite"></p>
+            </fieldset>
+
+            <fieldset class="choice-field">
+              <legend>¿Mostrar video en la portada?</legend>
+              <div class="choice-grid">
+                <label class="choice-card">
+                  <input type="radio" name="videoEnabled" value="yes" />
+                  <span>Sí</span>
+                </label>
+                <label class="choice-card">
+                  <input type="radio" name="videoEnabled" value="no" checked />
+                  <span>No</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="video-field" class="media-field" hidden>
+              <div class="field-label">Video MP4</div>
+              <p class="field-help">Si agregás un video, se utilizará como fondo de la portada. Si no hay video, se mostrará la foto principal.</p>
+              <input id="cover-video-input" class="visually-hidden" type="file" accept="video/mp4,.mp4" />
+              <div id="video-empty" class="file-picker">
+                <button id="select-video" class="button button-secondary" type="button">Seleccionar video</button>
+                <span>Únicamente archivos MP4</span>
+              </div>
+              <div id="video-selected" class="selected-file" hidden>
+                <div class="file-icon" aria-hidden="true">▶</div>
+                <div>
+                  <strong id="video-name"></strong>
+                  <span>Video seleccionado</span>
+                </div>
+                <div class="media-actions">
+                  <button id="change-video" class="button button-quiet" type="button">Cambiar video</button>
+                  <button id="remove-video" class="button button-danger" type="button">Eliminar</button>
+                </div>
+              </div>
+              <p id="video-error" class="field-error" aria-live="polite"></p>
+            </div>
+
+            <div class="form-actions">
+              <button id="cover-back" class="button button-quiet" type="button">Atrás</button>
+              <button id="cover-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
+              <button class="button button-primary" type="submit">Siguiente</button>
+            </div>
+          </form>
+
           <section id="future-step" class="future-step" hidden>
             <div class="future-icon" aria-hidden="true">✓</div>
-            <p class="eyebrow">Información guardada</p>
-            <h2>El Paso 1 está completo</h2>
-            <p>La sección <strong>Portada</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
+            <p class="eyebrow">Portada guardada</p>
+            <h2>Los pasos 1 y 2 están completos</h2>
+            <p>La sección <strong>Propiedad</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
             <div class="form-actions">
-              <button id="back-to-step-one" class="button button-secondary" type="button">Volver a Información</button>
+              <button id="back-to-cover" class="button button-secondary" type="button">Volver a Portada</button>
               <button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button>
             </div>
           </section>
@@ -132,6 +216,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
         const listScreen = document.querySelector("#property-list");
         const editorScreen = document.querySelector("#editor");
         const form = document.querySelector("#basic-form");
+        const coverForm = document.querySelector("#cover-form");
         const futureStep = document.querySelector("#future-step");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
@@ -141,16 +226,42 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
         const priceInput = document.querySelector("#property-price");
         const subtitleInput = document.querySelector("#property-subtitle");
         const nameError = document.querySelector("#name-error");
+        const coverDescription = document.querySelector("#cover-description");
+        const photoInput = document.querySelector("#cover-photo-input");
+        const photoDropzone = document.querySelector("#photo-dropzone");
+        const photoEmpty = document.querySelector("#photo-empty");
+        const photoPreview = document.querySelector("#photo-preview");
+        const photoPreviewImage = document.querySelector("#photo-preview-image");
+        const photoName = document.querySelector("#photo-name");
+        const photoError = document.querySelector("#photo-error");
+        const videoField = document.querySelector("#video-field");
+        const videoInput = document.querySelector("#cover-video-input");
+        const videoEmpty = document.querySelector("#video-empty");
+        const videoSelected = document.querySelector("#video-selected");
+        const videoName = document.querySelector("#video-name");
+        const videoError = document.querySelector("#video-error");
         const toast = document.querySelector("#toast");
         let editingId = null;
         let saveTimer = null;
+        let selectedPhoto = null;
+        let selectedVideo = null;
+        let photoObjectUrl = null;
+        let photoRemoved = false;
+        let videoRemoved = false;
+        const sessionMedia = new Map();
 
         const originalProperty = {
           id: "atardecer-y-vides",
           slug: "atardecer-y-vides",
           name: "Atardecer y Vides",
           price: "USD 850.000",
-          subtitle: "Piriápolis · Maldonado · Uruguay"
+          subtitle: "Piriápolis · Maldonado · Uruguay",
+          coverDescription: "10 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.",
+          coverPhotoName: "hero.jpg",
+          coverPhotoSource: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg",
+          videoEnabled: true,
+          videoName: "video-atardecer.mp4",
+          videoSource: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/video-atardecer.mp4"
         };
 
         const slugify = (value) => value
@@ -177,6 +288,12 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
           name: nameInput.value.trim(),
           price: priceInput.value.trim(),
           subtitle: subtitleInput.value.trim(),
+          coverDescription: coverDescription.value.trim(),
+          coverPhotoName: selectedPhoto?.name || photoName.textContent || "",
+          coverPhotoSource: editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : "",
+          videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
+          videoName: selectedVideo?.name || videoName.textContent || "",
+          videoSource: editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : "",
           updatedAt: new Date().toISOString()
         });
 
@@ -186,6 +303,13 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
           const drafts = readDrafts();
           drafts[values.id] = values;
           writeDrafts(drafts);
+          if (selectedPhoto || selectedVideo) {
+            sessionMedia.set(values.id, {
+              photo: selectedPhoto,
+              photoUrl: photoObjectUrl,
+              video: selectedVideo
+            });
+          }
           saveState.textContent = "Guardado automáticamente";
           saveState.classList.add("saved");
           window.setTimeout(() => {
@@ -224,7 +348,84 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
           });
           stepCount.textContent = "Paso " + step + " de 9";
           form.hidden = step !== 1;
-          futureStep.hidden = step === 1;
+          coverForm.hidden = step !== 2;
+          futureStep.hidden = step !== 3;
+        };
+
+        const setVideoEnabled = (enabled) => {
+          document.querySelector(`input[name="videoEnabled"][value="${enabled ? "yes" : "no"}"]`).checked = true;
+          videoField.hidden = !enabled;
+        };
+
+        const showPhoto = (source, name) => {
+          photoPreviewImage.src = source;
+          photoName.textContent = name;
+          photoEmpty.hidden = true;
+          photoPreview.hidden = false;
+          photoError.textContent = "";
+          photoDropzone.classList.add("has-file");
+        };
+
+        const clearPhoto = () => {
+          if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+          photoObjectUrl = null;
+          selectedPhoto = null;
+          photoRemoved = true;
+          photoInput.value = "";
+          photoPreviewImage.removeAttribute("src");
+          photoName.textContent = "";
+          photoPreview.hidden = true;
+          photoEmpty.hidden = false;
+          photoDropzone.classList.remove("has-file");
+          scheduleSave();
+        };
+
+        const showVideo = (name) => {
+          videoName.textContent = name;
+          videoEmpty.hidden = true;
+          videoSelected.hidden = false;
+          videoError.textContent = "";
+        };
+
+        const clearVideo = () => {
+          selectedVideo = null;
+          videoRemoved = true;
+          videoInput.value = "";
+          videoName.textContent = "";
+          videoSelected.hidden = true;
+          videoEmpty.hidden = false;
+          scheduleSave();
+        };
+
+        const loadCoverValues = (property, propertyId = null) => {
+          selectedPhoto = null;
+          selectedVideo = null;
+          photoRemoved = false;
+          videoRemoved = false;
+          photoObjectUrl = null;
+          const session = propertyId ? sessionMedia.get(propertyId) : null;
+          coverDescription.value = property.coverDescription || "";
+          if (session?.photo && session.photoUrl) {
+            selectedPhoto = session.photo;
+            photoObjectUrl = session.photoUrl;
+            showPhoto(session.photoUrl, session.photo.name);
+          } else if (property.coverPhotoSource) showPhoto(property.coverPhotoSource, property.coverPhotoName || "Foto principal");
+          else {
+            photoPreview.hidden = true;
+            photoEmpty.hidden = false;
+            photoName.textContent = "";
+            photoDropzone.classList.remove("has-file");
+          }
+          setVideoEnabled(Boolean(property.videoEnabled));
+          if (session?.video) {
+            selectedVideo = session.video;
+            showVideo(session.video.name);
+          } else if (property.videoEnabled && property.videoName) showVideo(property.videoName);
+          else {
+            videoSelected.hidden = true;
+            videoEmpty.hidden = false;
+            videoName.textContent = "";
+          }
         };
 
         const openEditor = (mode, property = null) => {
@@ -243,11 +444,13 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
             nameInput.value = saved.name || "";
             priceInput.value = saved.price || "";
             subtitleInput.value = saved.subtitle || "";
+            loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
             intro.textContent = "Completá la información básica para empezar.";
             form.reset();
+            loadCoverValues({ videoEnabled: false });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -295,6 +498,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
               nameInput.value = draft.name || "";
               priceInput.value = draft.price || "";
               subtitleInput.value = draft.subtitle || "";
+              loadCoverValues(draft, draft.id);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -307,16 +511,29 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
         document.querySelectorAll("[data-duplicate]").forEach((button) => button.addEventListener("click", () => showToast("La duplicación estará disponible en una próxima etapa.")));
         document.querySelector("#cancel").addEventListener("click", showList);
         document.querySelector("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        document.querySelector("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#future-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#back-to-step-one").addEventListener("click", () => setStep(1));
+        document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
+        document.querySelector("#back-to-cover").addEventListener("click", () => setStep(2));
 
         document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
           if (number === 1) setStep(1);
+          else if (number === 2) {
+            if (!nameInput.value.trim()) {
+              nameError.textContent = "Escribí el nombre de la propiedad para continuar.";
+              nameInput.setAttribute("aria-invalid", "true");
+              setStep(1);
+              nameInput.focus();
+            } else {
+              saveDraft();
+              setStep(2);
+            }
+          }
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
-        [nameInput, priceInput, subtitleInput].forEach((input) => input.addEventListener("input", () => {
+        [nameInput, priceInput, subtitleInput, coverDescription].forEach((input) => input.addEventListener("input", () => {
           if (input === nameInput && nameInput.value.trim()) {
             nameError.textContent = "";
             nameInput.removeAttribute("aria-invalid");
@@ -334,6 +551,88 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
           }
           saveDraft();
           setStep(2);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        const choosePhoto = () => photoInput.click();
+        document.querySelector("#select-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
+        document.querySelector("#change-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
+        document.querySelector("#remove-photo").addEventListener("click", (event) => { event.stopPropagation(); clearPhoto(); });
+        photoDropzone.addEventListener("click", () => { if (!photoDropzone.classList.contains("has-file")) choosePhoto(); });
+        photoDropzone.addEventListener("keydown", (event) => {
+          if ((event.key === "Enter" || event.key === " ") && !photoDropzone.classList.contains("has-file")) {
+            event.preventDefault();
+            choosePhoto();
+          }
+        });
+        ["dragenter", "dragover"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
+          event.preventDefault();
+          photoDropzone.classList.add("dragging");
+        }));
+        ["dragleave", "drop"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
+          event.preventDefault();
+          photoDropzone.classList.remove("dragging");
+        }));
+        photoDropzone.addEventListener("drop", (event) => {
+          const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("image/"));
+          if (!file) {
+            photoError.textContent = "Seleccioná un archivo de imagen.";
+            return;
+          }
+          selectedPhoto = file;
+          photoRemoved = false;
+          if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+          photoObjectUrl = URL.createObjectURL(file);
+          showPhoto(photoObjectUrl, file.name);
+          scheduleSave();
+        });
+        photoInput.addEventListener("change", () => {
+          const file = photoInput.files[0];
+          if (!file) return;
+          selectedPhoto = file;
+          photoRemoved = false;
+          if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+          photoObjectUrl = URL.createObjectURL(file);
+          showPhoto(photoObjectUrl, file.name);
+          scheduleSave();
+        });
+
+        document.querySelectorAll('input[name="videoEnabled"]').forEach((input) => input.addEventListener("change", () => {
+          setVideoEnabled(input.value === "yes");
+          scheduleSave();
+        }));
+        const chooseVideo = () => videoInput.click();
+        document.querySelector("#select-video").addEventListener("click", chooseVideo);
+        document.querySelector("#change-video").addEventListener("click", chooseVideo);
+        document.querySelector("#remove-video").addEventListener("click", clearVideo);
+        videoInput.addEventListener("change", () => {
+          const file = videoInput.files[0];
+          if (!file) return;
+          if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) {
+            videoError.textContent = "Seleccioná un video en formato MP4.";
+            videoInput.value = "";
+            return;
+          }
+          selectedVideo = file;
+          videoRemoved = false;
+          showVideo(file.name);
+          scheduleSave();
+        });
+
+        coverForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!photoName.textContent) {
+            photoError.textContent = "Seleccioná una foto principal para continuar.";
+            photoDropzone.focus();
+            return;
+          }
+          if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+            videoError.textContent = "Seleccioná un video MP4 o elegí No.";
+            document.querySelector("#select-video").focus();
+            return;
+          }
+          saveDraft();
+          setStep(3);
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
