@@ -1387,7 +1387,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#data-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#future-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
         document.querySelector("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
         document.querySelector("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
