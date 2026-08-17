@@ -354,10 +354,40 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             <section class="feature-category-group" aria-labelledby="exterior-title"><div class="feature-group-heading"><h3 id="exterior-title">Exterior / entorno</h3><p>Vistas, terreno, accesos y espacios exteriores.</p></div><div id="exterior-features" class="feature-list"></div></section>
             <div class="form-actions"><button id="features-back" class="button button-quiet" type="button">Atrás</button><button id="features-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
           </form>
+          <form id="location-form" novalidate hidden>
+            <div class="form-heading"><p class="eyebrow">Ubicación</p><h2>Indicá dónde está la propiedad</h2><p>Elegí si querés mostrar la ubicación y, si corresponde, cargá los datos que verá el cliente.</p></div>
+            <fieldset class="choice-field">
+              <legend>¿Mostrar ubicación en la presentación?</legend>
+              <div class="choice-grid">
+                <label class="choice-card"><input type="radio" name="locationEnabled" value="yes" /><span>Sí</span></label>
+                <label class="choice-card"><input type="radio" name="locationEnabled" value="no" /><span>No</span></label>
+              </div>
+              <p class="field-help">Si elegís No, la sección de ubicación y el mapa no aparecerán en la presentación.</p>
+              <p id="location-hidden-note" class="temporary-help" hidden>Los datos se conservan en este borrador, pero la sección de ubicación no aparecerá.</p>
+            </fieldset>
+            <div id="location-fields">
+              <div class="form-grid">
+                <div class="field"><label for="location-name">Nombre visible de ubicación</label><p class="field-help">Es el nombre que verá el cliente en la presentación.</p><input id="location-name" type="text" placeholder="Piriápolis, Playa Hermosa" /><p class="example">Ejemplo: Piriápolis, Playa Hermosa</p></div>
+                <div class="field"><label for="location-address">Dirección</label><p class="field-help">Es la referencia o dirección que aparecerá escrita en la presentación.</p><input id="location-address" type="text" placeholder="Calle 29 y Vecinal a la Bodega" /><p class="example">Ejemplo: Calle 29 y Vecinal a la Bodega, en la zona alta de Piriápolis.</p></div>
+              </div>
+              <section class="coordinates-section" aria-labelledby="coordinates-title">
+                <h3 id="coordinates-title">Ubicación del mapa</h3>
+                <p class="field-help">Estas coordenadas se utilizan únicamente para ubicar el punto en el mapa. No se mostrarán como texto al cliente.</p>
+                <p class="field-help">Podés obtener estas coordenadas desde Google Maps haciendo clic con el botón derecho sobre el punto de la propiedad.</p>
+                <div class="form-grid coordinates-grid">
+                  <div class="field"><label for="location-latitude">Latitud</label><input id="location-latitude" inputmode="decimal" type="text" placeholder="-34.83216094970703" /><p class="example">Ejemplo: -34.83216094970703</p></div>
+                  <div class="field"><label for="location-longitude">Longitud</label><input id="location-longitude" inputmode="decimal" type="text" placeholder="-55.2911491394043" /><p class="example">Ejemplo: -55.2911491394043</p></div>
+                </div>
+                <p id="coordinates-warning" class="missing-files" hidden>Faltan las coordenadas para poder mostrar el mapa.</p>
+              </section>
+              <section class="map-preview-section" aria-labelledby="map-preview-title"><div class="paragraphs-heading"><div><h3 id="map-preview-title">Vista previa del mapa</h3><p>Es solo una referencia; todavía no se puede mover el punto desde aquí.</p></div></div><div id="location-map-preview" class="location-map-preview"></div></section>
+            </div>
+            <div class="form-actions"><button id="location-back" class="button button-quiet" type="button">Atrás</button><button id="location-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
+          </form>
           <section id="future-step" class="future-step" hidden>
-            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Ubicación</h2>
+            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Distancias</h2>
             <p>Este paso se desarrollará en una próxima etapa.</p>
-            <div class="form-actions"><button id="back-to-features" class="button button-secondary" type="button">Volver a Características</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
+            <div class="form-actions"><button id="back-to-location" class="button button-secondary" type="button">Volver a Ubicación</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
           </section>
         </div>
       </section>
@@ -377,9 +407,18 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const dataForm = document.querySelector("#data-form");
         const galleryForm = document.querySelector("#gallery-form");
         const featuresForm = document.querySelector("#features-form");
+        const locationForm = document.querySelector("#location-form");
         const futureStep = document.querySelector("#future-step");
         const structuralFeatures = document.querySelector("#structural-features");
         const exteriorFeatures = document.querySelector("#exterior-features");
+        const locationFields = document.querySelector("#location-fields");
+        const locationHiddenNote = document.querySelector("#location-hidden-note");
+        const locationNameInput = document.querySelector("#location-name");
+        const locationAddressInput = document.querySelector("#location-address");
+        const latitudeInput = document.querySelector("#location-latitude");
+        const longitudeInput = document.querySelector("#location-longitude");
+        const coordinatesWarning = document.querySelector("#coordinates-warning");
+        const locationMapPreview = document.querySelector("#location-map-preview");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -491,7 +530,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             "Paredes dobles", "Aberturas de aluminio con DVH", "4 dormitorios", "3 baños", "Living-comedor con estufa a leña", "Barbacoa integrada", "Pisos de porcelanato", "Losa radiante eléctrica independiente"
           ].map((label, index) => ({ id: "structural-" + (index + 1), label, category: "structural" })).concat([
             "Vista panorámica de 180° al mar", "Piscina climatizada con jacuzzi", "Viñedo de 4 años", "Tajamar", "Dos accesos independientes", "Cochera"
-          ].map((label, index) => ({ id: "exterior-" + (index + 1), label, category: "exterior" })))
+          ].map((label, index) => ({ id: "exterior-" + (index + 1), label, category: "exterior" }))),
+          locationEnabled: true,
+          locationName: "Piriápolis, Playa Hermosa",
+          locationAddress: "Calle 29 y Vecinal a la Bodega, en la zona alta de Piriápolis.",
+          latitude: "-34.83216094970703",
+          longitude: "-55.2911491394043"
         };
 
         const slugify = (value) => value
@@ -528,6 +572,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
+          locationEnabled: document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes",
+          locationName: locationNameInput.value.trim(),
+          locationAddress: locationAddressInput.value.trim(),
+          latitude: latitudeInput.value.trim(),
+          longitude: longitudeInput.value.trim(),
           sectionName: sectionNameInput.value.trim(),
           propertyHeadline: propertyHeadlineInput.value.trim(),
           paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
@@ -598,7 +647,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           dataForm.hidden = step !== 4;
           galleryForm.hidden = step !== 5;
           featuresForm.hidden = step !== 6;
-          futureStep.hidden = step < 7;
+          locationForm.hidden = step !== 7;
+          futureStep.hidden = step < 8;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -997,6 +1047,37 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           renderFeatures();
         };
 
+        const validCoordinates = () => {
+          const latitude = Number(latitudeInput.value.replace(",", "."));
+          const longitude = Number(longitudeInput.value.replace(",", "."));
+          return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180 ? { latitude, longitude } : null;
+        };
+        const renderLocation = () => {
+          const enabled = document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes";
+          locationFields.hidden = !enabled;
+          locationHiddenNote.hidden = enabled;
+          if (!enabled) return;
+          const coordinates = validCoordinates();
+          coordinatesWarning.hidden = Boolean(coordinates);
+          if (!coordinates) {
+            locationMapPreview.innerHTML = '<div class="map-preview-empty">El mapa aparecerá cuando cargues latitud y longitud.</div>';
+            return;
+          }
+          const delta = 0.012;
+          const bbox = [coordinates.longitude - delta, coordinates.latitude - delta, coordinates.longitude + delta, coordinates.latitude + delta].join(",");
+          const mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" + encodeURIComponent(bbox) + "&layer=mapnik&marker=" + encodeURIComponent(coordinates.latitude + "," + coordinates.longitude);
+          locationMapPreview.innerHTML = '<iframe title="Vista previa de la ubicación" loading="lazy" src="' + mapUrl + '"></iframe>';
+        };
+        const loadLocationValues = (property) => {
+          const enabled = property.locationEnabled === true;
+          document.querySelector('input[name="locationEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
+          locationNameInput.value = property.locationName || "";
+          locationAddressInput.value = property.locationAddress || "";
+          latitudeInput.value = property.latitude || "";
+          longitudeInput.value = property.longitude || "";
+          renderLocation();
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -1050,6 +1131,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadFeaturedData({ ...originalProperty, ...saved });
             loadGalleryValues({ ...originalProperty, ...saved });
             loadFeatures({ ...originalProperty, ...saved });
+            loadLocationValues({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -1060,6 +1142,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadFeaturedData({ featuredData: [] });
             loadGalleryValues({ galleryEnabled: true, galleryItems: detectedGalleryItems() });
             loadFeatures({ features: [] });
+            loadLocationValues({ locationEnabled: false });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1112,6 +1195,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               loadFeaturedData(draft);
               loadGalleryValues(draft);
               loadFeatures(draft);
+              loadLocationValues(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -1135,7 +1219,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#gallery-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La galería quedó guardada como borrador."); });
         document.querySelector("#features-back").addEventListener("click", () => { saveDraft(); setStep(5); });
         document.querySelector("#features-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las características quedaron guardadas como borrador."); });
-        document.querySelector("#back-to-features").addEventListener("click", () => setStep(6));
+        document.querySelector("#location-back").addEventListener("click", () => { saveDraft(); setStep(6); });
+        document.querySelector("#location-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La ubicación quedó guardada como borrador."); });
+        document.querySelector("#back-to-location").addEventListener("click", () => setStep(7));
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
@@ -1204,6 +1290,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           else if (number === 5) { saveDraft(); setStep(5); }
           else if (number === 6) { saveDraft(); setStep(6); }
           else if (number === 7) { saveDraft(); setStep(7); }
+          else if (number === 8) { saveDraft(); setStep(8); }
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
@@ -1327,6 +1414,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         featuresForm.addEventListener("submit", (event) => {
           event.preventDefault(); saveDraft(); setStep(7); window.scrollTo({ top: 0, behavior: "smooth" });
         });
+        locationForm.addEventListener("submit", (event) => {
+          event.preventDefault(); saveDraft(); setStep(8); window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        document.querySelectorAll('input[name="locationEnabled"]').forEach((input) => input.addEventListener("change", () => { renderLocation(); scheduleSave(); }));
+        [locationNameInput, locationAddressInput, latitudeInput, longitudeInput].forEach((input) => input.addEventListener("input", () => { renderLocation(); scheduleSave(); }));
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
         document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
         galleryDropzone.addEventListener("click", () => galleryInput.click());
