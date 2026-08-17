@@ -286,3 +286,20 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
 .gallery-actions button.selected{border-color:var(--olive);background:var(--green-soft)}
 .gallery-actions [data-remove]{border-color:#e2c6c3;color:var(--danger)}
 @media(max-width:760px){.gallery-editor-card{grid-template-columns:1fr}.gallery-thumb,.gallery-thumb img{height:210px}.gallery-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery-actions button:first-child{grid-column:1/-1}.gallery-dropzone{min-height:210px}}
+
+/* Paso 6 — Características */
+.feature-category-group{margin-top:38px;padding:28px;border:1px solid var(--line);border-radius:12px;background:#fafbf8}
+.feature-group-heading{padding-bottom:18px;border-bottom:1px solid var(--line)}
+.feature-group-heading h3{margin:0;color:var(--green);font-size:1.15rem}
+.feature-group-heading p{margin:8px 0 0;color:var(--muted);font-size:.8rem;line-height:1.6}
+.feature-list{display:grid;gap:16px;margin-top:18px}
+.feature-empty{margin:0;padding:20px;border:1px dashed #b6bdb0;border-radius:8px;color:var(--muted);background:#fff;font-size:.82rem;text-align:center}
+.feature-card{padding:20px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 5px 18px rgba(32,37,29,.05)}
+.feature-card.dragging{opacity:.55;border-color:var(--olive);box-shadow:0 14px 30px rgba(32,37,29,.14)}
+.feature-card-header{display:flex;align-items:center;gap:12px;padding-bottom:17px;border-bottom:1px solid var(--line)}
+.feature-card-header>strong{color:var(--green);font-size:.82rem}
+.feature-card-header .drag-handle{font-size:1.15rem}
+.feature-fields{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.15fr);gap:24px}
+.feature-category-field{margin:23px 0 0;padding:0;border:0}
+.feature-category-field legend{margin-bottom:10px;color:var(--green);font-size:.75rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+@media(max-width:760px){.feature-category-group{padding:18px}.feature-fields{grid-template-columns:1fr}.feature-card-header{align-items:flex-start;flex-wrap:wrap}.feature-card-header .order-actions{margin-left:auto}.feature-card-header .remove-data{width:100%}.feature-category-field .choice-grid{grid-template-columns:1fr}.feature-category-field .choice-card span{padding:12px;text-align:center}}
