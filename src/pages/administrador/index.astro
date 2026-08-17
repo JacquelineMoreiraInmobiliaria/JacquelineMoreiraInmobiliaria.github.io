@@ -347,10 +347,17 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               <button class="button button-primary" type="submit">Siguiente</button>
             </div>
           </form>
+          <form id="features-form" novalidate hidden>
+            <div class="form-heading"><p class="eyebrow">Características</p><h2>Destacá lo mejor de la propiedad</h2><p>Agregá las características más importantes de la propiedad. Podés incluir tantas como necesites.</p></div>
+            <div class="data-toolbar"><div><h3>Características de la propiedad</h3><p>El orden se conserva dentro de cada categoría. En la presentación, primero aparecerán las estructurales y de confort, y luego las del exterior y entorno.</p></div><button id="add-feature" class="button button-secondary" type="button">+ Agregar característica</button></div>
+            <section class="feature-category-group" aria-labelledby="structural-title"><div class="feature-group-heading"><h3 id="structural-title">Estructural / confort</h3><p>Materiales, ambientes y comodidades de la vivienda.</p></div><div id="structural-features" class="feature-list"></div></section>
+            <section class="feature-category-group" aria-labelledby="exterior-title"><div class="feature-group-heading"><h3 id="exterior-title">Exterior / entorno</h3><p>Vistas, terreno, accesos y espacios exteriores.</p></div><div id="exterior-features" class="feature-list"></div></section>
+            <div class="form-actions"><button id="features-back" class="button button-quiet" type="button">Atrás</button><button id="features-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
+          </form>
           <section id="future-step" class="future-step" hidden>
-            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Características</h2>
+            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Ubicación</h2>
             <p>Este paso se desarrollará en una próxima etapa.</p>
-            <div class="form-actions"><button id="back-to-gallery" class="button button-secondary" type="button">Volver a Galería</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
+            <div class="form-actions"><button id="back-to-features" class="button button-secondary" type="button">Volver a Características</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
           </section>
         </div>
       </section>
@@ -369,7 +376,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const propertyForm = document.querySelector("#property-form");
         const dataForm = document.querySelector("#data-form");
         const galleryForm = document.querySelector("#gallery-form");
+        const featuresForm = document.querySelector("#features-form");
         const futureStep = document.querySelector("#future-step");
+        const structuralFeatures = document.querySelector("#structural-features");
+        const exteriorFeatures = document.querySelector("#exterior-features");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -431,6 +441,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let galleryItems = [];
         let selectedFutureCoverId = null;
         let draggedGalleryItem = null;
+        let featureItems = [];
+        let draggedFeatureItem = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -474,7 +486,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryItems: [
             "hero.jpg", "atardecer.jpg", "piscina.jpg", "campo.jpg", "living.jpg", "cocina.jpg", "dormitorio-1.jpg", "living-4.jpg"
           ].map((name, index) => ({ id: "original-" + (index + 1), name, originalName: name, source: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + name, status: "uploaded", external: true, description: "" })),
-          futureCoverId: null
+          futureCoverId: null,
+          features: [
+            "Paredes dobles", "Aberturas de aluminio con DVH", "4 dormitorios", "3 baños", "Living-comedor con estufa a leña", "Barbacoa integrada", "Pisos de porcelanato", "Losa radiante eléctrica independiente"
+          ].map((label, index) => ({ id: "structural-" + (index + 1), label, category: "structural" })).concat([
+            "Vista panorámica de 180° al mar", "Piscina climatizada con jacuzzi", "Viñedo de 4 años", "Tajamar", "Dos accesos independientes", "Cochera"
+          ].map((label, index) => ({ id: "exterior-" + (index + 1), label, category: "exterior" })))
         };
 
         const slugify = (value) => value
@@ -510,6 +527,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryEnabled: document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no",
           galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
+          features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
           sectionName: sectionNameInput.value.trim(),
           propertyHeadline: propertyHeadlineInput.value.trim(),
           paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
@@ -579,7 +597,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           propertyForm.hidden = step !== 3;
           dataForm.hidden = step !== 4;
           galleryForm.hidden = step !== 5;
-          futureStep.hidden = step < 6;
+          featuresForm.hidden = step !== 6;
+          futureStep.hidden = step < 7;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -908,6 +927,76 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           renderGallery();
         };
 
+
+        const categoryTitle = (category) => category === "exterior" ? "Exterior / entorno" : "Estructural / confort";
+        const featureContainer = (category) => category === "exterior" ? exteriorFeatures : structuralFeatures;
+        const featureGroupItems = (category) => featureItems.filter((item) => item.category === category);
+        const moveFeature = (item, direction) => {
+          const group = featureGroupItems(item.category);
+          const index = group.indexOf(item);
+          const target = group[index + direction];
+          if (!target) return;
+          const sourceIndex = featureItems.indexOf(item);
+          const targetIndex = featureItems.indexOf(target);
+          featureItems[sourceIndex] = target;
+          featureItems[targetIndex] = item;
+          renderFeatures(); scheduleSave();
+        };
+        const removeFeature = (item) => {
+          if (!window.confirm("¿Eliminar esta característica?")) return;
+          featureItems = featureItems.filter((entry) => entry !== item);
+          renderFeatures(); scheduleSave();
+        };
+        const buildFeatureCard = (item, index, count) => {
+          const card = document.createElement("article");
+          card.className = "feature-card";
+          card.draggable = true;
+          card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Característica ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="feature-fields"><fieldset class="feature-category-field"><legend>Categoría</legend><div class="choice-grid compact-choices"><label class="choice-card"><input type="radio" value="structural" /><span>Estructural / confort</span></label><label class="choice-card"><input type="radio" value="exterior" /><span>Exterior / entorno</span></label></div></fieldset><div class="field compact-field"><label>Característica</label><p class="field-help">Escribí una característica que quieras destacar en la presentación.</p><input type="text" placeholder="Escribir característica" /><p class="example">Ejemplo: Aberturas de aluminio con DVH</p></div></div>';
+          const radios = card.querySelectorAll('input[type="radio"]');
+          radios.forEach((radio) => { radio.name = "feature-category-" + item.id; radio.checked = radio.value === item.category; radio.addEventListener("change", () => { item.category = radio.value; renderFeatures(); scheduleSave(); }); });
+          const input = card.querySelector('input[type="text"]');
+          input.value = item.label || "";
+          input.addEventListener("input", () => { item.label = input.value; scheduleSave(); });
+          card.querySelector("[data-up]").disabled = index === 0;
+          card.querySelector("[data-down]").disabled = index === count - 1;
+          card.querySelector("[data-up]").addEventListener("click", () => moveFeature(item, -1));
+          card.querySelector("[data-down]").addEventListener("click", () => moveFeature(item, 1));
+          card.querySelector("[data-remove]").addEventListener("click", () => removeFeature(item));
+          card.addEventListener("dragstart", () => { draggedFeatureItem = item; card.classList.add("dragging"); });
+          card.addEventListener("dragend", () => { draggedFeatureItem = null; card.classList.remove("dragging"); scheduleSave(); });
+          card.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            if (!draggedFeatureItem || draggedFeatureItem === item || draggedFeatureItem.category !== item.category) return;
+            const from = featureItems.indexOf(draggedFeatureItem);
+            const to = featureItems.indexOf(item);
+            featureItems.splice(from, 1); featureItems.splice(to, 0, draggedFeatureItem);
+            renderFeatures();
+          });
+          return card;
+        };
+        const renderFeatureGroup = (category) => {
+          const container = featureContainer(category);
+          const items = featureGroupItems(category);
+          container.replaceChildren(...items.map((item, index) => buildFeatureCard(item, index, items.length)));
+          if (!items.length) {
+            const empty = document.createElement("p");
+            empty.className = "feature-empty";
+            empty.textContent = "Todavía no hay características en esta categoría.";
+            container.appendChild(empty);
+          }
+        };
+        const renderFeatures = () => { renderFeatureGroup("structural"); renderFeatureGroup("exterior"); };
+        const addFeature = (category = "structural", label = "") => {
+          const item = { id: "feature-" + Date.now() + "-" + Math.random().toString(16).slice(2), label, category };
+          featureItems.push(item); renderFeatures(); scheduleSave();
+          window.setTimeout(() => featureContainer(category).querySelector('input[type="text"]')?.focus(), 0);
+        };
+        const loadFeatures = (property) => {
+          const saved = Array.isArray(property.features) ? property.features : [];
+          featureItems = saved.map((item, index) => ({ id: item.id || "feature-loaded-" + index, label: item.label || "", category: item.category === "exterior" ? "exterior" : "structural" }));
+          renderFeatures();
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -960,6 +1049,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadPropertyValues({ ...originalProperty, ...saved });
             loadFeaturedData({ ...originalProperty, ...saved });
             loadGalleryValues({ ...originalProperty, ...saved });
+            loadFeatures({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -969,6 +1059,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadPropertyValues({ sectionName: "La propiedad", propertyHeadline: "", paragraphs: [""] });
             loadFeaturedData({ featuredData: [] });
             loadGalleryValues({ galleryEnabled: true, galleryItems: detectedGalleryItems() });
+            loadFeatures({ features: [] });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1020,6 +1111,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               loadPropertyValues(draft);
               loadFeaturedData(draft);
               loadGalleryValues(draft);
+              loadFeatures(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -1041,12 +1133,15 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
         document.querySelector("#gallery-back").addEventListener("click", () => { saveDraft(); setStep(4); });
         document.querySelector("#gallery-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La galería quedó guardada como borrador."); });
-        document.querySelector("#back-to-gallery").addEventListener("click", () => setStep(5));
+        document.querySelector("#features-back").addEventListener("click", () => { saveDraft(); setStep(5); });
+        document.querySelector("#features-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las características quedaron guardadas como borrador."); });
+        document.querySelector("#back-to-features").addEventListener("click", () => setStep(6));
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
           scheduleSave();
         });
+        document.querySelector("#add-feature").addEventListener("click", () => addFeature());
         document.querySelector("#add-paragraph").addEventListener("click", () => {
           const item = addParagraph();
           item.querySelector("textarea").focus();
@@ -1106,10 +1201,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               setStep(4);
             }
           }
-          else if (number === 5) {
-            saveDraft();
-            setStep(5);
-          }
+          else if (number === 5) { saveDraft(); setStep(5); }
+          else if (number === 6) { saveDraft(); setStep(6); }
+          else if (number === 7) { saveDraft(); setStep(7); }
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
@@ -1229,6 +1323,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         });
         galleryForm.addEventListener("submit", (event) => {
           event.preventDefault(); saveDraft(); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        featuresForm.addEventListener("submit", (event) => {
+          event.preventDefault(); saveDraft(); setStep(7); window.scrollTo({ top: 0, behavior: "smooth" });
         });
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
         document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
