@@ -242,13 +242,52 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
           </form>
 
+          <form id="property-form" novalidate hidden>
+            <div class="form-heading">
+              <p class="eyebrow">La propiedad</p>
+              <h2>Contá qué hace especial a esta propiedad</h2>
+              <p>Podés usar un título y todos los párrafos que necesites. Todos los campos son opcionales.</p>
+            </div>
+
+            <div class="field">
+              <label for="section-name">Nombre de la sección <small>Opcional</small></label>
+              <p class="field-help">Es el nombre pequeño que aparece encima del título principal de esta sección.</p>
+              <input id="section-name" name="sectionName" type="text" autocomplete="off" placeholder="Escribir nombre de la sección" aria-describedby="section-name-example" />
+              <p id="section-name-example" class="example">Ejemplo: La propiedad</p>
+            </div>
+
+            <div class="field">
+              <label for="property-headline">Título destacado <small>Opcional</small></label>
+              <p class="field-help">Es el título grande que aparecerá dentro de la sección principal de la propiedad.</p>
+              <input id="property-headline" name="propertyHeadline" type="text" autocomplete="off" placeholder="Escribir título destacado" aria-describedby="headline-example" />
+              <p id="headline-example" class="example">Ejemplo: Las vistas como protagonistas.</p>
+            </div>
+
+            <section class="paragraphs-section" aria-labelledby="paragraphs-title">
+              <div class="paragraphs-heading">
+                <div>
+                  <h3 id="paragraphs-title">Texto descriptivo</h3>
+                  <p>Agregá uno o más párrafos. Podés dejar un párrafo vacío o eliminarlo.</p>
+                </div>
+                <button id="add-paragraph" class="button button-secondary" type="button">+ Agregar otro párrafo</button>
+              </div>
+              <div id="paragraphs-list"></div>
+            </section>
+
+            <div class="form-actions">
+              <button id="property-back" class="button button-quiet" type="button">Atrás</button>
+              <button id="property-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
+              <button class="button button-primary" type="submit">Siguiente</button>
+            </div>
+          </form>
+
           <section id="future-step" class="future-step" hidden>
             <div class="future-icon" aria-hidden="true">✓</div>
-            <p class="eyebrow">Portada guardada</p>
-            <h2>Los pasos 1 y 2 están completos</h2>
-            <p>La sección <strong>Propiedad</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
+            <p class="eyebrow">Descripción guardada</p>
+            <h2>Los pasos 1, 2 y 3 están completos</h2>
+            <p>La sección <strong>Datos</strong> aparece en el recorrido, pero se desarrollará en la próxima etapa.</p>
             <div class="form-actions">
-              <button id="back-to-cover" class="button button-secondary" type="button">Volver a Portada</button>
+              <button id="back-to-property" class="button button-secondary" type="button">Volver a La propiedad</button>
               <button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button>
             </div>
           </section>
@@ -266,6 +305,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const editorScreen = document.querySelector("#editor");
         const form = document.querySelector("#basic-form");
         const coverForm = document.querySelector("#cover-form");
+        const propertyForm = document.querySelector("#property-form");
         const futureStep = document.querySelector("#future-step");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
@@ -297,6 +337,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const missingFiles = document.querySelector("#missing-files");
         const missingFilesList = document.querySelector("#missing-files-list");
         const externalMediaNote = document.querySelector("#external-media-note");
+        const sectionNameInput = document.querySelector("#section-name");
+        const propertyHeadlineInput = document.querySelector("#property-headline");
+        const paragraphsList = document.querySelector("#paragraphs-list");
         const toast = document.querySelector("#toast");
         const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
         let editingId = null;
@@ -319,7 +362,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           coverPhotoSource: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg",
           videoEnabled: true,
           videoName: "video-atardecer.mp4",
-          videoSource: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/video-atardecer.mp4"
+          videoSource: "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/video-atardecer.mp4",
+          sectionName: "La propiedad",
+          propertyHeadline: "Las vistas como protagonistas.",
+          paragraphs: [
+            "Ubicada en la zona alta de Piriápolis, dentro de un entorno de chacras de categoría y residencias de gran porte, esta propiedad combina privacidad, naturaleza y una residencia de altísimo nivel.",
+            "A solo 2 kilómetros de la playa y de todos los servicios, ofrece una vista franca de 180° al mar y atardeceres únicos durante todo el año."
+          ]
         };
 
         const slugify = (value) => value
@@ -353,6 +402,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           videoName: selectedVideo?.name || videoName.textContent || "",
           videoSource: editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : "",
           galleryEnabled: editingId === originalProperty.id,
+          sectionName: sectionNameInput.value.trim(),
+          propertyHeadline: propertyHeadlineInput.value.trim(),
+          paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
           updatedAt: new Date().toISOString()
         });
 
@@ -400,15 +452,18 @@ const mediaInventory = Object.fromEntries(await Promise.all(
 
         const setStep = (step) => {
           document.querySelectorAll(".step").forEach((item) => {
-            const active = Number(item.dataset.step) === step;
+            const itemStep = Number(item.dataset.step);
+            const active = itemStep === step;
             item.classList.toggle("active", active);
+            item.classList.toggle("completed", itemStep < step && itemStep <= 3);
             if (active) item.setAttribute("aria-current", "step");
             else item.removeAttribute("aria-current");
           });
           stepCount.textContent = "Paso " + step + " de 9";
           form.hidden = step !== 1;
           coverForm.hidden = step !== 2;
-          futureStep.hidden = step !== 3;
+          propertyForm.hidden = step !== 3;
+          futureStep.hidden = step !== 4;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -498,6 +553,50 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           scheduleSave();
         };
 
+        const renumberParagraphs = () => {
+          paragraphsList.querySelectorAll(".paragraph-item").forEach((item, index) => {
+            item.querySelector("label").textContent = `Párrafo ${index + 1}`;
+            item.querySelector("textarea").id = `property-paragraph-${index + 1}`;
+            item.querySelector("label").htmlFor = `property-paragraph-${index + 1}`;
+            item.querySelector("[data-remove-paragraph]").setAttribute("aria-label", `Eliminar párrafo ${index + 1}`);
+          });
+        };
+
+        const addParagraph = (value = "") => {
+          const item = document.createElement("div");
+          item.className = "paragraph-item";
+          item.innerHTML = `
+            <div class="paragraph-label">
+              <label></label>
+              <button class="remove-paragraph" type="button" data-remove-paragraph>Eliminar</button>
+            </div>
+            <textarea rows="6" placeholder="Escribir párrafo"></textarea>
+            <p class="example">Ejemplo: Ubicada en la zona alta de Piriápolis, dentro de un entorno de chacras de categoría y residencias de gran porte, esta propiedad combina privacidad, naturaleza y una residencia de altísimo nivel.</p>`;
+          item.querySelector("textarea").value = value;
+          item.querySelector("textarea").addEventListener("input", scheduleSave);
+          item.querySelector("[data-remove-paragraph]").addEventListener("click", () => {
+            if (paragraphsList.children.length === 1) {
+              item.querySelector("textarea").value = "";
+              item.querySelector("textarea").focus();
+            } else {
+              item.remove();
+              renumberParagraphs();
+            }
+            scheduleSave();
+          });
+          paragraphsList.appendChild(item);
+          renumberParagraphs();
+          return item;
+        };
+
+        const loadPropertyValues = (property) => {
+          sectionNameInput.value = property.sectionName ?? "La propiedad";
+          propertyHeadlineInput.value = property.propertyHeadline || "";
+          paragraphsList.replaceChildren();
+          const paragraphs = Array.isArray(property.paragraphs) && property.paragraphs.length ? property.paragraphs : [""];
+          paragraphs.forEach((paragraph) => addParagraph(paragraph));
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -547,12 +646,14 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             priceInput.value = saved.price || "";
             subtitleInput.value = saved.subtitle || "";
             loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
+            loadPropertyValues({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
             intro.textContent = "Completá la información básica para empezar.";
             form.reset();
             loadCoverValues({ videoEnabled: false });
+            loadPropertyValues({ sectionName: "La propiedad", propertyHeadline: "", paragraphs: [""] });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -601,6 +702,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               priceInput.value = draft.price || "";
               subtitleInput.value = draft.subtitle || "";
               loadCoverValues(draft, draft.id);
+              loadPropertyValues(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -614,9 +716,17 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#cancel").addEventListener("click", showList);
         document.querySelector("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        document.querySelector("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#future-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
-        document.querySelector("#back-to-cover").addEventListener("click", () => setStep(2));
+        document.querySelector("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
+        document.querySelector("#back-to-property").addEventListener("click", () => setStep(3));
+        document.querySelector("#add-paragraph").addEventListener("click", () => {
+          const item = addParagraph();
+          item.querySelector("textarea").focus();
+          scheduleSave();
+        });
+        [sectionNameInput, propertyHeadlineInput].forEach((input) => input.addEventListener("input", scheduleSave));
 
         document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
@@ -630,6 +740,25 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             } else {
               saveDraft();
               setStep(2);
+            }
+          }
+          else if (number === 3) {
+            if (!nameInput.value.trim()) {
+              nameError.textContent = "Escribí el nombre de la propiedad para continuar.";
+              nameInput.setAttribute("aria-invalid", "true");
+              setStep(1);
+              nameInput.focus();
+            } else if (!photoName.textContent) {
+              setStep(2);
+              photoError.textContent = "Seleccioná una foto principal para continuar.";
+              photoDropzone.focus();
+            } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+              setStep(2);
+              videoError.textContent = "Seleccioná un video MP4 o elegí No.";
+              document.querySelector("#select-video").focus();
+            } else {
+              saveDraft();
+              setStep(3);
             }
           }
           else showToast("Este paso se desarrollará en una próxima etapa.");
@@ -736,6 +865,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           }
           saveDraft();
           setStep(3);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        propertyForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          saveDraft();
+          setStep(4);
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
