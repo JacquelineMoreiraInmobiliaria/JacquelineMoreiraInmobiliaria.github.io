@@ -384,10 +384,27 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
             <div class="form-actions"><button id="location-back" class="button button-quiet" type="button">Atrás</button><button id="location-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
           </form>
+          <form id="distances-form" novalidate hidden>
+            <div class="form-heading"><p class="eyebrow">Distancias</p><h2>Mostrá los puntos de interés</h2><p>Podés agregar todas las distancias o tiempos de viaje que quieras destacar.</p></div>
+            <fieldset class="choice-field">
+              <legend>¿Mostrar distancias en la presentación?</legend>
+              <div class="choice-grid">
+                <label class="choice-card"><input type="radio" name="distancesEnabled" value="yes" /><span>Sí</span></label>
+                <label class="choice-card"><input type="radio" name="distancesEnabled" value="no" /><span>No</span></label>
+              </div>
+              <p class="field-help">Si elegís No, la sección de distancias no aparecerá en la presentación.</p>
+              <p id="distances-hidden-note" class="temporary-help" hidden>Las distancias se conservan en este borrador, pero no aparecerán en la presentación.</p>
+            </fieldset>
+            <div id="distances-controls">
+              <div class="data-toolbar"><div><h3>Distancias de la propiedad</h3><p>Arrastrá las filas o usá Subir y Bajar. El orden que veas aquí será el de la futura presentación.</p></div><button id="add-distance" class="button button-secondary" type="button">+ Agregar distancia</button></div>
+              <div id="distances-list" class="distance-editor-list"></div>
+            </div>
+            <div class="form-actions"><button id="distances-back" class="button button-quiet" type="button">Atrás</button><button id="distances-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
+          </form>
           <section id="future-step" class="future-step" hidden>
-            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Distancias</h2>
+            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Revisión</h2>
             <p>Este paso se desarrollará en una próxima etapa.</p>
-            <div class="form-actions"><button id="back-to-location" class="button button-secondary" type="button">Volver a Ubicación</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
+            <div class="form-actions"><button id="back-to-distances" class="button button-secondary" type="button">Volver a Distancias</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
           </section>
         </div>
       </section>
@@ -408,6 +425,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const galleryForm = document.querySelector("#gallery-form");
         const featuresForm = document.querySelector("#features-form");
         const locationForm = document.querySelector("#location-form");
+        const distancesForm = document.querySelector("#distances-form");
         const futureStep = document.querySelector("#future-step");
         const structuralFeatures = document.querySelector("#structural-features");
         const exteriorFeatures = document.querySelector("#exterior-features");
@@ -419,6 +437,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const longitudeInput = document.querySelector("#location-longitude");
         const coordinatesWarning = document.querySelector("#coordinates-warning");
         const locationMapPreview = document.querySelector("#location-map-preview");
+        const distancesControls = document.querySelector("#distances-controls");
+        const distancesHiddenNote = document.querySelector("#distances-hidden-note");
+        const distancesList = document.querySelector("#distances-list");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -482,6 +503,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let draggedGalleryItem = null;
         let featureItems = [];
         let draggedFeatureItem = null;
+        let distanceItems = [];
+        let draggedDistanceItem = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -535,7 +558,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           locationName: "Piriápolis, Playa Hermosa",
           locationAddress: "Calle 29 y Vecinal a la Bodega, en la zona alta de Piriápolis.",
           latitude: "-34.83216094970703",
-          longitude: "-55.2911491394043"
+          longitude: "-55.2911491394043",
+          distancesEnabled: false,
+          distances: []
         };
 
         const slugify = (value) => value
@@ -577,6 +602,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           locationAddress: locationAddressInput.value.trim(),
           latitude: latitudeInput.value.trim(),
           longitude: longitudeInput.value.trim(),
+          distancesEnabled: document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes",
+          distances: distanceItems.map((item, index) => ({ id: item.id, destination: item.destination || "", distance: item.distance || "", order: index + 1 })),
           sectionName: sectionNameInput.value.trim(),
           propertyHeadline: propertyHeadlineInput.value.trim(),
           paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
@@ -648,7 +675,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryForm.hidden = step !== 5;
           featuresForm.hidden = step !== 6;
           locationForm.hidden = step !== 7;
-          futureStep.hidden = step < 8;
+          distancesForm.hidden = step !== 8;
+          futureStep.hidden = step < 9;
         };
 
         const setVideoEnabled = (enabled) => {
@@ -1078,6 +1106,75 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           renderLocation();
         };
 
+        const moveDistance = (item, direction) => {
+          const index = distanceItems.indexOf(item);
+          const target = distanceItems[index + direction];
+          if (!target) return;
+          distanceItems[index] = target;
+          distanceItems[index + direction] = item;
+          renderDistances(); scheduleSave();
+        };
+        const removeDistance = (item) => {
+          if (!window.confirm("¿Eliminar esta distancia?")) return;
+          distanceItems = distanceItems.filter((entry) => entry !== item);
+          renderDistances(); scheduleSave();
+        };
+        const buildDistanceCard = (item, index) => {
+          const card = document.createElement("article");
+          card.className = "distance-card";
+          card.draggable = true;
+          card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Distancia ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="distance-fields"><div class="field compact-field"><label>Destino</label><p class="field-help">Indicá el lugar o punto de referencia.</p><input type="text" data-destination placeholder="Destino" /><p class="example">Ejemplo: Centro de Piriápolis</p></div><div class="field compact-field"><label>Distancia</label><p class="field-help">Escribí la distancia o el tiempo de viaje como querés que aparezca.</p><input type="text" data-distance placeholder="Distancia" /><p class="example">Ejemplo: 5 km</p></div></div>';
+          const destination = card.querySelector("[data-destination]");
+          const distance = card.querySelector("[data-distance]");
+          destination.value = item.destination || "";
+          distance.value = item.distance || "";
+          destination.addEventListener("input", () => { item.destination = destination.value; scheduleSave(); });
+          distance.addEventListener("input", () => { item.distance = distance.value; scheduleSave(); });
+          card.querySelector("[data-up]").disabled = index === 0;
+          card.querySelector("[data-down]").disabled = index === distanceItems.length - 1;
+          card.querySelector("[data-up]").addEventListener("click", () => moveDistance(item, -1));
+          card.querySelector("[data-down]").addEventListener("click", () => moveDistance(item, 1));
+          card.querySelector("[data-remove]").addEventListener("click", () => removeDistance(item));
+          card.addEventListener("dragstart", () => { draggedDistanceItem = item; card.classList.add("dragging"); });
+          card.addEventListener("dragend", () => { draggedDistanceItem = null; card.classList.remove("dragging"); scheduleSave(); });
+          card.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            if (!draggedDistanceItem || draggedDistanceItem === item) return;
+            const from = distanceItems.indexOf(draggedDistanceItem);
+            const to = distanceItems.indexOf(item);
+            distanceItems.splice(from, 1); distanceItems.splice(to, 0, draggedDistanceItem);
+            renderDistances();
+          });
+          return card;
+        };
+        const renderDistances = () => {
+          const enabled = document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes";
+          distancesControls.hidden = !enabled;
+          distancesHiddenNote.hidden = enabled;
+          if (!enabled) return;
+          distancesList.replaceChildren();
+          if (!distanceItems.length) {
+            const empty = document.createElement("p");
+            empty.className = "feature-empty";
+            empty.textContent = "Todavía no agregaste distancias. Podés hacerlo cuando quieras.";
+            distancesList.appendChild(empty);
+            return;
+          }
+          distanceItems.forEach((item, index) => distancesList.appendChild(buildDistanceCard(item, index)));
+        };
+        const addDistance = () => {
+          const item = { id: "distance-" + Date.now() + "-" + Math.random().toString(16).slice(2), destination: "", distance: "" };
+          distanceItems.push(item); renderDistances(); scheduleSave();
+          window.setTimeout(() => distancesList.querySelector("[data-destination]")?.focus(), 0);
+        };
+        const loadDistances = (property) => {
+          const saved = Array.isArray(property.distances) ? property.distances : [];
+          distanceItems = saved.map((item, index) => ({ id: item.id || "distance-loaded-" + index, destination: item.destination || "", distance: item.distance || "" }));
+          const enabled = property.distancesEnabled === true;
+          document.querySelector('input[name="distancesEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
+          renderDistances();
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -1132,6 +1229,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadGalleryValues({ ...originalProperty, ...saved });
             loadFeatures({ ...originalProperty, ...saved });
             loadLocationValues({ ...originalProperty, ...saved });
+            loadDistances({ ...originalProperty, ...saved });
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -1143,6 +1241,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             loadGalleryValues({ galleryEnabled: true, galleryItems: detectedGalleryItems() });
             loadFeatures({ features: [] });
             loadLocationValues({ locationEnabled: false });
+            loadDistances({ distancesEnabled: false, distances: [] });
           }
 
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1196,6 +1295,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               loadGalleryValues(draft);
               loadFeatures(draft);
               loadLocationValues(draft);
+              loadDistances(draft);
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
@@ -1221,7 +1321,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#features-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las características quedaron guardadas como borrador."); });
         document.querySelector("#location-back").addEventListener("click", () => { saveDraft(); setStep(6); });
         document.querySelector("#location-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La ubicación quedó guardada como borrador."); });
-        document.querySelector("#back-to-location").addEventListener("click", () => setStep(7));
+        document.querySelector("#distances-back").addEventListener("click", () => { saveDraft(); setStep(7); });
+        document.querySelector("#distances-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las distancias quedaron guardadas como borrador."); });
+        document.querySelector("#back-to-distances").addEventListener("click", () => setStep(8));
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
@@ -1291,6 +1393,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           else if (number === 6) { saveDraft(); setStep(6); }
           else if (number === 7) { saveDraft(); setStep(7); }
           else if (number === 8) { saveDraft(); setStep(8); }
+          else if (number === 9) { saveDraft(); setStep(9); }
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
@@ -1417,6 +1520,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         locationForm.addEventListener("submit", (event) => {
           event.preventDefault(); saveDraft(); setStep(8); window.scrollTo({ top: 0, behavior: "smooth" });
         });
+        distancesForm.addEventListener("submit", (event) => {
+          event.preventDefault(); saveDraft(); setStep(9); window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        document.querySelector("#add-distance").addEventListener("click", addDistance);
+        document.querySelectorAll('input[name="distancesEnabled"]').forEach((input) => input.addEventListener("change", () => { renderDistances(); scheduleSave(); }));
         document.querySelectorAll('input[name="locationEnabled"]').forEach((input) => input.addEventListener("change", () => { renderLocation(); scheduleSave(); }));
         [locationNameInput, locationAddressInput, latitudeInput, longitudeInput].forEach((input) => input.addEventListener("input", () => { renderLocation(); scheduleSave(); }));
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
