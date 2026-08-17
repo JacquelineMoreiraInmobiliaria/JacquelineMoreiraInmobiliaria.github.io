@@ -1,5 +1,25 @@
 ---
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+
 const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
+const mediaRoot = join(process.cwd(), "public", "media");
+const mediaDirectories = await readdir(mediaRoot, { withFileTypes: true }).catch(() => []);
+const mediaInventory = Object.fromEntries(await Promise.all(
+  mediaDirectories
+    .filter((entry) => entry.isDirectory())
+    .map(async (entry) => {
+      const files = await readdir(join(mediaRoot, entry.name)).catch(() => []);
+      const gallery = files
+        .filter((name) => /^foto-(\d+)\.jpg$/i.test(name))
+        .sort((a, b) => Number(a.match(/\d+/)?.[0]) - Number(b.match(/\d+/)?.[0]));
+      return [entry.name, {
+        cover: files.some((name) => name.toLowerCase() === "portada.jpg"),
+        gallery,
+        video: files.some((name) => name.toLowerCase() === "video.mp4")
+      }];
+    })
+));
 ---
 
 <!doctype html>
@@ -117,6 +137,32 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
               <p>Definí el texto y el contenido visual que recibirán a quien visite la presentación.</p>
             </div>
 
+            <section class="repository-media" aria-labelledby="property-files-title">
+              <div class="repository-heading">
+                <div>
+                  <p class="eyebrow">Archivos de esta propiedad</p>
+                  <h3 id="property-files-title">Carpeta esperada</h3>
+                </div>
+                <code id="expected-folder">public/media/nueva-propiedad/</code>
+              </div>
+              <p class="field-help">Subí las fotos y el video de esta propiedad dentro de esta carpeta en GitHub.</p>
+
+              <div class="media-status" aria-labelledby="media-status-title">
+                <h3 id="media-status-title">Estado de multimedia</h3>
+                <dl>
+                  <div><dt>Foto principal</dt><dd id="status-photo" class="status-warning">⚠ No subida</dd></div>
+                  <div><dt>Galería</dt><dd id="status-gallery">0 fotos detectadas</dd></div>
+                  <div><dt>Video</dt><dd id="status-video">No requerido</dd></div>
+                  <div class="general-status"><dt>Estado general</dt><dd id="status-general" class="status-warning">Faltan archivos</dd></div>
+                </dl>
+                <div id="missing-files" class="missing-files">
+                  <strong>Falta:</strong>
+                  <ul id="missing-files-list"><li>portada.jpg</li></ul>
+                </div>
+                <p id="external-media-note" class="external-note" hidden>Esta propiedad utiliza temporalmente los archivos disponibles en su presentación actual.</p>
+              </div>
+            </section>
+
             <div class="field">
               <label for="cover-description">Descripción corta de portada <small>Opcional</small></label>
               <p class="field-help">Es el texto breve que aparecerá sobre la imagen o video principal.</p>
@@ -148,6 +194,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
                 </div>
               </div>
               <p id="photo-help" class="example">Podés elegir una imagen directamente desde tu computadora o teléfono.</p>
+              <p class="temporary-help">Esta selección sirve para preparar la propiedad. La publicación definitiva del archivo se hará cuando esté cargado en la carpeta indicada.</p>
               <p id="photo-error" class="field-error" aria-live="polite"></p>
             </fieldset>
 
@@ -185,6 +232,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
                 </div>
               </div>
               <p id="video-error" class="field-error" aria-live="polite"></p>
+              <p class="temporary-help">Esta selección es temporal y no significa que el video ya esté subido.</p>
             </div>
 
             <div class="form-actions">
@@ -209,6 +257,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
 
     <script is:inline>
       (() => {
@@ -240,7 +289,16 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
         const videoSelected = document.querySelector("#video-selected");
         const videoName = document.querySelector("#video-name");
         const videoError = document.querySelector("#video-error");
+        const expectedFolder = document.querySelector("#expected-folder");
+        const statusPhoto = document.querySelector("#status-photo");
+        const statusGallery = document.querySelector("#status-gallery");
+        const statusVideo = document.querySelector("#status-video");
+        const statusGeneral = document.querySelector("#status-general");
+        const missingFiles = document.querySelector("#missing-files");
+        const missingFilesList = document.querySelector("#missing-files-list");
+        const externalMediaNote = document.querySelector("#external-media-note");
         const toast = document.querySelector("#toast");
+        const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
         let editingId = null;
         let saveTimer = null;
         let selectedPhoto = null;
@@ -294,6 +352,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
           videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
           videoName: selectedVideo?.name || videoName.textContent || "",
           videoSource: editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : "",
+          galleryEnabled: editingId === originalProperty.id,
           updatedAt: new Date().toISOString()
         });
 
@@ -355,6 +414,48 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
         const setVideoEnabled = (enabled) => {
           document.querySelector(`input[name="videoEnabled"][value="${enabled ? "yes" : "no"}"]`).checked = true;
           videoField.hidden = !enabled;
+          updateMediaStatus();
+        };
+
+        const setStatus = (element, text, complete = false) => {
+          element.textContent = text;
+          element.classList.toggle("status-success", complete);
+          element.classList.toggle("status-warning", !complete);
+        };
+
+        const updateMediaStatus = () => {
+          const slug = slugify(nameInput.value) || "nueva-propiedad";
+          const detected = detectedMedia[slug] || { cover: false, gallery: [], video: false };
+          const usesExternalOriginal = editingId === originalProperty.id;
+          const hasCover = detected.cover || usesExternalOriginal;
+          const galleryCount = Math.max(detected.gallery.length, usesExternalOriginal ? 8 : 0);
+          const hasVideo = detected.video || usesExternalOriginal;
+          const videoRequired = document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes";
+          const galleryRequired = usesExternalOriginal;
+          const missing = [];
+
+          expectedFolder.textContent = `public/media/${slug}/`;
+          setStatus(statusPhoto, hasCover ? "✓ Subida" : "⚠ No subida", hasCover);
+          statusGallery.textContent = `${galleryCount} ${galleryCount === 1 ? "foto detectada" : "fotos detectadas"}`;
+          statusGallery.classList.toggle("status-success", galleryCount > 0);
+          statusGallery.classList.toggle("status-neutral", galleryCount === 0);
+
+          if (!videoRequired) setStatus(statusVideo, "No requerido", true);
+          else setStatus(statusVideo, hasVideo ? "✓ Subido" : "⚠ No subido", hasVideo);
+
+          if (!hasCover) missing.push("portada.jpg");
+          if (videoRequired && !hasVideo) missing.push("video.mp4");
+          if (galleryRequired && galleryCount === 0) missing.push("al menos foto-01.jpg");
+
+          const complete = missing.length === 0;
+          setStatus(statusGeneral, complete ? "✓ Completo" : "⚠ Faltan archivos", complete);
+          missingFiles.hidden = complete;
+          missingFilesList.replaceChildren(...missing.map((name) => {
+            const item = document.createElement("li");
+            item.textContent = name;
+            return item;
+          }));
+          externalMediaNote.hidden = !usesExternalOriginal;
         };
 
         const showPhoto = (source, name) => {
@@ -426,6 +527,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
             videoEmpty.hidden = false;
             videoName.textContent = "";
           }
+          updateMediaStatus();
         };
 
         const openEditor = (mode, property = null) => {
@@ -538,6 +640,7 @@ const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
             nameError.textContent = "";
             nameInput.removeAttribute("aria-invalid");
           }
+          if (input === nameInput) updateMediaStatus();
           scheduleSave();
         }));
 
