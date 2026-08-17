@@ -71,8 +71,24 @@ const mapBounds = showLocation
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
-      <div class="grid">{property.gallery.images.map((image) => <div class="tile"><img src={image.source} alt={image.alt || property.name} /></div>)}</div>
+      <div class="grid">{property.gallery.images.map((image, index) => (
+        <button class="tile" type="button" data-gallery-index={index} aria-label={`Ampliar imagen ${index + 1} de ${property.gallery.images.length}: ${image.alt || property.name}`}>
+          <img src={image.source} alt={image.alt || property.name} loading="lazy" />
+        </button>
+      ))}</div>
     </section>}
+
+    {showGallery && <dialog class="lightbox" aria-label={`Galería ampliada de ${property.name}`}>
+      <div class="lightbox-frame">
+        <button class="lightbox-control lightbox-close" type="button" aria-label="Cerrar imagen ampliada">×</button>
+        <button class="lightbox-control lightbox-previous" type="button" aria-label="Ver imagen anterior">‹</button>
+        <figure>
+          <img class="lightbox-image" src="" alt="" />
+          <figcaption class="lightbox-caption" aria-live="polite"></figcaption>
+        </figure>
+        <button class="lightbox-control lightbox-next" type="button" aria-label="Ver imagen siguiente">›</button>
+      </div>
+    </dialog>}
 
     {features.length > 0 && <section id="caracteristicas" class="features">
       <div class="features-copy"><div class="kicker">Características</div><h2>Confort, diseño y naturaleza.</h2><div class="checks">{features.map((feature) => <div class="check">{feature.label}</div>)}</div></div>
@@ -88,5 +104,49 @@ const mapBounds = showLocation
 
     <section id="contacto" class="contact"><div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
     <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>
+    {showGallery && <script define:vars={{ galleryImages: property.gallery.images, propertyName: property.name }}>
+      const dialog = document.querySelector(".lightbox");
+      const image = dialog?.querySelector(".lightbox-image");
+      const caption = dialog?.querySelector(".lightbox-caption");
+      const closeButton = dialog?.querySelector(".lightbox-close");
+      let currentIndex = 0;
+      let touchStartX = 0;
+
+      const showImage = (index) => {
+        currentIndex = (index + galleryImages.length) % galleryImages.length;
+        const selected = galleryImages[currentIndex];
+        image.src = selected.source;
+        image.alt = selected.alt || propertyName;
+        caption.textContent = `${currentIndex + 1} de ${galleryImages.length} · ${selected.alt || propertyName}`;
+      };
+
+      document.querySelectorAll("[data-gallery-index]").forEach((button) => {
+        button.addEventListener("click", () => {
+          showImage(Number(button.dataset.galleryIndex));
+          dialog.showModal();
+          document.body.classList.add("lightbox-open");
+          closeButton.focus();
+        });
+      });
+
+      closeButton?.addEventListener("click", () => dialog.close());
+      dialog?.querySelector(".lightbox-previous")?.addEventListener("click", () => showImage(currentIndex - 1));
+      dialog?.querySelector(".lightbox-next")?.addEventListener("click", () => showImage(currentIndex + 1));
+      dialog?.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      dialog?.addEventListener("close", () => document.body.classList.remove("lightbox-open"));
+      dialog?.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") showImage(currentIndex - 1);
+        if (event.key === "ArrowRight") showImage(currentIndex + 1);
+      });
+      dialog?.addEventListener("touchstart", (event) => {
+        touchStartX = event.changedTouches[0].clientX;
+      }, { passive: true });
+      dialog?.addEventListener("touchend", (event) => {
+        const distance = event.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(distance) > 50) showImage(currentIndex + (distance < 0 ? 1 : -1));
+      }, { passive: true });
+    </script>}
   </body>
 </html>
