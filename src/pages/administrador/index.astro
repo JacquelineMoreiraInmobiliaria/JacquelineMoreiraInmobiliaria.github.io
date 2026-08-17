@@ -1106,6 +1106,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               setStep(4);
             }
           }
+          else if (number === 5) {
+            saveDraft();
+            setStep(5);
+          }
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
