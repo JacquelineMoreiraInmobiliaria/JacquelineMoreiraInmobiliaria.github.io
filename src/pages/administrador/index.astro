@@ -401,10 +401,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
             <div class="form-actions"><button id="distances-back" class="button button-quiet" type="button">Atrás</button><button id="distances-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
           </form>
-          <section id="future-step" class="future-step" hidden>
-            <div class="future-icon" aria-hidden="true">✓</div><p class="eyebrow">Próximo paso</p><h2>Revisión</h2>
-            <p>Este paso se desarrollará en una próxima etapa.</p>
-            <div class="form-actions"><button id="back-to-distances" class="button button-secondary" type="button">Volver a Distancias</button><button id="future-save-exit" class="button button-primary" type="button">Guardar y salir</button></div>
+          <section id="review-step" class="review-step" hidden>
+            <div class="form-heading"><p class="eyebrow">Paso final</p><h2>Revisión de la propiedad</h2><p>Revisá la información antes de preparar la presentación.</p><p id="review-property-name" class="review-property-name"></p></div>
+            <section id="review-general" class="review-general" aria-live="polite"></section>
+            <section class="review-section" aria-labelledby="review-sections-title"><div class="paragraphs-heading"><div><h3 id="review-sections-title">Resumen por secciones</h3><p>Podés volver directamente a cualquier paso para corregir o completar información.</p></div></div><div id="review-cards" class="review-cards"></div></section>
+            <section id="review-pending" class="review-pending" aria-live="polite"></section>
+            <div class="form-actions review-actions"><button id="review-back" class="button button-quiet" type="button">Atrás</button><button id="review-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button id="prepare-presentation" class="button button-primary review-primary" type="button">Preparar presentación</button></div>
           </section>
         </div>
       </section>
@@ -426,7 +428,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const featuresForm = document.querySelector("#features-form");
         const locationForm = document.querySelector("#location-form");
         const distancesForm = document.querySelector("#distances-form");
-        const futureStep = document.querySelector("#future-step");
+        const reviewStep = document.querySelector("#review-step");
         const structuralFeatures = document.querySelector("#structural-features");
         const exteriorFeatures = document.querySelector("#exterior-features");
         const locationFields = document.querySelector("#location-fields");
@@ -440,6 +442,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const distancesControls = document.querySelector("#distances-controls");
         const distancesHiddenNote = document.querySelector("#distances-hidden-note");
         const distancesList = document.querySelector("#distances-list");
+        const reviewPropertyName = document.querySelector("#review-property-name");
+        const reviewGeneral = document.querySelector("#review-general");
+        const reviewCards = document.querySelector("#review-cards");
+        const reviewPending = document.querySelector("#review-pending");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -676,7 +682,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           featuresForm.hidden = step !== 6;
           locationForm.hidden = step !== 7;
           distancesForm.hidden = step !== 8;
-          futureStep.hidden = step < 9;
+          reviewStep.hidden = step !== 9;
+          if (step === 9) renderReview();
         };
 
         const setVideoEnabled = (enabled) => {
@@ -1175,6 +1182,75 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           renderDistances();
         };
 
+        const escapeReview = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
+        const reviewStatus = (ok, positive = "✓ Completa", pending = "⚠ Requiere atención") => '<span class="review-status ' + (ok ? "is-ok" : "is-pending") + '">' + (ok ? positive : pending) + '</span>';
+        const reviewOptional = (text) => '<span class="review-status is-neutral">○ ' + text + '</span>';
+        const getReviewState = () => {
+          const slug = slugify(nameInput.value) || "nueva-propiedad";
+          const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
+          const externalOriginal = editingId === originalProperty.id;
+          const videoEnabled = document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes";
+          const galleryEnabled = currentGalleryEnabled();
+          const locationEnabled = document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes";
+          const distancesEnabled = document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes";
+          const coverAvailable = (externalOriginal && !photoRemoved) || media.cover;
+          const videoAvailable = (externalOriginal && !videoRemoved) || media.video;
+          const galleryUploaded = galleryItems.filter((item) => item.status === "uploaded").length;
+          const galleryAvailable = externalOriginal ? galleryUploaded > 0 : media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg");
+          const structural = featureItems.filter((item) => item.category === "structural" && item.label.trim()).length;
+          const exterior = featureItems.filter((item) => item.category === "exterior" && item.label.trim()).length;
+          const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
+            label: card.querySelector("[data-field='label']").value.trim(),
+            value: card.querySelector("[data-field='value']").value.trim(),
+            show: card.querySelector("input[type='radio']:checked")?.value === "yes"
+          }));
+          const visibleData = featured.filter((item) => item.show && item.label && item.value).length;
+          const validParagraphs = [...paragraphsList.querySelectorAll("textarea")].filter((item) => item.value.trim()).length;
+          const validDistances = distanceItems.filter((item) => item.destination.trim() && item.distance.trim()).length;
+          const coordinates = validCoordinates();
+          const pending = [];
+          if (!nameInput.value.trim()) pending.push({ text: "Falta el nombre de la propiedad", step: 1 });
+          if (!coverAvailable) pending.push({ text: "Falta portada.jpg", step: 2 });
+          if (videoEnabled && !videoAvailable) pending.push({ text: "Falta video.mp4", step: 2 });
+          if (galleryEnabled && !galleryAvailable) pending.push({ text: "La galería está activada pero todavía no tiene fotos", step: 5 });
+          if (locationEnabled && !coordinates) pending.push({ text: "La ubicación no tiene coordenadas válidas", step: 7 });
+          if (distancesEnabled && !validDistances) pending.push({ text: "No hay distancias completas", step: 8, optional: true });
+          return { slug, videoEnabled, galleryEnabled, locationEnabled, distancesEnabled, coverAvailable, videoAvailable, galleryUploaded, galleryAvailable, structural, exterior, featuredCount: featured.length, visibleData, validParagraphs, validDistances, coordinates, pending };
+        };
+        const renderReview = () => {
+          const state = getReviewState();
+          const requiredPending = state.pending.filter((item) => !item.optional);
+          reviewPropertyName.textContent = nameInput.value.trim() || "Propiedad sin nombre";
+          reviewGeneral.innerHTML = '<div class="review-general-copy"><p class="eyebrow">Estado de la propiedad</p><h3>' + (requiredPending.length ? "⚠ Hay elementos pendientes" : "✓ Lista para preparar") + '</h3><p>' + (requiredPending.length ? "Completá los elementos indicados antes de la próxima etapa." : "Todos los datos obligatorios están completos.") + '</p></div>';
+          const cards = [
+            { step: 1, title: "Información", status: nameInput.value.trim() ? reviewStatus(true) : reviewStatus(false, "✓ Completa", "⚠ Falta el nombre de la propiedad"), body: '<p><strong>Nombre:</strong> ' + (escapeReview(nameInput.value.trim()) || "—") + '</p><p><strong>Precio:</strong> ' + (escapeReview(priceInput.value.trim()) || "No indicado") + '</p><p><strong>Subtítulo:</strong> ' + (escapeReview(subtitleInput.value.trim()) || "No indicado") + '</p>' },
+            { step: 2, title: "Portada", status: state.coverAvailable && (!state.videoEnabled || state.videoAvailable) ? reviewStatus(true) : reviewStatus(false), body: '<p><strong>Descripción corta:</strong> ' + (escapeReview(coverDescription.value.trim()) || "No indicada") + '</p><p><strong>Foto principal:</strong> ' + (state.coverAvailable ? "✓ Subida" : "⚠ Falta portada.jpg") + '</p><p><strong>Video:</strong> ' + (!state.videoEnabled ? "No requerido" : state.videoAvailable ? "✓ Subido" : "⚠ Falta video.mp4") + '</p>' },
+            { step: 3, title: "La propiedad", status: (sectionNameInput.value.trim() || propertyHeadlineInput.value.trim() || state.validParagraphs) ? reviewStatus(true) : reviewOptional("Sin contenido"), body: (sectionNameInput.value.trim() || propertyHeadlineInput.value.trim() || state.validParagraphs) ? '<p><strong>Sección:</strong> ' + (escapeReview(sectionNameInput.value.trim()) || "Sin nombre") + '</p><p><strong>Título:</strong> ' + (escapeReview(propertyHeadlineInput.value.trim()) || "No indicado") + '</p><p><strong>Párrafos:</strong> ' + state.validParagraphs + '</p>' : '<p>Esta sección no tendrá contenido.</p>' },
+            { step: 4, title: "Datos destacados", status: state.visibleData ? reviewStatus(true) : reviewOptional("Sin datos destacados"), body: state.visibleData ? '<p>' + state.featuredCount + ' datos configurados</p><p>' + state.visibleData + ' visibles</p>' : '<p>Sin datos destacados</p>' },
+            { step: 5, title: "Galería", status: !state.galleryEnabled ? reviewOptional("Desactivada") : state.galleryAvailable ? reviewStatus(true) : reviewStatus(false), body: !state.galleryEnabled ? '<p>Galería: Desactivada</p>' : '<p><strong>Fotos detectadas:</strong> ' + state.galleryUploaded + '</p><p><strong>Futura portada seleccionada:</strong> ' + (selectedFutureCoverId ? "Sí" : "No") + '</p><p>' + (state.galleryAvailable ? "✓ foto-01.jpg disponible" : "⚠ Falta al menos una foto de galería") + '</p>' },
+            { step: 6, title: "Características", status: state.structural + state.exterior ? reviewStatus(true) : reviewOptional("Sin características cargadas"), body: state.structural + state.exterior ? '<p>' + state.structural + ' Estructural / confort</p><p>' + state.exterior + ' Exterior / entorno</p>' : '<p>Sin características cargadas</p>' },
+            { step: 7, title: "Ubicación", status: !state.locationEnabled ? reviewOptional("Desactivada") : state.coordinates ? reviewStatus(true) : reviewStatus(false, "✓ Coordenadas válidas", "⚠ Faltan coordenadas válidas"), body: !state.locationEnabled ? '<p>Ubicación: Desactivada</p>' : '<p><strong>Nombre:</strong> ' + (escapeReview(locationNameInput.value.trim()) || "No indicado") + '</p><p><strong>Dirección:</strong> ' + (escapeReview(locationAddressInput.value.trim()) || "No indicada") + '</p><p><strong>Mapa:</strong> ' + (state.coordinates ? "✓ Coordenadas válidas" : "⚠ Faltan coordenadas válidas") + '</p>' },
+            { step: 8, title: "Distancias", status: !state.distancesEnabled ? reviewOptional("Desactivadas") : state.validDistances ? reviewStatus(true) : reviewStatus(false, "✓ Configuradas", "⚠ No hay distancias completas"), body: !state.distancesEnabled ? '<p>Distancias: Desactivadas</p>' : '<p><strong>Distancias válidas:</strong> ' + state.validDistances + '</p>' }
+          ];
+          reviewCards.replaceChildren(...cards.map((card) => {
+            const element = document.createElement("article");
+            element.className = "review-card";
+            element.innerHTML = '<div><h3>' + card.title + '</h3>' + card.status + '</div><div class="review-card-copy">' + card.body + '</div><button class="button button-secondary" type="button">Editar</button>';
+            element.querySelector("button").addEventListener("click", () => { setStep(card.step); window.scrollTo({ top: 0, behavior: "smooth" }); });
+            return element;
+          }));
+          if (!state.pending.length) {
+            reviewPending.innerHTML = '<div class="review-pending-ok"><h3>Pendientes</h3><p>✓ No se detectaron elementos obligatorios pendientes.</p></div>';
+          } else {
+            reviewPending.replaceChildren();
+            const wrapper = document.createElement("div");
+            wrapper.className = "review-pending-list";
+            wrapper.innerHTML = '<h3>Pendientes</h3><ul>' + state.pending.map((item) => '<li>' + (item.optional ? "○ " : "⚠ ") + escapeReview(item.text) + '<button type="button" data-step="' + item.step + '">Ir a ' + ({1:"Información",2:"Portada",5:"Galería",7:"Ubicación",8:"Distancias"}[item.step] || "sección") + '</button></li>').join("") + '</ul>';
+            wrapper.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => { setStep(Number(button.dataset.step)); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+            reviewPending.appendChild(wrapper);
+          }
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -1323,7 +1399,15 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#location-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La ubicación quedó guardada como borrador."); });
         document.querySelector("#distances-back").addEventListener("click", () => { saveDraft(); setStep(7); });
         document.querySelector("#distances-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las distancias quedaron guardadas como borrador."); });
-        document.querySelector("#back-to-distances").addEventListener("click", () => setStep(8));
+        document.querySelector("#review-back").addEventListener("click", () => { saveDraft(); setStep(8); });
+        document.querySelector("#review-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La revisión quedó guardada en el borrador."); });
+        document.querySelector("#prepare-presentation").addEventListener("click", () => {
+          saveDraft();
+          const requiredPending = getReviewState().pending.filter((item) => !item.optional);
+          if (requiredPending.length) showToast("Todavía hay elementos pendientes antes de preparar la presentación.");
+          else showToast("Todos los datos necesarios están completos. La propiedad está lista para la próxima etapa de preparación.");
+          renderReview();
+        });
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
