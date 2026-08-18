@@ -1298,7 +1298,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const features = values.features.filter((item) => item.label).sort((a, b) => (a.category === b.category ? 0 : a.category === "structural" ? -1 : 1));
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
-            ? packageGalleryFiles.map((file, index) => ({ source: external ? (galleryItems[index]?.source || "") : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"), alt: galleryItems[index]?.description || "" })).filter((item) => item.source)
+            ? (external ? galleryItems : packageGalleryFiles).map((item, index) => ({
+                source: external ? item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
+                alt: external ? item.description || "" : galleryItems[index]?.description || ""
+              })).filter((item) => item.source)
             : [];
           const coverSource = external ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
           const videoSource = external ? (values.videoSource || originalProperty.videoSource) : local("video.mp4");
