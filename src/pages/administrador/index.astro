@@ -413,9 +413,24 @@ const mediaInventory = Object.fromEntries(await Promise.all(
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <dialog id="preparation-dialog" class="preparation-dialog" aria-labelledby="preparation-title">
+      <div class="preparation-shell">
+        <button id="close-preparation" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+        <div class="form-heading"><p class="eyebrow">Preparar presentación</p><h2 id="preparation-title">Preparar archivos</h2><p id="preparation-intro">Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.</p></div>
+        <div id="preparation-fields">
+          <section class="preparation-file-section"><div><h3>Foto principal</h3><p>Se guardará automáticamente como <strong>portada.jpg</strong>.</p></div><input id="preparation-cover-input" class="visually-hidden" type="file" accept=".jpg,.jpeg,image/jpeg" /><button id="preparation-cover-select" class="button button-secondary" type="button">Seleccionar archivo</button><p id="preparation-cover-status" class="preparation-file-status"></p></section>
+          <section id="preparation-gallery-section" class="preparation-file-section"><div><h3>Fotos de galería</h3><p>Seleccioná las fotos. El orden de abajo será el orden de la galería.</p></div><input id="preparation-gallery-input" class="visually-hidden" type="file" accept=".jpg,.jpeg,image/jpeg" multiple /><button id="preparation-gallery-select" class="button button-secondary" type="button">Seleccionar fotos</button><p id="preparation-gallery-status" class="preparation-file-status"></p><div id="preparation-gallery-list" class="preparation-gallery-list"></div></section>
+          <section id="preparation-video-section" class="preparation-file-section"><div><h3>Video</h3><p>Se guardará automáticamente como <strong>video.mp4</strong>.</p></div><input id="preparation-video-input" class="visually-hidden" type="file" accept=".mp4,video/mp4" /><button id="preparation-video-select" class="button button-secondary" type="button">Seleccionar video</button><p id="preparation-video-status" class="preparation-file-status"></p></section>
+        </div>
+        <section id="preparation-summary" class="preparation-summary" aria-live="polite"></section>
+        <p id="preparation-progress" class="preparation-progress" hidden>Preparando archivos…</p>
+        <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button></div>
+      </div>
+    </dialog>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
 
-    <script is:inline>
+    <script>
+      import JSZip from "jszip";
       (() => {
         const storageKey = "moreira-property-admin-drafts-v1";
         const listScreen = document.querySelector("#property-list");
@@ -446,6 +461,21 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const reviewGeneral = document.querySelector("#review-general");
         const reviewCards = document.querySelector("#review-cards");
         const reviewPending = document.querySelector("#review-pending");
+        const preparationDialog = document.querySelector("#preparation-dialog");
+        const preparationIntro = document.querySelector("#preparation-intro");
+        const preparationFields = document.querySelector("#preparation-fields");
+        const preparationCoverInput = document.querySelector("#preparation-cover-input");
+        const preparationGalleryInput = document.querySelector("#preparation-gallery-input");
+        const preparationVideoInput = document.querySelector("#preparation-video-input");
+        const preparationCoverStatus = document.querySelector("#preparation-cover-status");
+        const preparationGalleryStatus = document.querySelector("#preparation-gallery-status");
+        const preparationVideoStatus = document.querySelector("#preparation-video-status");
+        const preparationGallerySection = document.querySelector("#preparation-gallery-section");
+        const preparationVideoSection = document.querySelector("#preparation-video-section");
+        const preparationGalleryList = document.querySelector("#preparation-gallery-list");
+        const preparationSummary = document.querySelector("#preparation-summary");
+        const preparationProgress = document.querySelector("#preparation-progress");
+        const downloadPackage = document.querySelector("#download-package");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -511,6 +541,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let draggedFeatureItem = null;
         let distanceItems = [];
         let draggedDistanceItem = null;
+        let packageCoverFile = null;
+        let packageGalleryFiles = [];
+        let packageVideoFile = null;
+        let packageUsesExternalMedia = false;
+        let draggedPackageGalleryFile = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -1251,6 +1286,140 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           }
         };
 
+        const isJpegFile = (file) => Boolean(file) && (file.type === "image/jpeg" || /\.jpe?g$/i.test(file.name));
+        const isMp4File = (file) => Boolean(file) && (file.type === "video/mp4" || /\.mp4$/i.test(file.name));
+        const yamlText = (value) => JSON.stringify(String(value));
+        const buildPropertyYaml = () => {
+          const values = currentValues();
+          const slug = values.slug;
+          const external = packageUsesExternalMedia;
+          const local = (name) => "/media/" + slug + "/" + name;
+          const visibleData = values.featuredData.filter((item) => item.show && item.label && item.value);
+          const features = values.features.filter((item) => item.label).sort((a, b) => (a.category === b.category ? 0 : a.category === "structural" ? -1 : 1));
+          const paragraphs = values.paragraphs.filter(Boolean);
+          const gallery = values.galleryEnabled
+            ? packageGalleryFiles.map((file, index) => ({ source: external ? (galleryItems[index]?.source || "") : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"), alt: galleryItems[index]?.description || "" })).filter((item) => item.source)
+            : [];
+          const coverSource = external ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
+          const videoSource = external ? (values.videoSource || originalProperty.videoSource) : local("video.mp4");
+          const lines = ["slug: " + yamlText(slug), "name: " + yamlText(values.name)];
+          if (values.price) lines.push("price: " + yamlText(values.price));
+          lines.push("", "hero:");
+          if (values.subtitle) lines.push("  subtitle: " + yamlText(values.subtitle));
+          if (values.coverDescription) lines.push("  description: " + yamlText(values.coverDescription));
+          lines.push("  coverImage: " + yamlText(coverSource), "  video:", "    enabled: " + (values.videoEnabled ? "true" : "false"));
+          if (values.videoEnabled) lines.push("    source: " + yamlText(videoSource));
+          lines.push("", "summary:");
+          if (visibleData.length) visibleData.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    value: " + yamlText(item.value), "    show: true"));
+          else lines.push("  []");
+          lines.push("", "property:");
+          if (values.sectionName) lines.push("  sectionTitle: " + yamlText(values.sectionName));
+          if (values.propertyHeadline) lines.push("  headline: " + yamlText(values.propertyHeadline));
+          lines.push("  paragraphs:");
+          if (paragraphs.length) paragraphs.forEach((item) => lines.push("    - " + yamlText(item)));
+          else lines.push("    []");
+          lines.push("", "gallery:", "  enabled: " + (values.galleryEnabled ? "true" : "false"), "  images:");
+          if (gallery.length) gallery.forEach((item) => { lines.push("    - source: " + yamlText(item.source)); if (item.alt) lines.push("      alt: " + yamlText(item.alt)); });
+          else lines.push("    []");
+          lines.push("", "features:");
+          if (features.length) features.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    category: " + item.category));
+          else lines.push("  []");
+          lines.push("", "location:", "  enabled: " + (values.locationEnabled ? "true" : "false"));
+          if (values.locationEnabled) {
+            if (values.locationName) lines.push("  visibleName: " + yamlText(values.locationName));
+            if (values.locationAddress) lines.push("  address: " + yamlText(values.locationAddress));
+            const coordinates = validCoordinates();
+            if (coordinates) lines.push("  latitude: " + coordinates.latitude, "  longitude: " + coordinates.longitude);
+          }
+          lines.push("", "distances:", "  enabled: " + (values.distancesEnabled ? "true" : "false"), "  items:");
+          const distances = values.distances.filter((item) => item.destination && item.distance);
+          if (values.distancesEnabled && distances.length) distances.forEach((item) => lines.push("    - destination: " + yamlText(item.destination), "      distance: " + yamlText(item.distance)));
+          else lines.push("    []");
+          lines.push("", "contact:", "  useDefault: true", "");
+          return lines.join("\n");
+        };
+        const refreshPackageSummary = () => {
+          const values = currentValues();
+          const galleryRequired = values.galleryEnabled;
+          const videoRequired = values.videoEnabled;
+          const coverReady = packageUsesExternalMedia || isJpegFile(packageCoverFile);
+          const galleryReady = !galleryRequired || packageUsesExternalMedia || packageGalleryFiles.length > 0;
+          const videoReady = !videoRequired || packageUsesExternalMedia || isMp4File(packageVideoFile);
+          preparationCoverStatus.textContent = packageUsesExternalMedia ? "Esta propiedad utiliza la foto de la presentación original." : coverReady ? "✓ " + packageCoverFile.name + " → portada.jpg" : "Falta seleccionar la foto principal.";
+          preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExternalMedia ? "Esta propiedad utiliza fotos de la presentación original." : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
+          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? "Esta propiedad utiliza el video de la presentación original." : videoReady ? "✓ " + packageVideoFile.name + " → video.mp4" : "Falta seleccionar el video.";
+          preparationGallerySection.hidden = !galleryRequired || packageUsesExternalMedia;
+          preparationVideoSection.hidden = !videoRequired || packageUsesExternalMedia;
+          const ready = coverReady && galleryReady && videoReady;
+          downloadPackage.disabled = !ready;
+          preparationSummary.innerHTML = '<h3>' + (ready ? "Listo para preparar" : "Faltan archivos por confirmar") + '</h3><p><strong>Propiedad:</strong> ' + escapeReview(values.name) + '</p><p><strong>Foto principal:</strong> ' + (coverReady ? "✓ portada.jpg" : "⚠ Pendiente") + '</p><p><strong>Galería:</strong> ' + (!galleryRequired ? "No incluida" : galleryReady ? "✓ " + (packageUsesExternalMedia ? galleryItems.length : packageGalleryFiles.length) + " fotos" : "⚠ Pendiente") + '</p><p><strong>Video:</strong> ' + (!videoRequired ? "No incluido" : videoReady ? "✓ video.mp4" : "⚠ Pendiente") + '</p><p><strong>Datos:</strong> ✓ propiedad.yaml</p>';
+        };
+        const renderPackageGallery = () => {
+          preparationGalleryList.replaceChildren();
+          packageGalleryFiles.forEach((file, index) => {
+            const card = document.createElement("article");
+            card.className = "package-gallery-card";
+            card.draggable = true;
+            const preview = URL.createObjectURL(file);
+            card.innerHTML = '<img alt="" src="' + preview + '" /><div><strong>' + (index + 1) + ' → foto-' + String(index + 1).padStart(2, "0") + '.jpg</strong><span>' + escapeReview(file.name) + '</span></div><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div>';
+            card.querySelector("[data-up]").disabled = index === 0;
+            card.querySelector("[data-down]").disabled = index === packageGalleryFiles.length - 1;
+            card.querySelector("[data-up]").addEventListener("click", () => { const target = packageGalleryFiles[index - 1]; packageGalleryFiles[index - 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
+            card.querySelector("[data-down]").addEventListener("click", () => { const target = packageGalleryFiles[index + 1]; packageGalleryFiles[index + 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
+            card.addEventListener("dragstart", () => { draggedPackageGalleryFile = file; card.classList.add("dragging"); });
+            card.addEventListener("dragend", () => { draggedPackageGalleryFile = null; card.classList.remove("dragging"); });
+            card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedPackageGalleryFile || draggedPackageGalleryFile === file) return; const from = packageGalleryFiles.indexOf(draggedPackageGalleryFile); const to = packageGalleryFiles.indexOf(file); packageGalleryFiles.splice(from, 1); packageGalleryFiles.splice(to, 0, draggedPackageGalleryFile); renderPackageGallery(); refreshPackageSummary(); });
+            preparationGalleryList.appendChild(card);
+          });
+        };
+        const applyFutureCover = () => {
+          if (!selectedFutureCoverId || packageCoverFile || !packageGalleryFiles.length) return;
+          const intended = galleryItems.find((item) => item.id === selectedFutureCoverId);
+          const match = intended && packageGalleryFiles.find((file) => file.name === intended.originalName || file.name === intended.name);
+          if (match) packageCoverFile = match;
+          else if (intended) preparationCoverStatus.textContent = "Volvé a seleccionar la foto que querés usar como portada.";
+        };
+        const openPreparation = () => {
+          const requiredPending = getReviewState().pending.filter((item) => !item.optional);
+          if (requiredPending.length) { showToast("Todavía hay elementos pendientes antes de preparar la presentación."); renderReview(); return; }
+          packageUsesExternalMedia = editingId === originalProperty.id;
+          packageCoverFile = packageUsesExternalMedia ? null : (isJpegFile(selectedPhoto) ? selectedPhoto : null);
+          packageVideoFile = packageUsesExternalMedia ? null : (isMp4File(selectedVideo) ? selectedVideo : null);
+          packageGalleryFiles = [];
+          preparationCoverInput.value = ""; preparationGalleryInput.value = ""; preparationVideoInput.value = "";
+          preparationFields.hidden = false;
+          preparationIntro.textContent = packageUsesExternalMedia ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
+          applyFutureCover();
+          renderPackageGallery(); refreshPackageSummary();
+          preparationDialog.showModal();
+        };
+        const closePreparation = () => { if (preparationDialog.open) preparationDialog.close(); };
+        const downloadPreparedPackage = async () => {
+          const values = currentValues();
+          if (!packageUsesExternalMedia && (!isJpegFile(packageCoverFile) || (values.galleryEnabled && !packageGalleryFiles.length) || (values.videoEnabled && !isMp4File(packageVideoFile)))) { showToast("Falta seleccionar algún archivo necesario."); refreshPackageSummary(); return; }
+          downloadPackage.disabled = true; preparationProgress.hidden = false; preparationProgress.textContent = "Preparando archivos…";
+          try {
+            const zip = new JSZip();
+            const root = values.slug + "/";
+            zip.file(root + "propiedad.yaml", buildPropertyYaml());
+            if (!packageUsesExternalMedia) {
+              zip.file(root + "media/portada.jpg", packageCoverFile);
+              packageGalleryFiles.forEach((file, index) => zip.file(root + "media/foto-" + String(index + 1).padStart(2, "0") + ".jpg", file));
+              if (values.videoEnabled) zip.file(root + "media/video.mp4", packageVideoFile);
+            }
+            const blob = await zip.generateAsync({ type: "blob" }, (metadata) => { preparationProgress.textContent = "Preparando archivos… " + Math.round(metadata.percent) + "%"; });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url; link.download = values.slug + "-presentacion.zip"; link.click();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+            preparationProgress.textContent = "✓ Paquete descargado.";
+          } catch (error) {
+            preparationProgress.textContent = "No se pudo preparar el archivo.";
+          } finally {
+            downloadPackage.disabled = false;
+          }
+        };
+
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
           selectedVideo = null;
@@ -1400,13 +1569,16 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#distances-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las distancias quedaron guardadas como borrador."); });
         document.querySelector("#review-back").addEventListener("click", () => { saveDraft(); setStep(8); });
         document.querySelector("#review-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La revisión quedó guardada en el borrador."); });
-        document.querySelector("#prepare-presentation").addEventListener("click", () => {
-          saveDraft();
-          const requiredPending = getReviewState().pending.filter((item) => !item.optional);
-          if (requiredPending.length) showToast("Todavía hay elementos pendientes antes de preparar la presentación.");
-          else showToast("Todos los datos necesarios están completos. La propiedad está lista para la próxima etapa de preparación.");
-          renderReview();
-        });
+        document.querySelector("#prepare-presentation").addEventListener("click", () => { saveDraft(); openPreparation(); });
+        document.querySelector("#close-preparation").addEventListener("click", closePreparation);
+        document.querySelector("#preparation-cancel").addEventListener("click", closePreparation);
+        document.querySelector("#preparation-cover-select").addEventListener("click", () => preparationCoverInput.click());
+        document.querySelector("#preparation-gallery-select").addEventListener("click", () => preparationGalleryInput.click());
+        document.querySelector("#preparation-video-select").addEventListener("click", () => preparationVideoInput.click());
+        preparationCoverInput.addEventListener("change", () => { const file = preparationCoverInput.files[0]; if (!file) return; if (!isJpegFile(file)) { showToast("Usá una imagen JPG o JPEG."); preparationCoverInput.value = ""; return; } packageCoverFile = file; refreshPackageSummary(); });
+        preparationGalleryInput.addEventListener("change", () => { const files = [...preparationGalleryInput.files]; if (files.some((file) => !isJpegFile(file))) { showToast("Usá una imagen JPG o JPEG."); preparationGalleryInput.value = ""; return; } packageGalleryFiles = files; applyFutureCover(); renderPackageGallery(); refreshPackageSummary(); });
+        preparationVideoInput.addEventListener("change", () => { const file = preparationVideoInput.files[0]; if (!file) return; if (!isMp4File(file)) { showToast("El video seleccionado no es MP4."); preparationVideoInput.value = ""; return; } packageVideoFile = file; refreshPackageSummary(); });
+        downloadPackage.addEventListener("click", downloadPreparedPackage);
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
