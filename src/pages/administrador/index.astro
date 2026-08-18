@@ -1004,60 +1004,66 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         };
         const reconcileGalleryItems = (property) => {
           const detected = detectedGalleryItems();
-          const saved = Array.isArray(property.galleryItems) ? [...property.galleryItems].sort((a, b) => (a.position || 0) - (b.position || 0)) : [];
+          const saved = Array.isArray(property.galleryItems)
+            ? [...property.galleryItems].sort((a, b) => (a.position || 0) - (b.position || 0))
+            : [];
           if (!detected.length || editingId === originalProperty.id) {
             return { items: saved, futureCoverId: property.futureCoverId || null, changed: false };
           }
 
+          // Los archivos que el build detecta son la fuente de verdad. El borrador
+          // solo conserva metadatos y, si ya usaba nombres foto-XX.jpg, su orden.
           const detectedByName = new Map(detected.map((item) => [item.name.toLowerCase(), item]));
-          const usedNames = new Set();
+          const metadataByName = new Map();
+          const metadataByPosition = new Map();
           const migratedIds = new Map();
-          const reconciled = [];
 
-          saved.forEach((savedItem, savedIndex) => {
-            const savedName = String(savedItem.name || savedItem.originalName || "").toLowerCase();
-            let realItem = detectedByName.get(savedName);
-            if (realItem && usedNames.has(realItem.name.toLowerCase())) realItem = null;
-
-            if (!realItem && (savedItem.status === "missing" || savedItem.status === "temporary")) {
-              const position = Number(savedItem.position) || savedIndex + 1;
-              const positional = detected[position - 1];
-              if (positional && !usedNames.has(positional.name.toLowerCase())) realItem = positional;
-            }
-
-            if (realItem) {
-              const stableId = "uploaded-" + realItem.name;
-              usedNames.add(realItem.name.toLowerCase());
-              if (savedItem.id) migratedIds.set(savedItem.id, stableId);
-              reconciled.push({
-                ...realItem,
-                id: stableId,
-                description: savedItem.description || "",
-                position: reconciled.length + 1
-              });
-            } else {
-              reconciled.push({
-                ...savedItem,
-                source: savedItem.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + savedItem.name : "",
-                status: savedItem.status === "temporary" ? "missing" : savedItem.status || "missing",
-                position: reconciled.length + 1
-              });
-            }
+          saved.forEach((item, index) => {
+            const position = Number(item.position) || index + 1;
+            const name = String(item.name || item.originalName || "").toLowerCase();
+            if (detectedByName.has(name)) metadataByName.set(name, item);
+            else if (!metadataByPosition.has(position)) metadataByPosition.set(position, item);
           });
 
-          detected.forEach((realItem) => {
-            if (usedNames.has(realItem.name.toLowerCase())) return;
-            reconciled.push({ ...realItem, position: reconciled.length + 1 });
+          // Si el borrador ya contiene nombres definitivos, ese orden fue confirmado
+          // por la persona. Si proviene de archivos temporales, se usa el orden
+          // numérico real foto-01.jpg, foto-02.jpg, etc.
+          const stableSaved = saved.filter((item) => detectedByName.has(String(item.name || item.originalName || "").toLowerCase()));
+          const hasConfirmedOrder = stableSaved.length > 0 && stableSaved.length === saved.length;
+          const orderedDetected = hasConfirmedOrder
+            ? stableSaved.map((item) => detectedByName.get(String(item.name || item.originalName || "").toLowerCase()))
+            : detected;
+
+          const usedNames = new Set();
+          const reconciled = orderedDetected.concat(detected.filter((item) => !orderedDetected.includes(item))).map((realItem, index) => {
+            const position = Number(realItem.name.match(/\d+/)?.[0]) || index + 1;
+            const stableId = "uploaded-" + realItem.name;
+            const metadata = metadataByName.get(realItem.name.toLowerCase()) || metadataByPosition.get(position);
+            if (metadata?.id) migratedIds.set(metadata.id, stableId);
+            usedNames.add(realItem.name.toLowerCase());
+            return {
+              ...realItem,
+              id: stableId,
+              description: metadata?.description || "",
+              position: index + 1
+            };
           });
 
           const previousCoverId = property.futureCoverId || null;
-          const futureCoverId = migratedIds.get(previousCoverId) || (reconciled.some((item) => item.id === previousCoverId) ? previousCoverId : null);
-          const stableSaved = saved.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 }));
-          const stableReconciled = reconciled.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 }));
+          const futureCoverId = migratedIds.get(previousCoverId)
+            || (reconciled.some((item) => item.id === previousCoverId) ? previousCoverId : null);
+          const savedComparable = saved.map((item, index) => ({
+            id: item.id, name: item.name, originalName: item.originalName, status: item.status,
+            external: Boolean(item.external), description: item.description || "", position: index + 1
+          }));
+          const reconciledComparable = reconciled.map((item, index) => ({
+            id: item.id, name: item.name, originalName: item.originalName, status: item.status,
+            external: Boolean(item.external), description: item.description || "", position: index + 1
+          }));
           return {
             items: reconciled,
             futureCoverId,
-            changed: JSON.stringify(stableSaved) !== JSON.stringify(stableReconciled) || previousCoverId !== futureCoverId
+            changed: JSON.stringify(savedComparable) !== JSON.stringify(reconciledComparable) || previousCoverId !== futureCoverId
           };
         };
         const serializeGallery = () => galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 }));
@@ -1078,7 +1084,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           originalGalleryNote.hidden = editingId !== originalProperty.id;
           galleryControls.hidden = !currentGalleryEnabled();
           galleryHiddenNote.hidden = currentGalleryEnabled();
-          galleryWarning.hidden = !(currentGalleryEnabled() && !galleryItems.some((item) => item.status === "uploaded" || item.external));
+          const hasRealGallery = detected.length > 0 || editingId === originalProperty.id;
+          galleryWarning.hidden = !(currentGalleryEnabled() && !hasRealGallery);
           galleryCoverStatus.textContent = (detectedMedia[slug]?.cover || editingId === originalProperty.id) ? "✓ Subida" : "⚠ Falta";
           galleryList.replaceChildren(...galleryItems.map((item, index) => {
             const card = document.createElement("article");
@@ -1308,8 +1315,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const coverAvailable = (externalOriginal && !photoRemoved) || media.cover;
           const videoAvailable = (externalOriginal && !videoRemoved) || media.video;
           const availableGalleryItems = galleryItems.filter((item) => item.status === "uploaded" || item.external);
-          const galleryUploaded = availableGalleryItems.length;
-          const galleryAvailable = availableGalleryItems.some((item) => item.external || String(item.name || item.originalName || "").toLowerCase() === "foto-01.jpg");
+          // Revisión usa la misma fuente real del build que el Paso 5. Así nunca
+          // informa cero cuando foto-01.jpg ... foto-XX.jpg ya están publicados.
+          const galleryUploaded = externalOriginal ? availableGalleryItems.length : media.gallery.length;
+          const galleryAvailable = externalOriginal
+            ? availableGalleryItems.some((item) => item.external || String(item.name || item.originalName || "").toLowerCase() === "foto-01.jpg")
+            : media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg");
           const structural = featureItems.filter((item) => item.category === "structural" && item.label.trim()).length;
           const exterior = featureItems.filter((item) => item.category === "exterior" && item.label.trim()).length;
           const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
