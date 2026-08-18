@@ -424,7 +424,16 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         </div>
         <section id="preparation-summary" class="preparation-summary" aria-live="polite"></section>
         <p id="preparation-progress" class="preparation-progress" hidden>Preparando archivos…</p>
-        <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button></div>
+        <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button><button id="continue-publication" class="button button-secondary" type="button" hidden>Continuar con publicación manual</button></div>
+      </div>
+    </dialog>
+    <dialog id="publication-dialog" class="publication-dialog" aria-labelledby="publication-title">
+      <div class="preparation-shell publication-shell">
+        <button id="close-publication" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+        <div class="form-heading"><p class="eyebrow">Publicar manualmente</p><h2 id="publication-title">Publicar presentación</h2><p>Tu presentación ya está preparada. Ahora falta subir los archivos al repositorio para generar la vista previa.</p><p id="publication-property-name" class="review-property-name"></p></div>
+        <div id="publication-guide"></div>
+        <section class="publication-checklist-section"><h3>Checklist de ayuda</h3><p>Estos pasos se guardan solo en este navegador. No verifican automáticamente lo que subiste.</p><div id="publication-checklist" class="publication-checklist"></div></section>
+        <div class="form-actions"><button id="close-publication-bottom" class="button button-quiet" type="button">Cerrar</button><button id="open-preview" class="button button-primary" type="button">Abrir presentación</button></div>
       </div>
     </dialog>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
@@ -433,6 +442,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
       import JSZip from "jszip";
       (() => {
         const storageKey = "moreira-property-admin-drafts-v1";
+        const publishingChecklistKey = "moreira-property-publishing-checklist-v1";
         const listScreen = document.querySelector("#property-list");
         const editorScreen = document.querySelector("#editor");
         const form = document.querySelector("#basic-form");
@@ -476,6 +486,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const preparationSummary = document.querySelector("#preparation-summary");
         const preparationProgress = document.querySelector("#preparation-progress");
         const downloadPackage = document.querySelector("#download-package");
+        const continuePublication = document.querySelector("#continue-publication");
+        const publicationDialog = document.querySelector("#publication-dialog");
+        const publicationPropertyName = document.querySelector("#publication-property-name");
+        const publicationGuide = document.querySelector("#publication-guide");
+        const publicationChecklist = document.querySelector("#publication-checklist");
         const galleryControls = document.querySelector("#gallery-controls");
         const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
         const galleryFolder = document.querySelector("#gallery-folder");
@@ -1404,7 +1419,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           try {
             const zip = new JSZip();
             const root = values.slug + "/";
-            zip.file(root + "propiedad.yaml", buildPropertyYaml());
+            zip.file(root + values.slug + ".yaml", buildPropertyYaml());
             if (!packageUsesExternalMedia) {
               zip.file(root + "media/portada.jpg", packageCoverFile);
               packageGalleryFiles.forEach((file, index) => zip.file(root + "media/foto-" + String(index + 1).padStart(2, "0") + ".jpg", file));
@@ -1416,12 +1431,66 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             link.href = url; link.download = values.slug + "-presentacion.zip"; link.click();
             window.setTimeout(() => URL.revokeObjectURL(url), 1000);
             preparationProgress.textContent = "✓ Paquete descargado.";
+            continuePublication.hidden = false;
           } catch (error) {
             preparationProgress.textContent = "No se pudo preparar el archivo.";
           } finally {
             downloadPackage.disabled = false;
           }
         };
+
+        const readPublishingChecklist = () => {
+          try { return JSON.parse(localStorage.getItem(publishingChecklistKey) || "{}"); }
+          catch { return {}; }
+        };
+        const writePublishingChecklist = (value) => localStorage.setItem(publishingChecklistKey, JSON.stringify(value));
+        const copyPublicationPath = async (value) => {
+          try { await navigator.clipboard.writeText(value); showToast("Ruta copiada."); }
+          catch { showToast("No se pudo copiar la ruta. Podés seleccionarla manualmente."); }
+        };
+        const previewUrlFor = (slug) => window.location.origin + "/propiedades/" + slug + "/";
+        const openExpectedPreview = () => {
+          const slug = currentValues().slug;
+          window.open("/propiedades/" + slug + "/", "_blank", "noopener");
+          showToast("Si todavía no abre, esperá a que termine la nueva vista previa.");
+        };
+        const renderPublicationGuide = () => {
+          const values = currentValues();
+          const slug = values.slug;
+          const yamlName = slug + ".yaml";
+          const dataPath = "src/data/properties/";
+          const mediaPath = "public/media/" + slug + "/";
+          const checklist = readPublishingChecklist()[slug] || {};
+          publicationPropertyName.textContent = values.name || "Propiedad sin nombre";
+          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div><div><p class="eyebrow">Multimedia</p><h3>Subí las fotos y el video aquí</h3><code class="publication-path">' + mediaPath + '</code><button type="button" data-copy="' + mediaPath + '">Copiar ruta</button></div></section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar <strong>' + escapeReview(yamlName) + '</strong> y la carpeta <strong>media</strong>.</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>Subí el contenido de <strong>media</strong> a <code>' + mediaPath + '</code>.</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
+          const checklistItems = [
+            ["unzip", "Descomprimí el ZIP"],
+            ["data", "Subí el archivo de la propiedad a src/data/properties/"],
+            ["media", "Subí las fotos/video a public/media/" + slug + "/"],
+            ["branch", "Confirmé que estoy en setup-template-foundation"],
+            ["build", "Esperé el nuevo build"],
+            ["preview", "Abrí la vista previa"]
+          ];
+          publicationChecklist.replaceChildren(...checklistItems.map(([key, label]) => {
+            const labelElement = document.createElement("label");
+            labelElement.innerHTML = '<input type="checkbox" /> <span>' + escapeReview(label) + '</span>';
+            const input = labelElement.querySelector("input");
+            input.checked = Boolean(checklist[key]);
+            input.addEventListener("change", () => {
+              const all = readPublishingChecklist();
+              all[slug] = { ...(all[slug] || {}), [key]: input.checked };
+              writePublishingChecklist(all);
+            });
+            return labelElement;
+          }));
+          publicationGuide.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", () => copyPublicationPath(button.dataset.copy)));
+          publicationGuide.querySelector("#recheck-preview").addEventListener("click", openExpectedPreview);
+        };
+        const openPublicationGuide = () => {
+          renderPublicationGuide();
+          publicationDialog.showModal();
+        };
+        const closePublicationGuide = () => { if (publicationDialog.open) publicationDialog.close(); };
 
         const loadCoverValues = (property, propertyId = null) => {
           selectedPhoto = null;
@@ -1582,6 +1651,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         preparationGalleryInput.addEventListener("change", () => { const files = [...preparationGalleryInput.files]; if (files.some((file) => !isJpegFile(file))) { showToast("Usá una imagen JPG o JPEG."); preparationGalleryInput.value = ""; return; } packageGalleryFiles = files; applyFutureCover(); renderPackageGallery(); refreshPackageSummary(); });
         preparationVideoInput.addEventListener("change", () => { const file = preparationVideoInput.files[0]; if (!file) return; if (!isMp4File(file)) { showToast("El video seleccionado no es MP4."); preparationVideoInput.value = ""; return; } packageVideoFile = file; refreshPackageSummary(); });
         downloadPackage.addEventListener("click", downloadPreparedPackage);
+        continuePublication.addEventListener("click", openPublicationGuide);
+        document.querySelector("#close-publication").addEventListener("click", closePublicationGuide);
+        document.querySelector("#close-publication-bottom").addEventListener("click", closePublicationGuide);
+        document.querySelector("#open-preview").addEventListener("click", openExpectedPreview);
         document.querySelector("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
           card.querySelector("[data-field='label']").focus();
