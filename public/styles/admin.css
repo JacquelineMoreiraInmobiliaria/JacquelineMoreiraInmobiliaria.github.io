@@ -585,3 +585,100 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
   .package-gallery-card img { width: 64px; height: 54px; }
   .package-gallery-card .order-actions { grid-column: 1 / -1; }
 }
+
+
+/* Etapa 10B — Publicación manual guiada */
+.publication-dialog {
+  width: min(940px, calc(100vw - 28px));
+  max-height: min(920px, calc(100dvh - 28px));
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  color: var(--ink);
+  background: var(--cream);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .28);
+}
+.publication-dialog::backdrop { background: rgba(15, 25, 14, .66); }
+.publication-shell { padding-bottom: 34px; }
+.publication-destinations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.publication-destinations > div,
+.publication-steps,
+.publication-preview,
+.publication-checklist-section {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fff;
+}
+.publication-destinations h3,
+.publication-steps h3,
+.publication-preview h3,
+.publication-checklist-section h3 { margin: 4px 0 12px; font-size: 1.05rem; }
+.publication-path {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 11px;
+  border-radius: 8px;
+  color: var(--green);
+  background: #f1f4ec;
+  font-size: .78rem;
+}
+.publication-destinations button {
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  color: var(--green);
+  background: #fff;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.publication-steps,
+.publication-preview,
+.publication-checklist-section { margin-top: 18px; }
+.publication-steps ol { display: grid; gap: 13px; margin: 16px 0 0; padding-left: 24px; color: var(--muted); line-height: 1.55; }
+.publication-steps code,
+.publication-preview a { overflow-wrap: anywhere; color: var(--green); }
+.publication-warning {
+  display: block;
+  margin-top: 8px;
+  padding: 9px;
+  border-left: 3px solid #b8761c;
+  color: #75490e;
+  background: #fff4df;
+  font-weight: 700;
+}
+.publication-preview { background: #f4f8e8; border-color: #cad9a7; }
+.publication-preview a { font-weight: 700; }
+.publication-preview p,
+.publication-checklist-section > p { color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.publication-preview .button { margin: 8px 0 0; }
+.publication-checklist { display: grid; gap: 10px; margin-top: 15px; }
+.publication-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 9px;
+  background: #f7f8f5;
+  color: var(--ink);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+.publication-checklist input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--green); }
+
+@media (max-width: 640px) {
+  .publication-destinations { grid-template-columns: 1fr; }
+  .publication-destinations > div,
+  .publication-steps,
+  .publication-preview,
+  .publication-checklist-section { padding: 18px; }
+}
