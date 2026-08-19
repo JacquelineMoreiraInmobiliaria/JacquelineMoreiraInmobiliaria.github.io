@@ -249,7 +249,17 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               <p class="field-help">Pegá o escribí aquí toda la información de la propiedad. Más adelante el sistema la organizará en una presentación clara.</p>
               <textarea id="property-description" name="propertyDescription" rows="14" placeholder="Escribir descripción completa"></textarea>
               <p class="example">Ejemplo: Propiedad ubicada en la zona alta de Piriápolis, sobre 10 hectáreas, con vista al mar, piscina climatizada, cuatro dormitorios, tres baños, losa radiante y viñedo.</p>
-              <p class="field-help">Podés separar ideas con saltos de línea. Por ahora se conservará el texto tal como lo escribís.</p>
+              <p class="field-help">Podés separar ideas con saltos de línea. El texto original siempre se conserva.</p>
+              <button id="organize-description" class="button button-secondary" type="button">Organizar descripción</button>
+              <p id="organize-description-note" class="field-help" aria-live="polite"></p>
+            </div>
+            <section id="organized-description" class="gallery-order-section" hidden aria-labelledby="organized-description-title">
+              <div class="paragraphs-heading"><div><h3 id="organized-description-title">Vista organizada</h3><p>Podés corregir libremente el título y los párrafos antes de guardar.</p></div></div>
+              <div class="field"><label for="organized-headline">Título destacado <small>Opcional</small></label><input id="organized-headline" type="text" placeholder="Escribir título destacado" /><p class="field-help">Más adelante el asistente podrá proponer este título automáticamente.</p></div>
+              <div id="organized-paragraphs" class="feature-list"></div>
+              <button id="add-organized-paragraph" class="button button-secondary" type="button">+ Agregar párrafo</button>
+              <section class="repository-media"><h3>Sugerencias automáticas</h3><p class="field-help">Datos destacados y características estarán disponibles cuando se conecte la organización inteligente.</p></section>
+            </section>
             </div>
             <div class="form-actions">
               <button id="property-back" class="button button-quiet" type="button">Atrás</button>
@@ -544,6 +554,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let legacySubtitle = "";
         let legacySectionName = "La propiedad";
         let legacyPropertyHeadline = "";
+        let organizedHeadline = "";
+        let organizedParagraphs = [];
+        let draggedOrganizedParagraph = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -654,9 +667,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           distancesEnabled: document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes",
           distances: distanceItems.map((item, index) => ({ id: item.id, destination: item.destination || "", distance: item.distance || "", order: index + 1 })),
           propertyDescription: propertyDescriptionInput.value.trim(),
+          descriptionSource: propertyDescriptionInput.value.trim(),
+          organizedDescription: { headline: organizedHeadline.trim(), paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) },
           sectionName: legacySectionName,
-          propertyHeadline: legacyPropertyHeadline,
-          paragraphs: descriptionParagraphs(propertyDescriptionInput.value),
+          propertyHeadline: organizedHeadline.trim() || legacyPropertyHeadline,
+          paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean).length ? organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) : descriptionParagraphs(propertyDescriptionInput.value),
           featuredData: [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
             icon: card.dataset.icon || "home",
             label: card.querySelector("[data-field='label']").value.trim(),
@@ -817,11 +832,51 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           scheduleSave();
         };
 
+        const renderOrganizedDescription = () => {
+          const section = document.querySelector("#organized-description");
+          const list = document.querySelector("#organized-paragraphs");
+          const headline = document.querySelector("#organized-headline");
+          section.hidden = !(organizedHeadline || organizedParagraphs.length);
+          headline.value = organizedHeadline;
+          list.replaceChildren(...organizedParagraphs.map((item, index) => {
+            const card = document.createElement("article");
+            card.className = "feature-card";
+            card.draggable = true;
+            card.innerHTML = '<header class="feature-card-header"><div class="drag-handle">↕</div><strong>Párrafo ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><textarea rows="5" placeholder="Escribir párrafo"></textarea>';
+            const input = card.querySelector("textarea"); input.value = item.text || "";
+            input.addEventListener("input", () => { item.text = input.value; scheduleSave(); });
+            card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === organizedParagraphs.length - 1;
+            card.querySelector("[data-up]").addEventListener("click", () => { [organizedParagraphs[index - 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index - 1]]; renderOrganizedDescription(); scheduleSave(); });
+            card.querySelector("[data-down]").addEventListener("click", () => { [organizedParagraphs[index + 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index + 1]]; renderOrganizedDescription(); scheduleSave(); });
+            card.querySelector("[data-remove]").addEventListener("click", () => { if (window.confirm("¿Eliminar este párrafo?")) { organizedParagraphs.splice(index, 1); renderOrganizedDescription(); scheduleSave(); } });
+            card.addEventListener("dragstart", () => { draggedOrganizedParagraph = item; });
+            card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedOrganizedParagraph || draggedOrganizedParagraph === item) return; const from = organizedParagraphs.indexOf(draggedOrganizedParagraph); organizedParagraphs.splice(from, 1); organizedParagraphs.splice(index, 0, draggedOrganizedParagraph); renderOrganizedDescription(); });
+            card.addEventListener("dragend", () => { draggedOrganizedParagraph = null; scheduleSave(); });
+            return card;
+          }));
+        };
+        const basicOrganizeDescription = () => {
+          const source = propertyDescriptionInput.value.replace(/\r\n?/g, "\n").split("\n").map((line) => line.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n");
+          const paragraphs = source.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
+          return paragraphs.length > 1 ? paragraphs : (source ? source.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/).map((paragraph) => paragraph.trim()).filter(Boolean) : []);
+        };
+        const organizeDescription = () => {
+          if (!propertyDescriptionInput.value.trim()) return showToast("Primero escribí o pegá la descripción completa.");
+          if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("¿Querés volver a organizar la descripción? Los cambios realizados en la versión organizada podrían reemplazarse.")) return;
+          organizedParagraphs = basicOrganizeDescription().map((text, index) => ({ id: "paragraph-" + Date.now() + "-" + index, text }));
+          document.querySelector("#organized-description").hidden = false;
+          document.querySelector("#organize-description-note").textContent = "Organización básica aplicada. La función inteligente estará disponible cuando se conecte el asistente de texto.";
+          renderOrganizedDescription(); scheduleSave();
+        };
         const loadPropertyValues = (property) => {
           legacySectionName = property.sectionName ?? "La propiedad";
           legacyPropertyHeadline = property.propertyHeadline || "";
           const legacyContent = [legacySectionName, legacyPropertyHeadline, ...(Array.isArray(property.paragraphs) ? property.paragraphs : [])].filter(Boolean).join("\n\n");
-          propertyDescriptionInput.value = property.propertyDescription || legacyContent;
+          propertyDescriptionInput.value = property.descriptionSource || property.propertyDescription || legacyContent;
+          const organized = property.organizedDescription || { headline: property.propertyHeadline || "", paragraphs: Array.isArray(property.paragraphs) ? property.paragraphs : [] };
+          organizedHeadline = organized.headline || "";
+          organizedParagraphs = (organized.paragraphs || []).map((text, index) => ({ id: "paragraph-loaded-" + index, text }));
+          renderOrganizedDescription();
         };
 
         const renumberDataCards = () => {
@@ -1326,7 +1381,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const cards = [
             { step: 1, title: "Información", status: nameInput.value.trim() ? reviewStatus(true) : reviewStatus(false, "✓ Completa", "⚠ Falta el nombre de la propiedad"), body: '<p><strong>Nombre:</strong> ' + (escapeReview(nameInput.value.trim()) || "—") + '</p><p><strong>Precio:</strong> ' + (escapeReview(priceInput.value.trim()) || "No indicado") + '</p><p><strong>Ubicación para subtítulo:</strong> ' + (escapeReview(subtitleFromLocation()) || "Se generará al cargar una ubicación") + '</p>' },
             { step: 2, title: "Portada", status: state.coverAvailable && (!state.videoEnabled || state.videoAvailable) ? reviewStatus(true) : reviewStatus(false), body: '<p><strong>Descripción corta:</strong> ' + (escapeReview(coverDescription.value.trim()) || "No indicada") + '</p><p><strong>Foto principal:</strong> ' + (state.coverAvailable ? "✓ Subida" : "⚠ Falta portada.jpg") + '</p><p><strong>Video:</strong> ' + (!state.videoEnabled ? "No requerido" : state.videoAvailable ? "✓ Subido" : "⚠ Falta video.mp4") + '</p>' },
-            { step: 3, title: "La propiedad", status: propertyDescriptionInput.value.trim() ? reviewStatus(true) : reviewOptional("Sin contenido"), body: propertyDescriptionInput.value.trim() ? '<p><strong>Descripción:</strong> cargada</p><p><strong>Extensión:</strong> ' + propertyDescriptionInput.value.trim().length + ' caracteres</p><p><strong>Párrafos:</strong> ' + state.validParagraphs + '</p>' : '<p>Descripción: no cargada.</p>' },
+            { step: 3, title: "La propiedad", status: propertyDescriptionInput.value.trim() ? reviewStatus(true) : reviewOptional("Sin contenido"), body: '<p><strong>Descripción original:</strong> ' + (propertyDescriptionInput.value.trim() ? "✓ Cargada" : "No cargada") + '</p><p><strong>Descripción organizada:</strong> ' + (organizedHeadline || organizedParagraphs.length ? "✓ Disponible" : "No organizada") + '</p><p><strong>Título destacado:</strong> ' + (escapeReview(organizedHeadline) || "No definido") + '</p><p><strong>Párrafos:</strong> ' + (organizedParagraphs.filter((item) => item.text.trim()).length || state.validParagraphs) + '</p>' },
             { step: 4, title: "Datos destacados", status: state.visibleData ? reviewStatus(true) : reviewOptional("Sin datos destacados"), body: state.visibleData ? '<p>' + state.featuredCount + ' datos configurados</p><p>' + state.visibleData + ' visibles</p>' : '<p>Sin datos destacados</p>' },
             { step: 5, title: "Galería", status: !state.galleryEnabled ? reviewOptional("Desactivada") : state.galleryAvailable ? reviewStatus(true) : reviewStatus(false), body: !state.galleryEnabled ? '<p>Galería: Desactivada</p>' : '<p><strong>Fotos detectadas:</strong> ' + state.galleryUploaded + '</p><p><strong>Futura portada seleccionada:</strong> ' + (selectedFutureCoverId ? "Sí" : "No") + '</p><p>' + (state.galleryAvailable ? "✓ foto-01.jpg disponible" : "⚠ Falta al menos una foto de galería") + '</p>' },
             { step: 6, title: "Características", status: state.featureCount ? reviewStatus(true) : reviewOptional("Sin características cargadas"), body: state.featureCount ? '<p>' + state.featureCount + ' características</p>' : '<p>Sin características cargadas</p>' },
@@ -1721,6 +1776,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         });
         document.querySelector("#add-feature").addEventListener("click", () => addFeature());
         propertyDescriptionInput.addEventListener("input", scheduleSave);
+        document.querySelector("#organize-description").addEventListener("click", organizeDescription);
+        document.querySelector("#organized-headline").addEventListener("input", (event) => { organizedHeadline = event.target.value; scheduleSave(); });
+        document.querySelector("#add-organized-paragraph").addEventListener("click", () => { organizedParagraphs.push({ id: "paragraph-" + Date.now(), text: "" }); document.querySelector("#organized-description").hidden = false; renderOrganizedDescription(); scheduleSave(); });
 
         document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
