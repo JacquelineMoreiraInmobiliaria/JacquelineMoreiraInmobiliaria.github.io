@@ -682,3 +682,29 @@ h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; }
   .publication-preview,
   .publication-checklist-section { padding: 18px; }
 }
+
+
+/* Limpieza de espacios reservados y eliminación de propiedades */
+.empty-placeholder:empty,
+.gallery-editor-list:empty,
+.distance-editor-list:empty,
+.review-step > section:empty,
+form > section:empty,
+form > div:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+}
+.protected-property-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 600;
+}
+.delete-property-dialog .form-heading { padding-right: 44px; }
+.delete-property-dialog .button-danger {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.delete-property-dialog .temporary-help { margin-top: 22px; }
