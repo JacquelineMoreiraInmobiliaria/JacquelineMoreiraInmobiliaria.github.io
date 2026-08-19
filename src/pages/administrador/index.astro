@@ -1295,15 +1295,14 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const galleryAvailable = externalOriginal
             ? availableGalleryItems.some((item) => item.external || String(item.name || item.originalName || "").toLowerCase() === "foto-01.jpg")
             : media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg");
-          const structural = featureItems.filter((item) => item.category === "structural" && item.label.trim()).length;
-          const exterior = featureItems.filter((item) => item.category === "exterior" && item.label.trim()).length;
+          const featureCount = featureItems.filter((item) => item.label.trim()).length;
           const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
             label: card.querySelector("[data-field='label']").value.trim(),
             value: card.querySelector("[data-field='value']").value.trim(),
             show: card.querySelector("input[type='radio']:checked")?.value === "yes"
           }));
           const visibleData = featured.filter((item) => item.show && item.label && item.value).length;
-          const validParagraphs = [...paragraphsList.querySelectorAll("textarea")].filter((item) => item.value.trim()).length;
+          const validParagraphs = descriptionParagraphs(propertyDescriptionInput.value).length;
           const validDistances = distanceItems.filter((item) => item.destination.trim() && item.distance.trim()).length;
           const coordinates = validCoordinates();
           const pending = [];
@@ -1313,7 +1312,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           if (galleryEnabled && !galleryAvailable) pending.push({ text: "La galería está activada pero todavía no tiene fotos", step: 5 });
           if (locationEnabled && !coordinates) pending.push({ text: "La ubicación no tiene coordenadas válidas", step: 7 });
           if (distancesEnabled && !validDistances) pending.push({ text: "No hay distancias completas", step: 8, optional: true });
-          return { slug, videoEnabled, galleryEnabled, locationEnabled, distancesEnabled, coverAvailable, videoAvailable, galleryUploaded, galleryAvailable, structural, exterior, featuredCount: featured.length, visibleData, validParagraphs, validDistances, coordinates, pending };
+          return { slug, videoEnabled, galleryEnabled, locationEnabled, distancesEnabled, coverAvailable, videoAvailable, galleryUploaded, galleryAvailable, featureCount, featuredCount: featured.length, visibleData, validParagraphs, validDistances, coordinates, pending };
         };
         const renderReview = () => {
           const state = getReviewState();
@@ -1321,12 +1320,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           reviewPropertyName.textContent = nameInput.value.trim() || "Propiedad sin nombre";
           reviewGeneral.innerHTML = '<div class="review-general-copy"><p class="eyebrow">Estado de la propiedad</p><h3>' + (requiredPending.length ? "⚠ Hay elementos pendientes" : "✓ Lista para preparar") + '</h3><p>' + (requiredPending.length ? "Completá los elementos indicados antes de la próxima etapa." : "Todos los datos obligatorios están completos.") + '</p></div>';
           const cards = [
-            { step: 1, title: "Información", status: nameInput.value.trim() ? reviewStatus(true) : reviewStatus(false, "✓ Completa", "⚠ Falta el nombre de la propiedad"), body: '<p><strong>Nombre:</strong> ' + (escapeReview(nameInput.value.trim()) || "—") + '</p><p><strong>Precio:</strong> ' + (escapeReview(priceInput.value.trim()) || "No indicado") + '</p><p><strong>Subtítulo:</strong> ' + (escapeReview(subtitleInput.value.trim()) || "No indicado") + '</p>' },
+            { step: 1, title: "Información", status: nameInput.value.trim() ? reviewStatus(true) : reviewStatus(false, "✓ Completa", "⚠ Falta el nombre de la propiedad"), body: '<p><strong>Nombre:</strong> ' + (escapeReview(nameInput.value.trim()) || "—") + '</p><p><strong>Precio:</strong> ' + (escapeReview(priceInput.value.trim()) || "No indicado") + '</p><p><strong>Ubicación para subtítulo:</strong> ' + (escapeReview(subtitleFromLocation()) || "Se generará al cargar una ubicación") + '</p>' },
             { step: 2, title: "Portada", status: state.coverAvailable && (!state.videoEnabled || state.videoAvailable) ? reviewStatus(true) : reviewStatus(false), body: '<p><strong>Descripción corta:</strong> ' + (escapeReview(coverDescription.value.trim()) || "No indicada") + '</p><p><strong>Foto principal:</strong> ' + (state.coverAvailable ? "✓ Subida" : "⚠ Falta portada.jpg") + '</p><p><strong>Video:</strong> ' + (!state.videoEnabled ? "No requerido" : state.videoAvailable ? "✓ Subido" : "⚠ Falta video.mp4") + '</p>' },
-            { step: 3, title: "La propiedad", status: (sectionNameInput.value.trim() || propertyHeadlineInput.value.trim() || state.validParagraphs) ? reviewStatus(true) : reviewOptional("Sin contenido"), body: (sectionNameInput.value.trim() || propertyHeadlineInput.value.trim() || state.validParagraphs) ? '<p><strong>Sección:</strong> ' + (escapeReview(sectionNameInput.value.trim()) || "Sin nombre") + '</p><p><strong>Título:</strong> ' + (escapeReview(propertyHeadlineInput.value.trim()) || "No indicado") + '</p><p><strong>Párrafos:</strong> ' + state.validParagraphs + '</p>' : '<p>Esta sección no tendrá contenido.</p>' },
+            { step: 3, title: "La propiedad", status: propertyDescriptionInput.value.trim() ? reviewStatus(true) : reviewOptional("Sin contenido"), body: propertyDescriptionInput.value.trim() ? '<p><strong>Descripción:</strong> cargada</p><p><strong>Extensión:</strong> ' + propertyDescriptionInput.value.trim().length + ' caracteres</p><p><strong>Párrafos:</strong> ' + state.validParagraphs + '</p>' : '<p>Descripción: no cargada.</p>' },
             { step: 4, title: "Datos destacados", status: state.visibleData ? reviewStatus(true) : reviewOptional("Sin datos destacados"), body: state.visibleData ? '<p>' + state.featuredCount + ' datos configurados</p><p>' + state.visibleData + ' visibles</p>' : '<p>Sin datos destacados</p>' },
             { step: 5, title: "Galería", status: !state.galleryEnabled ? reviewOptional("Desactivada") : state.galleryAvailable ? reviewStatus(true) : reviewStatus(false), body: !state.galleryEnabled ? '<p>Galería: Desactivada</p>' : '<p><strong>Fotos detectadas:</strong> ' + state.galleryUploaded + '</p><p><strong>Futura portada seleccionada:</strong> ' + (selectedFutureCoverId ? "Sí" : "No") + '</p><p>' + (state.galleryAvailable ? "✓ foto-01.jpg disponible" : "⚠ Falta al menos una foto de galería") + '</p>' },
-            { step: 6, title: "Características", status: state.structural + state.exterior ? reviewStatus(true) : reviewOptional("Sin características cargadas"), body: state.structural + state.exterior ? '<p>' + state.structural + ' Estructural / confort</p><p>' + state.exterior + ' Exterior / entorno</p>' : '<p>Sin características cargadas</p>' },
+            { step: 6, title: "Características", status: state.featureCount ? reviewStatus(true) : reviewOptional("Sin características cargadas"), body: state.featureCount ? '<p>' + state.featureCount + ' características</p>' : '<p>Sin características cargadas</p>' },
             { step: 7, title: "Ubicación", status: !state.locationEnabled ? reviewOptional("Desactivada") : state.coordinates ? reviewStatus(true) : reviewStatus(false, "✓ Coordenadas válidas", "⚠ Faltan coordenadas válidas"), body: !state.locationEnabled ? '<p>Ubicación: Desactivada</p>' : '<p><strong>Nombre:</strong> ' + (escapeReview(locationNameInput.value.trim()) || "No indicado") + '</p><p><strong>Dirección:</strong> ' + (escapeReview(locationAddressInput.value.trim()) || "No indicada") + '</p><p><strong>Mapa:</strong> ' + (state.coordinates ? "✓ Coordenadas válidas" : "⚠ Faltan coordenadas válidas") + '</p>' },
             { step: 8, title: "Distancias", status: !state.distancesEnabled ? reviewOptional("Desactivadas") : state.validDistances ? reviewStatus(true) : reviewStatus(false, "✓ Configuradas", "⚠ No hay distancias completas"), body: !state.distancesEnabled ? '<p>Distancias: Desactivadas</p>' : '<p><strong>Distancias válidas:</strong> ' + state.validDistances + '</p>' }
           ];
@@ -1358,7 +1357,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const external = packageUsesExternalMedia;
           const local = (name) => "/media/" + slug + "/" + name;
           const visibleData = values.featuredData.filter((item) => item.show && item.label && item.value);
-          const features = values.features.filter((item) => item.label).sort((a, b) => (a.category === b.category ? 0 : a.category === "structural" ? -1 : 1));
+          const features = values.features.filter((item) => item.label);
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
             ? (external ? galleryItems : packageGalleryFiles).map((item, index) => ({
@@ -1587,7 +1586,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             intro.textContent = "Revisá y actualizá la información básica.";
             nameInput.value = saved.name || "";
             priceInput.value = saved.price || "";
-            subtitleInput.value = saved.subtitle || "";
+            legacySubtitle = saved.subtitle || "";
             loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
             loadPropertyValues({ ...originalProperty, ...saved });
             loadFeaturedData({ ...originalProperty, ...saved });
@@ -1653,7 +1652,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               intro.textContent = "Revisá y actualizá la información básica.";
               nameInput.value = draft.name || "";
               priceInput.value = draft.price || "";
-              subtitleInput.value = draft.subtitle || "";
+              legacySubtitle = draft.subtitle || "";
               loadCoverValues(draft, draft.id);
               loadPropertyValues(draft);
               loadFeaturedData(draft);
