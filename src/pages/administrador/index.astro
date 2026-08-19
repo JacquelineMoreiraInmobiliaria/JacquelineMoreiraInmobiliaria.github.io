@@ -1290,15 +1290,15 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const galleryEnabled = currentGalleryEnabled();
           const locationEnabled = document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes";
           const distancesEnabled = document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes";
-          const coverAvailable = (externalOriginal && !photoRemoved) || media.cover;
-          const videoAvailable = (externalOriginal && !videoRemoved) || media.video;
+          const coverAvailable = (externalOriginal && !photoRemoved) || media.cover || Boolean(remoteCover?.url);
+          const videoAvailable = (externalOriginal && !videoRemoved) || media.video || Boolean(remoteVideo?.url);
           const availableGalleryItems = galleryItems.filter((item) => item.status === "uploaded" || item.external);
           // Revisión usa la misma fuente real del build que el Paso 5. Así nunca
           // informa cero cuando foto-01.jpg ... foto-XX.jpg ya están publicados.
-          const galleryUploaded = externalOriginal ? availableGalleryItems.length : media.gallery.length;
+          const galleryUploaded = externalOriginal ? availableGalleryItems.length : Math.max(media.gallery.length, availableGalleryItems.length);
           const galleryAvailable = externalOriginal
             ? availableGalleryItems.some((item) => item.external || String(item.name || item.originalName || "").toLowerCase() === "foto-01.jpg")
-            : media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg");
+            : (availableGalleryItems.length > 0 || media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg"));
           const featureCount = featureItems.filter((item) => item.label.trim()).length;
           const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
             label: card.querySelector("[data-field='label']").value.trim(),
