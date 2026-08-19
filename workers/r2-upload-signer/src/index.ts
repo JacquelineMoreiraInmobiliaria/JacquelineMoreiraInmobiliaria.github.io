@@ -3,7 +3,7 @@ import { AwsClient } from "aws4fetch";
 interface Env { R2_ACCOUNT_ID: string; R2_ACCESS_KEY_ID: string; R2_SECRET_ACCESS_KEY: string; R2_BUCKET_NAME: string; R2_PUBLIC_BASE_URL: string; ALLOWED_ORIGINS?: string; }
 const types: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4" };
 const validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const cors = (origin: string | null, env: Env) => {
+const cors = (origin: string | null, env: Env): Record<string, string> => {
   const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((item) => item.trim());
   return origin && allowed.includes(origin) ? {
     "access-control-allow-origin": origin,
