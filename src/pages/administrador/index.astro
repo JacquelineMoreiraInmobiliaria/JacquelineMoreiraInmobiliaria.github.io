@@ -117,11 +117,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               <p id="price-example" class="example">Ejemplo: USD 850.000</p>
             </div>
 
-            <div class="field">
-              <label for="property-subtitle">Subtítulo <small>Opcional</small></label>
-              <input id="property-subtitle" name="subtitle" type="text" autocomplete="off" placeholder="Escribir ubicación o descripción breve" aria-describedby="subtitle-example" />
-              <p id="subtitle-example" class="example">Ejemplo: Piriápolis · Maldonado · Uruguay</p>
-            </div>
+            <p class="field-help">El subtítulo se generará automáticamente desde el nombre visible de la ubicación.</p>
 
             <div class="form-actions">
               <button id="cancel" class="button button-quiet" type="button">Cancelar</button>
@@ -245,42 +241,22 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           <form id="property-form" novalidate hidden>
             <div class="form-heading">
               <p class="eyebrow">La propiedad</p>
-              <h2>Contá qué hace especial a esta propiedad</h2>
-              <p>Podés usar un título y todos los párrafos que necesites. Todos los campos son opcionales.</p>
+              <h2>Contá todo sobre la propiedad</h2>
+              <p>Podés pegar o escribir toda la información en un solo lugar.</p>
             </div>
-
             <div class="field">
-              <label for="section-name">Nombre de la sección <small>Opcional</small></label>
-              <p class="field-help">Es el nombre pequeño que aparece encima del título principal de esta sección.</p>
-              <input id="section-name" name="sectionName" type="text" autocomplete="off" placeholder="Escribir nombre de la sección" aria-describedby="section-name-example" />
-              <p id="section-name-example" class="example">Ejemplo: La propiedad</p>
+              <label for="property-description">Descripción completa de la propiedad <small>Opcional</small></label>
+              <p class="field-help">Pegá o escribí aquí toda la información de la propiedad. Más adelante el sistema la organizará en una presentación clara.</p>
+              <textarea id="property-description" name="propertyDescription" rows="14" placeholder="Escribir descripción completa"></textarea>
+              <p class="example">Ejemplo: Propiedad ubicada en la zona alta de Piriápolis, sobre 10 hectáreas, con vista al mar, piscina climatizada, cuatro dormitorios, tres baños, losa radiante y viñedo.</p>
+              <p class="field-help">Podés separar ideas con saltos de línea. Por ahora se conservará el texto tal como lo escribís.</p>
             </div>
-
-            <div class="field">
-              <label for="property-headline">Título destacado <small>Opcional</small></label>
-              <p class="field-help">Es el título grande que aparecerá dentro de la sección principal de la propiedad.</p>
-              <input id="property-headline" name="propertyHeadline" type="text" autocomplete="off" placeholder="Escribir título destacado" aria-describedby="headline-example" />
-              <p id="headline-example" class="example">Ejemplo: Las vistas como protagonistas.</p>
-            </div>
-
-            <section class="paragraphs-section" aria-labelledby="paragraphs-title">
-              <div class="paragraphs-heading">
-                <div>
-                  <h3 id="paragraphs-title">Texto descriptivo</h3>
-                  <p>Agregá uno o más párrafos. Podés dejar un párrafo vacío o eliminarlo.</p>
-                </div>
-                <button id="add-paragraph" class="button button-secondary" type="button">+ Agregar otro párrafo</button>
-              </div>
-              <div id="paragraphs-list"></div>
-            </section>
-
             <div class="form-actions">
               <button id="property-back" class="button button-quiet" type="button">Atrás</button>
               <button id="property-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
               <button class="button button-primary" type="submit">Siguiente</button>
             </div>
           </form>
-
           <form id="data-form" novalidate hidden>
             <div class="form-heading">
               <p class="eyebrow">Datos destacados</p>
@@ -348,10 +324,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
           </form>
           <form id="features-form" novalidate hidden>
-            <div class="form-heading"><p class="eyebrow">Características</p><h2>Destacá lo mejor de la propiedad</h2><p>Agregá las características más importantes de la propiedad. Podés incluir tantas como necesites.</p></div>
-            <div class="data-toolbar"><div><h3>Características de la propiedad</h3><p>El orden se conserva dentro de cada categoría. En la presentación, primero aparecerán las estructurales y de confort, y luego las del exterior y entorno.</p></div><button id="add-feature" class="button button-secondary" type="button">+ Agregar característica</button></div>
-            <section class="feature-category-group" aria-labelledby="structural-title"><div class="feature-group-heading"><h3 id="structural-title">Estructural / confort</h3><p>Materiales, ambientes y comodidades de la vivienda.</p></div><div id="structural-features" class="feature-list"></div></section>
-            <section class="feature-category-group" aria-labelledby="exterior-title"><div class="feature-group-heading"><h3 id="exterior-title">Exterior / entorno</h3><p>Vistas, terreno, accesos y espacios exteriores.</p></div><div id="exterior-features" class="feature-list"></div></section>
+            <div class="form-heading"><p class="eyebrow">Características</p><h2>Destacá lo más importante</h2><p>Agregá todas las características que quieras mostrar.</p></div>
+            <div class="data-toolbar"><div><h3>Características</h3><p>Ordená las características desde la más importante hasta la menos importante.</p></div><button id="add-feature" class="button button-secondary" type="button">+ Agregar característica</button></div>
+            <div id="features-list" class="feature-list"></div>
             <div class="form-actions"><button id="features-back" class="button button-quiet" type="button">Atrás</button><button id="features-save-exit" class="button button-secondary" type="button">Guardar y salir</button><button class="button button-primary" type="submit">Siguiente</button></div>
           </form>
           <form id="location-form" novalidate hidden>
@@ -454,8 +429,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const locationForm = document.querySelector("#location-form");
         const distancesForm = document.querySelector("#distances-form");
         const reviewStep = document.querySelector("#review-step");
-        const structuralFeatures = document.querySelector("#structural-features");
-        const exteriorFeatures = document.querySelector("#exterior-features");
+
         const locationFields = document.querySelector("#location-fields");
         const locationHiddenNote = document.querySelector("#location-hidden-note");
         const locationNameInput = document.querySelector("#location-name");
@@ -510,7 +484,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const saveState = document.querySelector("#save-state");
         const nameInput = document.querySelector("#property-name");
         const priceInput = document.querySelector("#property-price");
-        const subtitleInput = document.querySelector("#property-subtitle");
+        const propertyDescriptionInput = document.querySelector("#property-description");
         const nameError = document.querySelector("#name-error");
         const coverDescription = document.querySelector("#cover-description");
         const photoInput = document.querySelector("#cover-photo-input");
@@ -534,9 +508,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const missingFiles = document.querySelector("#missing-files");
         const missingFilesList = document.querySelector("#missing-files-list");
         const externalMediaNote = document.querySelector("#external-media-note");
-        const sectionNameInput = document.querySelector("#section-name");
-        const propertyHeadlineInput = document.querySelector("#property-headline");
-        const paragraphsList = document.querySelector("#paragraphs-list");
+        const featuresList = document.querySelector("#features-list");
         const featuredDataList = document.querySelector("#featured-data-list");
         const toast = document.querySelector("#toast");
         const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
@@ -561,6 +533,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let packageVideoFile = null;
         let packageUsesExternalMedia = false;
         let draggedPackageGalleryFile = null;
+        let legacySubtitle = "";
+        let legacySectionName = "La propiedad";
+        let legacyPropertyHeadline = "";
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
