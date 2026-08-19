@@ -1974,36 +1974,48 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
         galleryDropzone.addEventListener("click", () => galleryInput.click());
         document.querySelector("#upload-gallery-r2").addEventListener("click", async () => {
-          const queued = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
-          if (!queued.length) return showToast("No hay fotos pendientes para subir.");
-          const updateUploadSummary = (finished = false) => {
-            const uploaded = galleryItems.filter((item) => item.status === "uploaded").length;
-            const errors = galleryItems.filter((item) => item.status === "error").length;
+          const batchItems = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
+          if (!batchItems.length) return showToast("No hay fotos pendientes para subir.");
+          const renderGalleryUploadSummary = (finished = false) => {
+            const total = batchItems.length;
+            const uploaded = batchItems.filter((item) => item.status === "uploaded").length;
+            const errors = batchItems.filter((item) => item.status === "error").length;
+            const uploading = batchItems.filter((item) => item.status === "uploading").length;
+            const pending = batchItems.filter((item) => item.status === "pending").length;
             const progress = document.querySelector("#gallery-upload-progress");
-            if (errors) progress.textContent = uploaded + " de " + galleryItems.length + " subidas · " + errors + (errors === 1 ? " con error" : " con errores");
-            else if (finished) progress.textContent = "✓ " + uploaded + (uploaded === 1 ? " foto subida" : " fotos subidas");
-            else progress.textContent = "Subiendo fotos: " + uploaded + " de " + galleryItems.length + " completadas";
-          };
-          updateUploadSummary();
-          for (const item of queued) {
-            item.status = "uploading";
-            item.progress = 0;
-            renderGallery();
-            try {
-              const result = await uploadR2File("gallery", item.file, item.id, (value) => { item.progress = value; renderGallery(); });
-              item.remoteUrl = result.publicUrl;
-              item.objectKey = result.key;
-              item.status = "uploaded";
-              item.source = item.remoteUrl;
-              delete item.file;
-            } catch {
-              item.status = "error";
+            if (finished && uploaded === total) {
+              progress.textContent = "✓ " + total + (total === 1 ? " foto subida" : " fotos subidas");
+            } else if (finished || errors) {
+              progress.textContent = uploaded + " de " + total + " subidas · " + errors + (errors === 1 ? " con error" : " con errores");
+            } else if (uploading || pending) {
+              progress.textContent = "Subiendo fotos: " + uploaded + " de " + total + " completadas";
             }
-            updateUploadSummary();
+          };
+          renderGalleryUploadSummary();
+          try {
+            for (const item of batchItems) {
+              item.status = "uploading";
+              item.progress = 0;
+              renderGallery();
+              try {
+                const result = await uploadR2File("gallery", item.file, item.id, (value) => { item.progress = value; renderGallery(); });
+                item.remoteUrl = result.publicUrl;
+                item.objectKey = result.key;
+                item.status = "uploaded";
+                item.source = item.remoteUrl;
+                delete item.file;
+              } catch {
+                item.status = "error";
+              }
+              renderGalleryUploadSummary();
+              renderGallery();
+              scheduleSave();
+            }
+          } finally {
             renderGallery();
             scheduleSave();
+            renderGalleryUploadSummary(true);
           }
-          updateUploadSummary(true);
         });
         document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
         document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
