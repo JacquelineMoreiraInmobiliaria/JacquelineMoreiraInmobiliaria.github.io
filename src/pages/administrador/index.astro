@@ -1115,18 +1115,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         };
 
 
-        const categoryTitle = (category) => category === "exterior" ? "Exterior / entorno" : "Estructural / confort";
-        const featureContainer = (category) => category === "exterior" ? exteriorFeatures : structuralFeatures;
-        const featureGroupItems = (category) => featureItems.filter((item) => item.category === category);
         const moveFeature = (item, direction) => {
-          const group = featureGroupItems(item.category);
-          const index = group.indexOf(item);
-          const target = group[index + direction];
+          const index = featureItems.indexOf(item);
+          const target = featureItems[index + direction];
           if (!target) return;
-          const sourceIndex = featureItems.indexOf(item);
-          const targetIndex = featureItems.indexOf(target);
-          featureItems[sourceIndex] = target;
-          featureItems[targetIndex] = item;
+          featureItems[index] = target;
+          featureItems[index + direction] = item;
           renderFeatures(); scheduleSave();
         };
         const removeFeature = (item) => {
@@ -1134,18 +1128,16 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           featureItems = featureItems.filter((entry) => entry !== item);
           renderFeatures(); scheduleSave();
         };
-        const buildFeatureCard = (item, index, count) => {
+        const buildFeatureCard = (item, index) => {
           const card = document.createElement("article");
           card.className = "feature-card";
           card.draggable = true;
-          card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Característica ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="feature-fields"><fieldset class="feature-category-field"><legend>Categoría</legend><div class="choice-grid compact-choices"><label class="choice-card"><input type="radio" value="structural" /><span>Estructural / confort</span></label><label class="choice-card"><input type="radio" value="exterior" /><span>Exterior / entorno</span></label></div></fieldset><div class="field compact-field"><label>Característica</label><p class="field-help">Escribí una característica que quieras destacar en la presentación.</p><input type="text" placeholder="Escribir característica" /><p class="example">Ejemplo: Aberturas de aluminio con DVH</p></div></div>';
-          const radios = card.querySelectorAll('input[type="radio"]');
-          radios.forEach((radio) => { radio.name = "feature-category-" + item.id; radio.checked = radio.value === item.category; radio.addEventListener("change", () => { item.category = radio.value; renderFeatures(); scheduleSave(); }); });
-          const input = card.querySelector('input[type="text"]');
+          card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Característica ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="field compact-field"><label>Característica</label><p class="field-help">Escribí una característica que quieras destacar en la presentación.</p><input type="text" placeholder="Escribir característica" /><p class="example">Ejemplo: Aberturas de aluminio con DVH</p></div>';
+          const input = card.querySelector("input");
           input.value = item.label || "";
           input.addEventListener("input", () => { item.label = input.value; scheduleSave(); });
           card.querySelector("[data-up]").disabled = index === 0;
-          card.querySelector("[data-down]").disabled = index === count - 1;
+          card.querySelector("[data-down]").disabled = index === featureItems.length - 1;
           card.querySelector("[data-up]").addEventListener("click", () => moveFeature(item, -1));
           card.querySelector("[data-down]").addEventListener("click", () => moveFeature(item, 1));
           card.querySelector("[data-remove]").addEventListener("click", () => removeFeature(item));
@@ -1153,7 +1145,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           card.addEventListener("dragend", () => { draggedFeatureItem = null; card.classList.remove("dragging"); scheduleSave(); });
           card.addEventListener("dragover", (event) => {
             event.preventDefault();
-            if (!draggedFeatureItem || draggedFeatureItem === item || draggedFeatureItem.category !== item.category) return;
+            if (!draggedFeatureItem || draggedFeatureItem === item) return;
             const from = featureItems.indexOf(draggedFeatureItem);
             const to = featureItems.indexOf(item);
             featureItems.splice(from, 1); featureItems.splice(to, 0, draggedFeatureItem);
@@ -1161,22 +1153,21 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           });
           return card;
         };
-        const renderFeatureGroup = (category) => {
-          const container = featureContainer(category);
-          const items = featureGroupItems(category);
-          container.replaceChildren(...items.map((item, index) => buildFeatureCard(item, index, items.length)));
-          if (!items.length) {
+        const renderFeatures = () => {
+          featuresList.replaceChildren();
+          if (!featureItems.length) {
             const empty = document.createElement("p");
             empty.className = "feature-empty";
-            empty.textContent = "Todavía no hay características en esta categoría.";
-            container.appendChild(empty);
+            empty.textContent = "Todavía no agregaste características.";
+            featuresList.appendChild(empty);
+            return;
           }
+          featureItems.forEach((item, index) => featuresList.appendChild(buildFeatureCard(item, index)));
         };
-        const renderFeatures = () => { renderFeatureGroup("structural"); renderFeatureGroup("exterior"); };
-        const addFeature = (category = "structural", label = "") => {
-          const item = { id: "feature-" + Date.now() + "-" + Math.random().toString(16).slice(2), label, category };
+        const addFeature = (label = "") => {
+          const item = { id: "feature-" + Date.now() + "-" + Math.random().toString(16).slice(2), label, category: "structural" };
           featureItems.push(item); renderFeatures(); scheduleSave();
-          window.setTimeout(() => featureContainer(category).querySelector('input[type="text"]')?.focus(), 0);
+          window.setTimeout(() => featuresList.querySelector("input")?.focus(), 0);
         };
         const loadFeatures = (property) => {
           const saved = Array.isArray(property.features) ? property.features : [];
