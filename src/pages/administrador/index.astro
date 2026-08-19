@@ -612,12 +612,20 @@ const mediaInventory = Object.fromEntries(await Promise.all(
 
         const writeDrafts = (drafts) => localStorage.setItem(storageKey, JSON.stringify(drafts));
 
+        const subtitleFromLocation = () => {
+          const visibleName = locationNameInput?.value.trim();
+          if (!visibleName) return legacySubtitle;
+          const parts = visibleName.split(",").map((part) => part.trim()).filter(Boolean);
+          if (!parts.some((part) => part.toLowerCase() === "uruguay")) parts.push("Uruguay");
+          return parts.join(" · ");
+        };
+        const descriptionParagraphs = (description) => description.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
         const currentValues = () => ({
           id: editingId || ("draft-" + Date.now()),
           slug: slugify(nameInput.value) || "nueva-propiedad",
           name: nameInput.value.trim(),
           price: priceInput.value.trim(),
-          subtitle: subtitleInput.value.trim(),
+          subtitle: subtitleFromLocation(),
           coverDescription: coverDescription.value.trim(),
           coverPhotoName: selectedPhoto?.name || photoName.textContent || "",
           coverPhotoSource: editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : "",
@@ -635,9 +643,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           longitude: longitudeInput.value.trim(),
           distancesEnabled: document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes",
           distances: distanceItems.map((item, index) => ({ id: item.id, destination: item.destination || "", distance: item.distance || "", order: index + 1 })),
-          sectionName: sectionNameInput.value.trim(),
-          propertyHeadline: propertyHeadlineInput.value.trim(),
-          paragraphs: [...paragraphsList.querySelectorAll("textarea")].map((textarea) => textarea.value.trim()),
+          propertyDescription: propertyDescriptionInput.value.trim(),
+          sectionName: legacySectionName,
+          propertyHeadline: legacyPropertyHeadline,
+          paragraphs: descriptionParagraphs(propertyDescriptionInput.value),
           featuredData: [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
             icon: card.dataset.icon || "home",
             label: card.querySelector("[data-field='label']").value.trim(),
@@ -835,11 +844,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         };
 
         const loadPropertyValues = (property) => {
-          sectionNameInput.value = property.sectionName ?? "La propiedad";
-          propertyHeadlineInput.value = property.propertyHeadline || "";
-          paragraphsList.replaceChildren();
-          const paragraphs = Array.isArray(property.paragraphs) && property.paragraphs.length ? property.paragraphs : [""];
-          paragraphs.forEach((paragraph) => addParagraph(paragraph));
+          legacySectionName = property.sectionName ?? "La propiedad";
+          legacyPropertyHeadline = property.propertyHeadline || "";
+          const legacyContent = [legacySectionName, legacyPropertyHeadline, ...(Array.isArray(property.paragraphs) ? property.paragraphs : [])].filter(Boolean).join("\n\n");
+          propertyDescriptionInput.value = property.propertyDescription || legacyContent;
         };
 
         const renumberDataCards = () => {
@@ -1710,12 +1718,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           scheduleSave();
         });
         document.querySelector("#add-feature").addEventListener("click", () => addFeature());
-        document.querySelector("#add-paragraph").addEventListener("click", () => {
-          const item = addParagraph();
-          item.querySelector("textarea").focus();
-          scheduleSave();
-        });
-        [sectionNameInput, propertyHeadlineInput].forEach((input) => input.addEventListener("input", scheduleSave));
+        propertyDescriptionInput.addEventListener("input", scheduleSave);
 
         document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
@@ -1777,7 +1780,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           else showToast("Este paso se desarrollará en una próxima etapa.");
         }));
 
-        [nameInput, priceInput, subtitleInput, coverDescription].forEach((input) => input.addEventListener("input", () => {
+        [nameInput, priceInput, coverDescription].forEach((input) => input.addEventListener("input", () => {
           if (input === nameInput && nameInput.value.trim()) {
             nameError.textContent = "";
             nameInput.removeAttribute("aria-invalid");
