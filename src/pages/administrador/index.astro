@@ -1599,8 +1599,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             title.textContent = "Nueva propiedad";
             intro.textContent = "Completá la información básica para empezar.";
             form.reset();
+            legacySubtitle = "";
+            legacySectionName = "La propiedad";
+            legacyPropertyHeadline = "";
             loadCoverValues({ videoEnabled: false });
-            loadPropertyValues({ sectionName: "La propiedad", propertyHeadline: "", paragraphs: [""] });
+            loadPropertyValues({ propertyDescription: "", sectionName: "", propertyHeadline: "", paragraphs: [] });
             loadFeaturedData({ featuredData: [] });
             loadGalleryValues({ galleryEnabled: true, galleryItems: detectedGalleryItems() });
             loadFeatures({ features: [] });
