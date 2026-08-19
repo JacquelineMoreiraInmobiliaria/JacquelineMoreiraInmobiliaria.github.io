@@ -190,7 +190,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
                 </div>
               </div>
               <p id="photo-help" class="example">Podés elegir una imagen directamente desde tu computadora o teléfono.</p>
-              <p class="temporary-help">Esta selección sirve para preparar la propiedad. La publicación definitiva del archivo se hará cuando esté cargado en la carpeta indicada.</p>
+              <p id="r2-cover-note" class="temporary-help">La carga directa todavía no está configurada. Podés continuar con el flujo manual actual.</p><button id="upload-cover-r2" class="button button-secondary" type="button" hidden>Subir foto</button><p id="cover-upload-progress" class="field-help" aria-live="polite"></p><p class="temporary-help">Esta selección sirve para preparar la propiedad. La publicación definitiva del archivo se hará cuando esté cargado en la carpeta indicada.</p>
               <p id="photo-error" class="field-error" aria-live="polite"></p>
             </fieldset>
 
@@ -228,7 +228,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
                 </div>
               </div>
               <p id="video-error" class="field-error" aria-live="polite"></p>
-              <p class="temporary-help">Esta selección es temporal y no significa que el video ya esté subido.</p>
+              <button id="upload-video-r2" class="button button-secondary" type="button" hidden>Subir video</button><p id="video-upload-progress" class="field-help" aria-live="polite"></p><p class="temporary-help">Esta selección es temporal y no significa que el video ya esté subido.</p>
             </div>
 
             <div class="form-actions">
@@ -308,7 +308,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
                 <div class="paragraphs-heading"><div><h3 id="gallery-preparation-title">Preparar nuevas fotos</h3><p>Podés seleccionar varias imágenes o arrastrarlas. El orden que ves aquí será el orden de la galería.</p></div></div>
                 <input id="gallery-input" class="visually-hidden" type="file" accept="image/*" multiple />
                 <div id="gallery-dropzone" class="gallery-dropzone" tabindex="0" role="button"><div class="upload-icon" aria-hidden="true">↑</div><strong>Arrastrá fotos hasta aquí</strong><span>o</span><button id="gallery-select" class="button button-secondary" type="button">Seleccionar fotos</button></div>
-                <p class="temporary-help">Las fotos seleccionadas aquí todavía no están subidas a GitHub. Cuando la propiedad esté lista, deberán cargarse en la carpeta indicada.</p>
+                <p id="r2-gallery-note" class="temporary-help">La carga directa todavía no está configurada. Podés continuar con el flujo manual actual.</p><button id="upload-gallery-r2" class="button button-secondary" type="button" hidden>Subir fotos seleccionadas</button><p id="gallery-upload-progress" class="field-help" aria-live="polite"></p><p class="temporary-help">Las fotos seleccionadas aquí todavía no están subidas a GitHub. Cuando la propiedad esté lista, deberán cargarse en la carpeta indicada.</p>
               </section>
               <section class="gallery-order-section" aria-labelledby="gallery-order-title">
                 <div class="paragraphs-heading"><div><h3 id="gallery-order-title">Orden de galería</h3><p>Arrastrá las fotos o usá Subir y Bajar. La persona no necesita decidir los nombres internos.</p></div></div>
@@ -411,6 +411,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         <div class="form-actions"><button id="close-publication-bottom" class="button button-quiet" type="button">Cerrar</button><button id="open-preview" class="button button-primary" type="button">Abrir presentación</button></div>
       </div>
     </dialog>
+    <script src="/config/r2-upload.js"></script>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
 
     <script>
@@ -512,6 +513,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const featuredDataList = document.querySelector("#featured-data-list");
         const toast = document.querySelector("#toast");
         const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
+        const r2Config = window.MOREIRA_R2_UPLOAD || {};
+        const r2Configured = Boolean(r2Config.workerUrl);
+        const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
+        const r2VideoLimit = Number(r2Config.maxVideoBytes) || 250 * 1024 * 1024;
         let editingId = null;
         let saveTimer = null;
         let selectedPhoto = null;
@@ -519,6 +524,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let photoObjectUrl = null;
         let photoRemoved = false;
         let videoRemoved = false;
+        let remoteCover = null;
+        let remoteVideo = null;
+        let activeUploads = 0;
         const sessionMedia = new Map();
         let draggedDataCard = null;
         let galleryItems = [];
@@ -628,12 +636,14 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           subtitle: subtitleFromLocation(),
           coverDescription: coverDescription.value.trim(),
           coverPhotoName: selectedPhoto?.name || photoName.textContent || "",
-          coverPhotoSource: editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : "",
+          coverPhotoSource: remoteCover?.url || (editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : ""),
+          remoteCover: remoteCover ? { ...remoteCover } : null,
           videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
           videoName: selectedVideo?.name || videoName.textContent || "",
-          videoSource: editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : "",
+          videoSource: remoteVideo?.url || (editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : ""),
+          remoteVideo: remoteVideo ? { ...remoteVideo } : null,
           galleryEnabled: document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no",
-          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 })),
+          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
           locationEnabled: document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes",
@@ -1021,6 +1031,30 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryItems.splice(index, 1); galleryItems.splice(target, 0, item);
           renderGallery(); scheduleSave();
         };
+        const isR2Image = (file) => Boolean(file) && ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+        const extensionFor = (type) => ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4" }[type] || "");
+        const r2Notice = () => {
+          const text = r2Configured ? "Podés subir directamente. Los archivos se guardarán de forma segura." : "La carga directa todavía no está configurada. Podés continuar con el flujo manual actual.";
+          document.querySelector("#r2-cover-note").textContent = text;
+          document.querySelector("#r2-gallery-note").textContent = text;
+          document.querySelector("#upload-cover-r2").hidden = !r2Configured;
+          document.querySelector("#upload-video-r2").hidden = !r2Configured;
+          document.querySelector("#upload-gallery-r2").hidden = !r2Configured;
+        };
+        const signedUpload = async (kind, file, id) => {
+          const response = await fetch(r2Config.workerUrl.replace(/\\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugify(nameInput.value) || "nueva-propiedad", kind, contentType: file.type, id }) });
+          if (!response.ok) throw new Error("No se pudo solicitar permiso de carga.");
+          return response.json();
+        };
+        const putFile = (url, file, progress) => new Promise((resolve, reject) => {
+          const request = new XMLHttpRequest(); request.open("PUT", url); request.setRequestHeader("Content-Type", file.type);
+          request.upload.onprogress = (event) => { if (event.lengthComputable) progress(Math.round(event.loaded / event.total * 100)); };
+          request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("No se pudo subir el archivo."));
+          request.onerror = () => reject(new Error("No se pudo subir el archivo.")); request.send(file);
+        });
+        const uploadR2File = async (kind, file, id, progress) => { activeUploads++; try { const signed = await signedUpload(kind, file, id); await putFile(signed.uploadUrl, file, progress); return signed; } finally { activeUploads--; } };
+        window.addEventListener("beforeunload", (event) => { if (activeUploads) { event.preventDefault(); event.returnValue = ""; } });
+
         const renderGallery = () => {
           const slug = slugForGallery();
           const detected = detectedMedia[slug]?.gallery || [];
@@ -1040,16 +1074,16 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             card.draggable = true;
             card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
             const thumb = card.querySelector(".gallery-thumb");
-            if (item.source) { const image = document.createElement("img"); image.src = item.source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
+            if (item.source || item.remoteUrl) { const image = document.createElement("img"); image.src = item.remoteUrl || item.source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
             card.querySelector(".gallery-internal").textContent = (index + 1) + " → " + galleryFileName(index);
             const status = card.querySelector(".gallery-status");
-            status.textContent = item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "○ Preparada, todavía no subida";
+            status.textContent = item.status === "uploading" ? "Subiendo… " + (item.progress || 0) + "%" : item.status === "error" ? "⚠ Error — Reintentar" : item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "Pendiente";
             status.className = "gallery-status " + (item.status === "missing" ? "status-warning" : item.status === "uploaded" || item.external ? "status-success" : "status-neutral");
             const description = card.querySelector("input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
-            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; renderGallery(); scheduleSave(); });
+            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
             card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === galleryItems.length - 1;
             card.querySelector("[data-up]").addEventListener("click", () => moveGalleryItem(item, -1)); card.querySelector("[data-down]").addEventListener("click", () => moveGalleryItem(item, 1));
-            card.querySelector("[data-remove]").addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
+            card.querySelector("[data-remove]").textContent = "Quitar de la galería"; card.querySelector("[data-remove]").addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
             card.addEventListener("dragstart", () => { draggedGalleryItem = item; card.classList.add("dragging"); });
             card.addEventListener("dragend", () => { draggedGalleryItem = null; card.classList.remove("dragging"); scheduleSave(); });
             card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedGalleryItem || draggedGalleryItem === item) return; const from = galleryItems.indexOf(draggedGalleryItem); const to = galleryItems.indexOf(item); galleryItems.splice(from, 1); galleryItems.splice(to, 0, draggedGalleryItem); renderGallery(); });
@@ -1057,8 +1091,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           }));
         };
         const addTemporaryGalleryFiles = (files) => {
-          [...files].filter((file) => file.type.startsWith("image/")).forEach((file) => {
-            galleryItems.push({ id: "temporary-" + Date.now() + "-" + Math.random().toString(16).slice(2), name: file.name, originalName: file.name, source: URL.createObjectURL(file), status: "temporary", external: false, description: "" });
+          [...files].forEach((file) => {
+            if (!isR2Image(file)) return showToast("Esta imagen no tiene un formato compatible.");
+            if (file.size > r2ImageLimit) return showToast("Una imagen supera el tamaño permitido.");
+            galleryItems.push({ id: crypto.randomUUID ? crypto.randomUUID() : "gallery-" + Date.now() + "-" + Math.random().toString(16).slice(2), name: file.name, originalName: file.name, source: URL.createObjectURL(file), file, status: r2Configured ? "pending" : "temporary", external: false, description: "", contentType: file.type });
           });
           renderGallery(); scheduleSave();
         };
@@ -1069,9 +1105,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             : (editingId === originalProperty.id ? originalProperty.galleryItems : detectedGalleryItems());
           galleryItems = sourceItems.map((item) => ({
             ...item,
-            source: item.source || (item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : ""),
+            remoteUrl: item.remoteUrl || "",
+            objectKey: item.objectKey || "",
+            source: item.source || (item.remoteUrl ? item.remoteUrl : item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : ""),
             status: item.status === "missing" ? "missing" : item.status || "uploaded"
           }));
+          remoteCover = property.remoteCover || (property.coverPhotoSource?.startsWith("https://") && !property.coverPhotoSource.includes("raw.githubusercontent.com") ? { url: property.coverPhotoSource } : null);
+          remoteVideo = property.remoteVideo || (property.videoSource?.startsWith("https://") && !property.videoSource.includes("raw.githubusercontent.com") ? { url: property.videoSource } : null);
           selectedFutureCoverId = reconciliation.futureCoverId;
           document.querySelector('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
           renderGallery();
@@ -1319,18 +1359,19 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const values = currentValues();
           const slug = values.slug;
           const external = packageUsesExternalMedia;
+          const remote = Boolean(values.remoteCover?.url || galleryItems.some((item) => item.remoteUrl) || values.remoteVideo?.url);
           const local = (name) => "/media/" + slug + "/" + name;
           const visibleData = values.featuredData.filter((item) => item.show && item.label && item.value);
           const features = values.features.filter((item) => item.label);
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
-            ? (external ? galleryItems : packageGalleryFiles).map((item, index) => ({
-                source: external ? item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
+            ? (external || remote ? galleryItems : packageGalleryFiles).map((item, index) => ({
+                source: external ? item.source || "" : remote ? item.remoteUrl || item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
                 alt: external ? item.description || "" : galleryItems[index]?.description || ""
               })).filter((item) => item.source)
             : [];
-          const coverSource = external ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
-          const videoSource = external ? (values.videoSource || originalProperty.videoSource) : local("video.mp4");
+          const coverSource = external || remote ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
+          const videoSource = external || remote ? (values.videoSource || originalProperty.videoSource) : local("video.mp4");
           const lines = ["slug: " + yamlText(slug), "name: " + yamlText(values.name)];
           if (values.price) lines.push("price: " + yamlText(values.price));
           lines.push("", "hero:");
@@ -1870,6 +1911,14 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
         document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
         galleryDropzone.addEventListener("click", () => galleryInput.click());
+        document.querySelector("#upload-gallery-r2").addEventListener("click", async () => {
+          const queued = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
+          if (!queued.length) return showToast("No hay fotos pendientes para subir.");
+          for (const item of queued) { item.status = "uploading"; item.progress = 0; renderGallery(); try { const result = await uploadR2File("gallery", item.file, item.id, (value) => { item.progress = value; document.querySelector("#gallery-upload-progress").textContent = "Subiendo fotos: " + galleryItems.filter((x) => x.status === "uploaded").length + " de " + galleryItems.length + " completadas"; renderGallery(); }); item.remoteUrl = result.publicUrl; item.objectKey = result.key; item.status = "uploaded"; item.source = item.remoteUrl; delete item.file; } catch { item.status = "error"; } renderGallery(); scheduleSave(); }
+        });
+        document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
+        document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
+        r2Notice();
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
         ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
         ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
