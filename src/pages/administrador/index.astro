@@ -356,9 +356,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               </section>
               <section class="gallery-order-section" aria-labelledby="gallery-order-title">
                 <div class="paragraphs-heading"><div><h3 id="gallery-order-title">Orden de galería</h3><p>Arrastrá las fotos o usá Subir y Bajar. La persona no necesita decidir los nombres internos.</p></div></div>
-                <p class="field-help">Foto principal actual: <strong id="gallery-cover-name">portada.jpg</strong> <span id="gallery-cover-status"></span></p>
+                <p class="field-help">Foto principal actual: <strong id="gallery-cover-name">portada.jpg</strong> <span id="gallery-cover-status"></span></p><p class="temporary-help">Recomendado: entre 10 y 15 fotos para mantener una presentación ágil y fácil de recorrer.</p><p id="gallery-recommendation" class="field-help" aria-live="polite"></p>
                 <div id="gallery-list" class="gallery-editor-list"></div>
                 <p id="gallery-warning" class="missing-files" hidden>Todavía no hay fotos de galería subidas.</p>
+              </section>
+              <section class="gallery-order-section" aria-labelledby="presentation-images-title">
+                <div class="paragraphs-heading"><div><h3 id="presentation-images-title">Imágenes de la presentación</h3><p>Elegí fotos ya disponibles. Una misma imagen puede reutilizarse sin volver a subirla.</p></div></div>
+                <div id="presentation-image-cards" class="gallery-editor-list"></div>
               </section>
             </div>
             <div class="form-actions">
@@ -432,6 +436,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <dialog id="presentation-image-dialog" class="preparation-dialog" aria-labelledby="presentation-image-title">
+      <div class="preparation-shell"><button id="close-presentation-image-dialog" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Imágenes de la presentación</p><h2 id="presentation-image-title">Elegir imagen</h2><p>Elegí una imagen ya disponible para esta propiedad.</p></div><div id="presentation-image-options" class="gallery-editor-list"></div><div class="form-actions"><button id="cancel-presentation-image" class="button button-quiet" type="button">Cancelar</button><button id="confirm-presentation-image" class="button button-primary" type="button">Usar esta imagen</button></div></div>
+    </dialog>
     <dialog id="delete-property-dialog" class="preparation-dialog delete-property-dialog" aria-labelledby="delete-property-title">
       <div class="preparation-shell">
         <button id="close-delete-property" class="dialog-close" type="button" aria-label="Cerrar">×</button>
@@ -533,6 +540,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const galleryWarning = document.querySelector("#gallery-warning");
         const galleryCoverName = document.querySelector("#gallery-cover-name");
         const galleryCoverStatus = document.querySelector("#gallery-cover-status");
+        const galleryRecommendation = document.querySelector("#gallery-recommendation");
+        const presentationImageCards = document.querySelector("#presentation-image-cards");
+        const presentationImageDialog = document.querySelector("#presentation-image-dialog");
+        const presentationImageOptions = document.querySelector("#presentation-image-options");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
         const stepCount = document.querySelector("#step-count");
@@ -597,6 +608,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let draggedDataCard = null;
         let galleryItems = [];
         let selectedFutureCoverId = null;
+        let presentationImages = { cover: null, property: null, features: null, final: null };
+        let selectingPresentationImage = null;
+        let pendingPresentationImageId = null;
         let draggedGalleryItem = null;
         let featureItems = [];
         let draggedFeatureItem = null;
@@ -714,8 +728,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           videoSource: remoteVideo?.url || (editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : ""),
           remoteVideo: remoteVideo ? { ...remoteVideo } : null,
           galleryEnabled: document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no",
-          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
+          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
+          presentationImages: { ...presentationImages },
           features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
           locationEnabled: document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes",
           locationName: locationNameInput.value.trim(),
@@ -937,6 +952,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             card.addEventListener("dragend", () => { draggedOrganizedParagraph = null; scheduleSave(); });
             return card;
           }));
+          normalizePresentationImages();
+          renderPresentationImages();
         };
         const normalizedSuggestion = normalizeSuggestion;
         const suggestedIcon = (label) => {
@@ -1306,6 +1323,38 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const uploadR2File = async (kind, file, id, progress) => { activeUploads++; try { const signed = await signedUpload(kind, file, id); await putFile(signed.uploadUrl, file, progress); return signed; } finally { activeUploads--; } };
         window.addEventListener("beforeunload", (event) => { if (activeUploads) { event.preventDefault(); event.returnValue = ""; } });
 
+        const itemSource = (item) => item?.remoteUrl || item?.source || (item?.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item?.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : "");
+        const availableGalleryImages = () => galleryItems.filter((item) => Boolean(itemSource(item)));
+        const selectedPresentationItem = (key) => availableGalleryImages().find((item) => item.id === presentationImages[key]) || null;
+        const fallbackPresentationItem = (key) => {
+          const images = availableGalleryImages(); const cover = selectedPresentationItem("cover");
+          const withoutCover = images.filter((item) => item !== cover); const position = { property: 0, features: 1, final: 2 }[key] || 0;
+          return withoutCover[position] || withoutCover[0] || images[position] || images[0] || null;
+        };
+        const renderPresentationImages = () => {
+          const labels = { cover: "Portada", property: "Imagen de “La propiedad”", features: "Imagen de “Características”", final: "Imagen final / “Una propiedad excepcional”" };
+          presentationImageCards.replaceChildren(...Object.entries(labels).map(([key, label]) => {
+            const item = selectedPresentationItem(key); const fallback = fallbackPresentationItem(key);
+            const card = document.createElement("article"); card.className = "gallery-editor-card";
+            card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>' + label + '</strong><span class="gallery-status"></span></div><div class="gallery-actions"><button type="button" data-choose>Elegir imagen</button><button type="button" data-clear>Quitar selección</button></div>';
+            const thumb = card.querySelector(".gallery-thumb"); const shown = item || fallback;
+            if (shown) { const image = document.createElement("img"); image.src = itemSource(shown); image.alt = shown.description || label; thumb.appendChild(image); card.querySelector(".gallery-status").textContent = item ? "✓ Seleccionada" : "Se usará una imagen automática"; } else { thumb.textContent = "—"; card.querySelector(".gallery-status").textContent = "La imagen seleccionada ya no está disponible."; }
+            card.querySelector("[data-choose]").addEventListener("click", () => openPresentationImageSelector(key));
+            const clear = card.querySelector("[data-clear]"); clear.hidden = !item; clear.addEventListener("click", () => { presentationImages[key] = null; renderPresentationImages(); scheduleSave(); });
+            return card;
+          }));
+        };
+        const openPresentationImageSelector = (key) => {
+          const items = availableGalleryImages(); if (!items.length) return showToast("Primero necesitás al menos una imagen disponible.");
+          selectingPresentationImage = key; pendingPresentationImageId = presentationImages[key] || items[0].id;
+          presentationImageOptions.replaceChildren(...items.map((item, index) => {
+            const card = document.createElement("button"); card.type = "button"; card.className = "gallery-editor-card"; card.innerHTML = '<span class="gallery-thumb"></span><span class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span>' + (item.visible === false ? "No se muestra en la galería" : "Visible en la galería") + '</span></span>';
+            const img = document.createElement("img"); img.src = itemSource(item); img.alt = item.description || "Foto " + (index + 1); card.querySelector(".gallery-thumb").appendChild(img);
+            card.classList.toggle("selected", item.id === pendingPresentationImageId); card.addEventListener("click", () => { pendingPresentationImageId = item.id; [...presentationImageOptions.children].forEach((element) => element.classList.toggle("selected", element === card)); }); return card;
+          })); presentationImageDialog.showModal();
+        };
+        const normalizePresentationImages = () => { Object.keys(presentationImages).forEach((key) => { if (presentationImages[key] && !availableGalleryImages().some((item) => item.id === presentationImages[key])) presentationImages[key] = null; }); };
+
         const renderGallery = () => {
           const slug = slugForGallery();
           const detected = detectedMedia[slug]?.gallery || [];
@@ -1318,6 +1367,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryHiddenNote.hidden = currentGalleryEnabled();
           const hasRealGallery = detected.length > 0 || editingId === originalProperty.id;
           galleryWarning.hidden = !(currentGalleryEnabled() && !hasRealGallery);
+          const visibleCount = galleryItems.filter((item) => item.visible !== false).length;
+          galleryRecommendation.textContent = visibleCount > 15 ? "Tenés " + visibleCount + " fotos seleccionadas. Podés publicar así, aunque recomendamos elegir las 10–15 más representativas." : visibleCount ? visibleCount + " fotos visibles en la galería." : "";
           galleryCoverStatus.textContent = (detectedMedia[slug]?.cover || editingId === originalProperty.id) ? "✓ Subida" : "⚠ Falta";
           galleryList.replaceChildren(...galleryItems.map((item, index) => {
             const card = document.createElement("article");
@@ -1330,7 +1381,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             const status = card.querySelector(".gallery-status");
             status.textContent = item.status === "uploading" ? "Subiendo… " + (item.progress || 0) + "%" : item.status === "error" ? "⚠ Error — Reintentar" : item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "Pendiente";
             status.className = "gallery-status " + (item.status === "missing" ? "status-warning" : item.status === "uploaded" || item.external ? "status-success" : "status-neutral");
-            const description = card.querySelector("input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
+            const visible = card.querySelector(".gallery-visible input"); visible.checked = item.visible !== false; visible.addEventListener("change", () => { item.visible = visible.checked; renderGallery(); scheduleSave(); });
+            const description = card.querySelector("label:not(.gallery-visible) input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
             const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
             card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === galleryItems.length - 1;
             card.querySelector("[data-up]").addEventListener("click", () => moveGalleryItem(item, -1)); card.querySelector("[data-down]").addEventListener("click", () => moveGalleryItem(item, 1));
@@ -1359,11 +1411,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             remoteUrl: item.remoteUrl || "",
             objectKey: item.objectKey || "",
             source: item.source || (item.remoteUrl ? item.remoteUrl : item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : ""),
+            visible: item.visible !== false,
             status: item.status === "missing" ? "missing" : item.status || "uploaded"
           }));
           remoteCover = property.remoteCover || (property.coverPhotoSource?.startsWith("https://") && !property.coverPhotoSource.includes("raw.githubusercontent.com") ? { url: property.coverPhotoSource } : null);
           remoteVideo = property.remoteVideo || (property.videoSource?.startsWith("https://") && !property.videoSource.includes("raw.githubusercontent.com") ? { url: property.videoSource } : null);
           selectedFutureCoverId = reconciliation.futureCoverId;
+          presentationImages = { cover: null, property: null, features: null, final: null, ...(property.presentationImages || {}) };
           document.querySelector('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
           renderGallery();
           updateMediaStatus();
