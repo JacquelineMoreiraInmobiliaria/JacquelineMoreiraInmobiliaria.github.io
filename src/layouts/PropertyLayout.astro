@@ -2,9 +2,7 @@
 import "../styles/master.css";
 
 const { property, settings } = Astro.props;
-const features = [...property.features].sort((a, b) =>
-  a.category === b.category ? 0 : a.category === "structural" ? -1 : 1
-);
+const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
 const statIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
 const showGallery = property.gallery.enabled && property.gallery.images.length > 0;
