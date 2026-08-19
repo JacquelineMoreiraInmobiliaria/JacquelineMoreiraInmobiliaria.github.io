@@ -1042,7 +1042,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           document.querySelector("#upload-gallery-r2").hidden = !r2Configured;
         };
         const signedUpload = async (kind, file, id) => {
-          const response = await fetch(r2Config.workerUrl.replace(/\\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugify(nameInput.value) || "nueva-propiedad", kind, contentType: file.type, id }) });
+          const response = await fetch(r2Config.workerUrl.replace(/\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugify(nameInput.value) || "nueva-propiedad", kind, contentType: file.type, id }) });
           if (!response.ok) throw new Error("No se pudo solicitar permiso de carga.");
           return response.json();
         };
@@ -1415,9 +1415,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const coverReady = packageUsesExternalMedia || isJpegFile(packageCoverFile);
           const galleryReady = !galleryRequired || packageUsesExternalMedia || packageGalleryFiles.length > 0;
           const videoReady = !videoRequired || packageUsesExternalMedia || isMp4File(packageVideoFile);
-          preparationCoverStatus.textContent = packageUsesExternalMedia ? "Esta propiedad utiliza la foto de la presentación original." : coverReady ? "✓ " + packageCoverFile.name + " → portada.jpg" : "Falta seleccionar la foto principal.";
-          preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExternalMedia ? "Esta propiedad utiliza fotos de la presentación original." : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
-          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? "Esta propiedad utiliza el video de la presentación original." : videoReady ? "✓ " + packageVideoFile.name + " → video.mp4" : "Falta seleccionar el video.";
+          preparationCoverStatus.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza la foto de la presentación original." : "✓ Foto principal ya subida.") : coverReady ? "✓ " + packageCoverFile.name + " → portada.jpg" : "Falta seleccionar la foto principal.";
+          preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza fotos de la presentación original." : "✓ Fotos de galería ya subidas.") : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
+          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza el video de la presentación original." : "✓ Video ya subido.") : videoReady ? "✓ " + packageVideoFile.name + " → video.mp4" : "Falta seleccionar el video.";
           preparationGallerySection.hidden = !galleryRequired || packageUsesExternalMedia;
           preparationVideoSection.hidden = !videoRequired || packageUsesExternalMedia;
           const ready = coverReady && galleryReady && videoReady;
@@ -1452,13 +1452,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const openPreparation = () => {
           const requiredPending = getReviewState().pending.filter((item) => !item.optional);
           if (requiredPending.length) { showToast("Todavía hay elementos pendientes antes de preparar la presentación."); renderReview(); return; }
-          packageUsesExternalMedia = editingId === originalProperty.id;
+          packageUsesExternalMedia = editingId === originalProperty.id || Boolean(remoteCover?.url || remoteVideo?.url || galleryItems.some((item) => item.remoteUrl));
           packageCoverFile = packageUsesExternalMedia ? null : (isJpegFile(selectedPhoto) ? selectedPhoto : null);
           packageVideoFile = packageUsesExternalMedia ? null : (isMp4File(selectedVideo) ? selectedVideo : null);
           packageGalleryFiles = [];
           preparationCoverInput.value = ""; preparationGalleryInput.value = ""; preparationVideoInput.value = "";
           preparationFields.hidden = false;
-          preparationIntro.textContent = packageUsesExternalMedia ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
+          preparationIntro.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "La multimedia ya está subida. Se preparará únicamente el archivo de datos con sus referencias.") : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
           applyFutureCover();
           renderPackageGallery(); refreshPackageSummary();
           preparationDialog.showModal();
@@ -1512,13 +1512,17 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const yamlName = slug + ".yaml";
           const dataPath = "src/data/properties/";
           const mediaPath = "public/media/" + slug + "/";
+          const usesR2 = Boolean(remoteCover?.url || remoteVideo?.url || galleryItems.some((item) => item.remoteUrl));
           const checklist = readPublishingChecklist()[slug] || {};
           publicationPropertyName.textContent = values.name || "Propiedad sin nombre";
-          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div><div><p class="eyebrow">Multimedia</p><h3>Subí las fotos y el video aquí</h3><code class="publication-path">' + mediaPath + '</code><button type="button" data-copy="' + mediaPath + '">Copiar ruta</button></div></section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar <strong>' + escapeReview(yamlName) + '</strong> y la carpeta <strong>media</strong>.</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>Subí el contenido de <strong>media</strong> a <code>' + mediaPath + '</code>.</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
+          const mediaDestination = usesR2 ? '<div><p class="eyebrow">Multimedia</p><h3>Ya está subida directamente</h3><p>No hace falta subir fotos ni video a GitHub.</p></div>' : '<div><p class="eyebrow">Multimedia</p><h3>Subí las fotos y el video aquí</h3><code class="publication-path">' + mediaPath + '</code><button type="button" data-copy="' + mediaPath + '">Copiar ruta</button></div>';
+          const packageContents = usesR2 ? '<strong>' + escapeReview(yamlName) + '</strong>.' : '<strong>' + escapeReview(yamlName) + '</strong> y la carpeta <strong>media</strong>.';
+          const mediaStep = usesR2 ? 'La multimedia ya está disponible; solo falta subir el archivo de datos.' : 'Subí el contenido de <strong>media</strong> a <code>' + mediaPath + '</code>.';
+          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div>' + mediaDestination + '</section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar ' + packageContents + '</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>' + mediaStep + '</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
           const checklistItems = [
             ["unzip", "Descomprimí el ZIP"],
             ["data", "Subí el archivo de la propiedad a src/data/properties/"],
-            ["media", "Subí las fotos/video a public/media/" + slug + "/"],
+            ["media", usesR2 ? "La multimedia ya está subida directamente" : "Subí las fotos/video a public/media/" + slug + "/"],
             ["branch", "Confirmé que estoy en setup-template-foundation"],
             ["build", "Esperé el nuevo build"],
             ["preview", "Abrí la vista previa"]
