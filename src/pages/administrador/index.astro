@@ -421,7 +421,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         <div class="form-actions"><button id="close-publication-bottom" class="button button-quiet" type="button">Cerrar</button><button id="open-preview" class="button button-primary" type="button">Abrir presentación</button></div>
       </div>
     </dialog>
-    <script src="/config/r2-upload.js"></script>
+    <script is:inline src="/config/r2-upload.js"></script>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
 
     <script>
