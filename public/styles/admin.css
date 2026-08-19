@@ -708,3 +708,36 @@ form > div:empty {
   background: var(--danger);
 }
 .delete-property-dialog .temporary-help { margin-top: 22px; }
+
+/* Organización inteligente de la descripción */
+.suggestion-section + .suggestion-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.suggestion-section .paragraphs-heading { align-items: center; }
+.suggestion-list { display: grid; gap: 12px; margin-top: 16px; }
+.suggestion-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.suggestion-card > div:first-child { display: grid; gap: 5px; min-width: 0; }
+.suggestion-card strong { color: var(--green); font-size: .88rem; }
+.suggestion-card span { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.suggestion-card > div:last-child { display: flex; flex: 0 0 auto; gap: 8px; }
+.suggestion-card .button { min-height: 42px; padding: 8px 13px; font-size: .74rem; }
+
+@media (max-width: 640px) {
+  .suggestion-section .paragraphs-heading,
+  .suggestion-card { align-items: stretch; flex-direction: column; }
+  .suggestion-section .paragraphs-heading .button,
+  .suggestion-card > div:last-child,
+  .suggestion-card .button { width: 100%; }
+}
+

@@ -260,10 +260,19 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             </div>
             <section id="organized-description" class="gallery-order-section" hidden aria-labelledby="organized-description-title">
               <div class="paragraphs-heading"><div><h3 id="organized-description-title">Vista organizada</h3><p>Podés corregir libremente el título y los párrafos antes de guardar.</p></div></div>
-              <div class="field"><label for="organized-headline">Título destacado <small>Opcional</small></label><input id="organized-headline" type="text" placeholder="Escribir título destacado" /><p class="field-help">Más adelante el asistente podrá proponer este título automáticamente.</p></div>
+              <div class="field"><label for="organized-headline">Título destacado <small>Opcional</small></label><input id="organized-headline" type="text" placeholder="Escribir título destacado" /><p class="field-help">Podés editar libremente el título propuesto.</p></div>
               <div id="organized-paragraphs" class="feature-list"></div>
               <button id="add-organized-paragraph" class="button button-secondary" type="button">+ Agregar párrafo</button>
-              <section class="repository-media"><h3>Sugerencias automáticas</h3><p class="field-help">Datos destacados y características estarán disponibles cuando se conecte la organización inteligente.</p></section>
+              <section id="ai-suggestions" class="repository-media" hidden>
+                <div class="suggestion-section">
+                  <div class="paragraphs-heading"><div><h3>Sugerencias de datos destacados</h3><p>La IA solamente propone. Elegí qué querés agregar al Paso 4.</p></div><button id="add-all-summary-suggestions" class="button button-quiet" type="button">Agregar todas</button></div>
+                  <div id="summary-suggestions" class="suggestion-list"></div>
+                </div>
+                <div class="suggestion-section">
+                  <div class="paragraphs-heading"><div><h3>Sugerencias de características</h3><p>Elegí qué querés agregar al Paso 6.</p></div><button id="add-all-feature-suggestions" class="button button-quiet" type="button">Agregar todas</button></div>
+                  <div id="feature-suggestions" class="suggestion-list"></div>
+                </div>
+              </section>
             </section>
             </div>
             <div class="form-actions">
@@ -435,6 +444,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
       </div>
     </dialog>
     <script is:inline src="/config/r2-upload.js"></script>
+    <script is:inline src="/config/ai-text.js"></script>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
     <script id="published-properties" type="application/json" set:html={JSON.stringify(publishedSlugs)}></script>
 
@@ -549,6 +559,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const publishedProperties = new Set(JSON.parse(document.querySelector("#published-properties").textContent || "[]"));
         const r2Config = window.MOREIRA_R2_UPLOAD || {};
         const r2Configured = Boolean(r2Config.workerUrl);
+        const aiConfig = window.MOREIRA_AI_TEXT || {};
+        const aiConfigured = Boolean(aiConfig.workerUrl);
+        const aiTimeoutMs = Number(aiConfig.timeoutMs) || 25000;
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
         const r2VideoLimit = Number(r2Config.maxVideoBytes) || 250 * 1024 * 1024;
         let editingId = null;
@@ -582,6 +595,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let legacyPropertyHeadline = "";
         let organizedHeadline = "";
         let organizedParagraphs = [];
+        let aiSummarySuggestions = [];
+        let aiFeatureSuggestions = [];
+        let isOrganizingDescription = false;
         let draggedOrganizedParagraph = null;
 
         const iconCatalog = [
@@ -695,6 +711,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           propertyDescription: propertyDescriptionInput.value.trim(),
           descriptionSource: propertyDescriptionInput.value.trim(),
           organizedDescription: { headline: organizedHeadline.trim(), paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) },
+          aiSuggestions: {
+            summary: aiSummarySuggestions.map(({ label, value }) => ({ label, value })),
+            features: [...aiFeatureSuggestions]
+          },
           sectionName: legacySectionName,
           propertyHeadline: organizedHeadline.trim() || legacyPropertyHeadline,
           paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean).length ? organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) : descriptionParagraphs(propertyDescriptionInput.value),
@@ -907,13 +927,159 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const paragraphs = source.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
           return paragraphs.length > 1 ? paragraphs : (source ? source.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/).map((paragraph) => paragraph.trim()).filter(Boolean) : []);
         };
-        const organizeDescription = () => {
-          if (!propertyDescriptionInput.value.trim()) return showToast("Primero escribí o pegá la descripción completa.");
-          if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("¿Querés volver a organizar la descripción? Los cambios realizados en la versión organizada podrían reemplazarse.")) return;
+        const normalizedSuggestion = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const suggestedIcon = (label) => {
+          const value = normalizedSuggestion(label);
+          if (value.includes("dormitorio")) return "bed";
+          if (value.includes("bano")) return "bath";
+          if (value.includes("piscina") || value.includes("agua")) return "pool";
+          if (value.includes("superficie") || value.includes("terreno") || value.includes("hectarea")) return "surface";
+          if (value.includes("calefaccion") || value.includes("radiante")) return "temperature";
+          if (value.includes("cochera") || value.includes("garage")) return "garage";
+          if (value.includes("vista")) return "view";
+          return "home";
+        };
+        const addSummarySuggestion = (suggestion) => {
+          const key = normalizedSuggestion(suggestion.label);
+          const duplicate = [...featuredDataList.querySelectorAll(".data-card")].some((card) => normalizedSuggestion(card.querySelector("[data-field='label']").value) === key);
+          if (duplicate) {
+            showToast("Ese dato ya está agregado.");
+          } else {
+            addDataCard({ icon: suggestedIcon(suggestion.label), label: suggestion.label, value: suggestion.value, show: true });
+            showToast("Dato agregado al Paso 4.");
+          }
+          aiSummarySuggestions = aiSummarySuggestions.filter((item) => item !== suggestion);
+          renderAiSuggestions();
+          scheduleSave();
+        };
+        const addFeatureSuggestion = (suggestion) => {
+          const key = normalizedSuggestion(suggestion);
+          const duplicate = featureItems.some((item) => normalizedSuggestion(item.label) === key);
+          if (duplicate) {
+            showToast("Esa característica ya está agregada.");
+          } else {
+            addFeature(suggestion);
+            showToast("Característica agregada al Paso 6.");
+          }
+          aiFeatureSuggestions = aiFeatureSuggestions.filter((item) => item !== suggestion);
+          renderAiSuggestions();
+          scheduleSave();
+        };
+        const suggestionCard = (title, subtitle, onAdd, onIgnore) => {
+          const card = document.createElement("article");
+          card.className = "suggestion-card";
+          const copy = document.createElement("div");
+          const heading = document.createElement("strong");
+          heading.textContent = title;
+          copy.appendChild(heading);
+          if (subtitle) {
+            const value = document.createElement("span");
+            value.textContent = subtitle;
+            copy.appendChild(value);
+          }
+          const actions = document.createElement("div");
+          const add = document.createElement("button");
+          add.className = "button button-secondary";
+          add.type = "button";
+          add.textContent = "Agregar";
+          add.addEventListener("click", onAdd);
+          const ignore = document.createElement("button");
+          ignore.className = "button button-quiet";
+          ignore.type = "button";
+          ignore.textContent = "Ignorar";
+          ignore.addEventListener("click", onIgnore);
+          actions.append(add, ignore);
+          card.append(copy, actions);
+          return card;
+        };
+        function renderAiSuggestions() {
+          const container = document.querySelector("#ai-suggestions");
+          const summaryList = document.querySelector("#summary-suggestions");
+          const featureList = document.querySelector("#feature-suggestions");
+          summaryList.replaceChildren(...aiSummarySuggestions.map((suggestion) => suggestionCard(
+            suggestion.label,
+            suggestion.value,
+            () => addSummarySuggestion(suggestion),
+            () => { aiSummarySuggestions = aiSummarySuggestions.filter((item) => item !== suggestion); renderAiSuggestions(); scheduleSave(); }
+          )));
+          featureList.replaceChildren(...aiFeatureSuggestions.map((suggestion) => suggestionCard(
+            suggestion,
+            "",
+            () => addFeatureSuggestion(suggestion),
+            () => { aiFeatureSuggestions = aiFeatureSuggestions.filter((item) => item !== suggestion); renderAiSuggestions(); scheduleSave(); }
+          )));
+          summaryList.closest(".suggestion-section").hidden = !aiSummarySuggestions.length;
+          featureList.closest(".suggestion-section").hidden = !aiFeatureSuggestions.length;
+          container.hidden = !aiSummarySuggestions.length && !aiFeatureSuggestions.length;
+        }
+        const applyBasicOrganization = (message) => {
           organizedParagraphs = basicOrganizeDescription().map((text, index) => ({ id: "paragraph-" + Date.now() + "-" + index, text }));
           document.querySelector("#organized-description").hidden = false;
-          document.querySelector("#organize-description-note").textContent = "Organización básica aplicada. La función inteligente estará disponible cuando se conecte el asistente de texto.";
-          renderOrganizedDescription(); scheduleSave();
+          document.querySelector("#organize-description-note").textContent = message;
+          renderOrganizedDescription();
+          scheduleSave();
+        };
+        const validAiProposal = (proposal) => proposal
+          && typeof proposal.headline === "string"
+          && Array.isArray(proposal.paragraphs)
+          && proposal.paragraphs.length >= 2
+          && proposal.paragraphs.length <= 4
+          && proposal.paragraphs.every((item) => typeof item === "string" && item.trim())
+          && Array.isArray(proposal.summarySuggestions)
+          && proposal.summarySuggestions.every((item) => item && typeof item.label === "string" && typeof item.value === "string")
+          && Array.isArray(proposal.featureSuggestions)
+          && proposal.featureSuggestions.every((item) => typeof item === "string");
+        const organizeDescription = async () => {
+          if (!propertyDescriptionInput.value.trim()) return showToast("Primero escribí o pegá la descripción completa.");
+          if (isOrganizingDescription) return;
+          if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("¿Querés generar una nueva propuesta? La versión organizada actual será reemplazada.")) return;
+          if (!aiConfigured) {
+            applyBasicOrganization("La organización inteligente todavía no está configurada. Se aplicó el modo básico.");
+            return;
+          }
+          const button = document.querySelector("#organize-description");
+          const note = document.querySelector("#organize-description-note");
+          const controller = new AbortController();
+          const timeout = window.setTimeout(() => controller.abort(), aiTimeoutMs);
+          isOrganizingDescription = true;
+          button.disabled = true;
+          button.textContent = "Organizando descripción…";
+          note.textContent = "Organizando descripción…";
+          try {
+            const response = await fetch(aiConfig.workerUrl.replace(/\/$/, "") + "/organize-description", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: controller.signal,
+              body: JSON.stringify({
+                description: propertyDescriptionInput.value.trim(),
+                propertyName: nameInput.value.trim(),
+                location: subtitleFromLocation()
+              })
+            });
+            const proposal = await response.json().catch(() => ({}));
+            if (response.status === 503 && proposal.code === "not_configured") {
+              applyBasicOrganization("La organización inteligente todavía no está configurada. Se aplicó el modo básico.");
+              return;
+            }
+            if (!response.ok || !validAiProposal(proposal)) throw new Error("invalid-proposal");
+            organizedHeadline = proposal.headline.trim();
+            organizedParagraphs = proposal.paragraphs.map((text, index) => ({ id: "paragraph-ai-" + Date.now() + "-" + index, text: text.trim() }));
+            aiSummarySuggestions = proposal.summarySuggestions.map((item) => ({ label: item.label.trim(), value: item.value.trim() }));
+            aiFeatureSuggestions = proposal.featureSuggestions.map((item) => item.trim());
+            renderOrganizedDescription();
+            renderAiSuggestions();
+            note.textContent = "✓ Propuesta creada. Revisá y editá todo antes de guardar.";
+            scheduleSave();
+          } catch (error) {
+            note.textContent = error?.name === "AbortError"
+              ? "La organización está demorando más de lo esperado. Podés intentar nuevamente."
+              : "No se pudo organizar la descripción. Tu texto original sigue guardado.";
+          } finally {
+            window.clearTimeout(timeout);
+            isOrganizingDescription = false;
+            button.disabled = false;
+            button.textContent = "Organizar descripción";
+          }
         };
         const loadPropertyValues = (property) => {
           legacySectionName = property.sectionName ?? "La propiedad";
@@ -923,7 +1089,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const organized = property.organizedDescription || { headline: property.propertyHeadline || "", paragraphs: Array.isArray(property.paragraphs) ? property.paragraphs : [] };
           organizedHeadline = organized.headline || "";
           organizedParagraphs = (organized.paragraphs || []).map((text, index) => ({ id: "paragraph-loaded-" + index, text }));
+          aiSummarySuggestions = Array.isArray(property.aiSuggestions?.summary) ? property.aiSuggestions.summary.map((item) => ({ label: item.label || "", value: item.value || "" })).filter((item) => item.label && item.value) : [];
+          aiFeatureSuggestions = Array.isArray(property.aiSuggestions?.features) ? property.aiSuggestions.features.filter((item) => typeof item === "string" && item.trim()) : [];
           renderOrganizedDescription();
+          renderAiSuggestions();
         };
 
         const renumberDataCards = () => {
@@ -1903,6 +2072,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#organize-description").addEventListener("click", organizeDescription);
         document.querySelector("#organized-headline").addEventListener("input", (event) => { organizedHeadline = event.target.value; scheduleSave(); });
         document.querySelector("#add-organized-paragraph").addEventListener("click", () => { organizedParagraphs.push({ id: "paragraph-" + Date.now(), text: "" }); document.querySelector("#organized-description").hidden = false; renderOrganizedDescription(); scheduleSave(); });
+        document.querySelector("#add-all-summary-suggestions").addEventListener("click", () => {
+          [...aiSummarySuggestions].forEach(addSummarySuggestion);
+        });
+        document.querySelector("#add-all-feature-suggestions").addEventListener("click", () => {
+          [...aiFeatureSuggestions].forEach(addFeatureSuggestion);
+        });
 
         document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
@@ -2145,6 +2320,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
         document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
+        if (!aiConfigured) document.querySelector("#organize-description-note").textContent = "La organización inteligente todavía no está configurada.";
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
         ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
         ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
@@ -2154,4 +2330,5 @@ const mediaInventory = Object.fromEntries(await Promise.all(
     </script>
   </body>
 </html>
+
 
