@@ -807,42 +807,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           scheduleSave();
         };
 
-        const renumberParagraphs = () => {
-          paragraphsList.querySelectorAll(".paragraph-item").forEach((item, index) => {
-            item.querySelector("label").textContent = `Párrafo ${index + 1}`;
-            item.querySelector("textarea").id = `property-paragraph-${index + 1}`;
-            item.querySelector("label").htmlFor = `property-paragraph-${index + 1}`;
-            item.querySelector("[data-remove-paragraph]").setAttribute("aria-label", `Eliminar párrafo ${index + 1}`);
-          });
-        };
-
-        const addParagraph = (value = "") => {
-          const item = document.createElement("div");
-          item.className = "paragraph-item";
-          item.innerHTML = `
-            <div class="paragraph-label">
-              <label></label>
-              <button class="remove-paragraph" type="button" data-remove-paragraph>Eliminar</button>
-            </div>
-            <textarea rows="6" placeholder="Escribir párrafo"></textarea>
-            <p class="example">Ejemplo: Ubicada en la zona alta de Piriápolis, dentro de un entorno de chacras de categoría y residencias de gran porte, esta propiedad combina privacidad, naturaleza y una residencia de altísimo nivel.</p>`;
-          item.querySelector("textarea").value = value;
-          item.querySelector("textarea").addEventListener("input", scheduleSave);
-          item.querySelector("[data-remove-paragraph]").addEventListener("click", () => {
-            if (paragraphsList.children.length === 1) {
-              item.querySelector("textarea").value = "";
-              item.querySelector("textarea").focus();
-            } else {
-              item.remove();
-              renumberParagraphs();
-            }
-            scheduleSave();
-          });
-          paragraphsList.appendChild(item);
-          renumberParagraphs();
-          return item;
-        };
-
         const loadPropertyValues = (property) => {
           legacySectionName = property.sectionName ?? "La propiedad";
           legacyPropertyHeadline = property.propertyHeadline || "";
