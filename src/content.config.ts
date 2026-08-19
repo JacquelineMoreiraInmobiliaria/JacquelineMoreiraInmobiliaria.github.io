@@ -35,9 +35,18 @@ const properties = defineCollection({
       enabled: z.boolean().default(false),
       images: z.array(z.object({
         source: z.string().min(1),
-        alt: z.string().optional()
+        alt: z.string().optional(),
+        visible: z.boolean().default(true)
       })).default([])
     }).default({ enabled: false, images: [] }),
+    media: z.object({
+      cover: z.string().min(1).optional(),
+      sections: z.object({
+        property: z.string().min(1).optional(),
+        features: z.string().min(1).optional(),
+        final: z.string().min(1).optional()
+      }).default({})
+    }).optional(),
     features: z.array(feature).default([]),
     location: z.object({
       enabled: z.boolean().default(false),
