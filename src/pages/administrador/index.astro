@@ -1374,7 +1374,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             const card = document.createElement("article");
             card.className = "gallery-editor-card";
             card.draggable = true;
-            card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
+            card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label class="gallery-visible"><input type="checkbox" /> Mostrar en galería</label><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
             const thumb = card.querySelector(".gallery-thumb");
             if (item.source || item.remoteUrl) { const image = document.createElement("img"); image.src = item.remoteUrl || item.source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
             card.querySelector(".gallery-internal").textContent = (index + 1) + " → " + galleryFileName(index);
@@ -1383,7 +1383,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             status.className = "gallery-status " + (item.status === "missing" ? "status-warning" : item.status === "uploaded" || item.external ? "status-success" : "status-neutral");
             const visible = card.querySelector(".gallery-visible input"); visible.checked = item.visible !== false; visible.addEventListener("change", () => { item.visible = visible.checked; renderGallery(); scheduleSave(); });
             const description = card.querySelector("label:not(.gallery-visible) input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
-            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
+            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; presentationImages.cover = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
             card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === galleryItems.length - 1;
             card.querySelector("[data-up]").addEventListener("click", () => moveGalleryItem(item, -1)); card.querySelector("[data-down]").addEventListener("click", () => moveGalleryItem(item, 1));
             card.querySelector("[data-remove]").textContent = "Quitar de la galería"; card.querySelector("[data-remove]").addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
@@ -1671,7 +1671,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const features = values.features.filter((item) => item.label);
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
-            ? (external || remote ? galleryItems : packageGalleryFiles).map((item, index) => ({
+            ? (external || remote ? galleryItems.filter((item) => item.visible !== false) : packageGalleryFiles).map((item, index) => ({
                 source: external ? item.source || "" : remote ? item.remoteUrl || item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
                 alt: external ? item.description || "" : galleryItems[index]?.description || ""
               })).filter((item) => item.source)
@@ -1688,6 +1688,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           lines.push("", "summary:");
           if (visibleData.length) visibleData.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    value: " + yamlText(item.value), "    show: true"));
           else lines.push("  []");
+          const imageReference = (key) => itemSource(selectedPresentationItem(key) || fallbackPresentationItem(key));
+          const selectedCoverSource = imageReference("cover");
+          lines.push("", "media:");
+          if (selectedCoverSource) lines.push("  cover: " + yamlText(selectedCoverSource));
+          lines.push("  sections:");
+          ["property", "features", "final"].forEach((key) => { const source = imageReference(key); if (source) lines.push("    " + key + ": " + yamlText(source)); });
           lines.push("", "property:");
           if (values.sectionName) lines.push("  sectionTitle: " + yamlText(values.sectionName));
           if (values.propertyHeadline) lines.push("  headline: " + yamlText(values.propertyHeadline));
@@ -2354,6 +2360,13 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
         document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
+        document.querySelector("#confirm-presentation-image").addEventListener("click", () => {
+          if (!selectingPresentationImage || !pendingPresentationImageId) return;
+          presentationImages[selectingPresentationImage] = pendingPresentationImageId;
+          if (selectingPresentationImage === "cover") selectedFutureCoverId = pendingPresentationImageId;
+          presentationImageDialog.close(); renderGallery(); scheduleSave();
+        });
+        [document.querySelector("#close-presentation-image-dialog"), document.querySelector("#cancel-presentation-image")].forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
         ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
         ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
