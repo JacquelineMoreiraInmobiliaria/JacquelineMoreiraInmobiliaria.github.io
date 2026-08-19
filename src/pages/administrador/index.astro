@@ -721,7 +721,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           subtitle: subtitleFromLocation(),
           coverDescription: coverDescription.value.trim(),
           coverPhotoName: selectedPhoto?.name || photoName.textContent || "",
-          coverPhotoSource: remoteCover?.url || (editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : ""),
+          coverPhotoSource: itemSource(selectedPresentationItem("cover")) || remoteCover?.url || (editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : ""),
           remoteCover: remoteCover ? { ...remoteCover } : null,
           videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
           videoName: selectedVideo?.name || videoName.textContent || "",
