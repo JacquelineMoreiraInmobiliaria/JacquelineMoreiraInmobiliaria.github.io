@@ -99,7 +99,7 @@ const mapBounds = showLocation
       </div>
     </dialog>}
 
-    {features.length > 0 && <section id="caracteristicas" class="features">
+    {features.length > 0 && <section id="caracteristicas" class:list={["features", { "has-presentation-media": Boolean(sectionImages?.features) }]}>
       <div class="features-copy"><div class="kicker">Características</div><h2>Confort, diseño y naturaleza.</h2><div class="checks">{features.map((feature) => <div class="check">{feature.label}</div>)}</div></div>
       {sectionImages?.features && <div class="features-media"><img src={sectionImages.features} alt={property.name} loading="lazy" /></div>}
     </section>}
@@ -112,7 +112,7 @@ const mapBounds = showLocation
 
     {showDistances && <section class="section distances"><div class="gallery-head"><div class="kicker">Distancias</div><h2>Todo cerca.</h2></div><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.destination}</strong><span>{item.distance}</span></div>)}</div></section>}
 
-    <section id="contacto" class="contact">{sectionImages?.final && <img class="contact-media" src={sectionImages.final} alt="" loading="lazy" />}<div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
+    <section id="contacto" class:list={["contact", { "has-presentation-media": Boolean(sectionImages?.final) }]}>{sectionImages?.final && <img class="contact-media" src={sectionImages.final} alt="" loading="lazy" />}<div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
     <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>
     {showGallery && <script define:vars={{ galleryImages, propertyName: property.name }}>
       const dialog = document.querySelector(".lightbox");
