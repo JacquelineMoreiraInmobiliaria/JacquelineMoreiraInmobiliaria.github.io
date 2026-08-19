@@ -255,9 +255,29 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               <textarea id="property-description" name="propertyDescription" rows="14" placeholder="Escribir descripción completa"></textarea>
               <p class="example">Ejemplo: Propiedad ubicada en la zona alta de Piriápolis, sobre 10 hectáreas, con vista al mar, piscina climatizada, cuatro dormitorios, tres baños, losa radiante y viñedo.</p>
               <p class="field-help">Podés separar ideas con saltos de línea. El texto original siempre se conserva.</p>
-              <button id="organize-description" class="button button-secondary" type="button">Organizar descripción</button>
-              <p id="organize-description-note" class="field-help" aria-live="polite"></p>
             </div>
+            <section class="chatgpt-workflow" aria-labelledby="chatgpt-workflow-title">
+              <div class="chatgpt-workflow-heading">
+                <p class="eyebrow">Organizar con ChatGPT</p>
+                <h3 id="chatgpt-workflow-title">Convertí el texto en una propuesta ordenada</h3>
+                <p>Esta opción no usa ninguna API paga. Copiá el mensaje, pegalo en ChatGPT y luego pegá aquí la respuesta.</p>
+              </div>
+              <ol class="chatgpt-steps">
+                <li>
+                  <span>1</span>
+                  <div><strong>Copiar mensaje</strong><p>Preparamos las instrucciones junto con la descripción de esta propiedad.</p><button id="copy-chatgpt-prompt" class="button button-secondary" type="button">Copiar mensaje para ChatGPT</button><p id="copy-chatgpt-note" class="field-help" aria-live="polite"></p></div>
+                </li>
+                <li>
+                  <span>2</span>
+                  <div><strong>Organizar en ChatGPT</strong><p>Pegá el mensaje en ChatGPT y esperá la respuesta completa. No es necesario abrirlo automáticamente desde aquí.</p></div>
+                </li>
+                <li>
+                  <span>3</span>
+                  <div class="chatgpt-paste"><label for="chatgpt-response">Pegar respuesta de ChatGPT</label><textarea id="chatgpt-response" rows="10" placeholder='Pegá aquí la respuesta que comienza con { y termina con }'></textarea><button id="apply-chatgpt-response" class="button button-primary" type="button">Aplicar organización</button><p id="chatgpt-response-error" class="field-error" aria-live="polite"></p></div>
+                </li>
+              </ol>
+              <p class="temporary-help">Este método no utiliza una API paga. Usa ChatGPT manualmente.</p>
+            </section>
             <section id="organized-description" class="gallery-order-section" hidden aria-labelledby="organized-description-title">
               <div class="paragraphs-heading"><div><h3 id="organized-description-title">Vista organizada</h3><p>Podés corregir libremente el título y los párrafos antes de guardar.</p></div></div>
               <div class="field"><label for="organized-headline">Título destacado <small>Opcional</small></label><input id="organized-headline" type="text" placeholder="Escribir título destacado" /><p class="field-help">Podés editar libremente el título propuesto.</p></div>
@@ -444,12 +464,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
       </div>
     </dialog>
     <script is:inline src="/config/r2-upload.js"></script>
-    <script is:inline src="/config/ai-text.js"></script>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
     <script id="published-properties" type="application/json" set:html={JSON.stringify(publishedSlugs)}></script>
 
     <script>
       import JSZip from "jszip";
+      import { buildChatGptDescriptionPrompt, normalizeSuggestion, parseChatGptDescriptionResponse } from "../../scripts/chatgpt-description-workflow.js";
       (() => {
         const storageKey = "moreira-property-admin-drafts-v1";
         const publishingChecklistKey = "moreira-property-publishing-checklist-v1";
@@ -559,9 +579,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const publishedProperties = new Set(JSON.parse(document.querySelector("#published-properties").textContent || "[]"));
         const r2Config = window.MOREIRA_R2_UPLOAD || {};
         const r2Configured = Boolean(r2Config.workerUrl);
-        const aiConfig = window.MOREIRA_AI_TEXT || {};
-        const aiConfigured = Boolean(aiConfig.workerUrl);
-        const aiTimeoutMs = Number(aiConfig.timeoutMs) || 25000;
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
         const r2VideoLimit = Number(r2Config.maxVideoBytes) || 250 * 1024 * 1024;
         let editingId = null;
@@ -597,7 +614,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let organizedParagraphs = [];
         let aiSummarySuggestions = [];
         let aiFeatureSuggestions = [];
-        let isOrganizingDescription = false;
         let draggedOrganizedParagraph = null;
 
         const iconCatalog = [
@@ -922,12 +938,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             return card;
           }));
         };
-        const basicOrganizeDescription = () => {
-          const source = propertyDescriptionInput.value.replace(/\r\n?/g, "\n").split("\n").map((line) => line.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n");
-          const paragraphs = source.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
-          return paragraphs.length > 1 ? paragraphs : (source ? source.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/).map((paragraph) => paragraph.trim()).filter(Boolean) : []);
-        };
-        const normalizedSuggestion = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const normalizedSuggestion = normalizeSuggestion;
         const suggestedIcon = (label) => {
           const value = normalizedSuggestion(label);
           if (value.includes("dormitorio")) return "bed";
@@ -1012,74 +1023,42 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           featureList.closest(".suggestion-section").hidden = !aiFeatureSuggestions.length;
           container.hidden = !aiSummarySuggestions.length && !aiFeatureSuggestions.length;
         }
-        const applyBasicOrganization = (message) => {
-          organizedParagraphs = basicOrganizeDescription().map((text, index) => ({ id: "paragraph-" + Date.now() + "-" + index, text }));
-          document.querySelector("#organized-description").hidden = false;
-          document.querySelector("#organize-description-note").textContent = message;
-          renderOrganizedDescription();
-          scheduleSave();
-        };
-        const validAiProposal = (proposal) => proposal
-          && typeof proposal.headline === "string"
-          && Array.isArray(proposal.paragraphs)
-          && proposal.paragraphs.length >= 2
-          && proposal.paragraphs.length <= 4
-          && proposal.paragraphs.every((item) => typeof item === "string" && item.trim())
-          && Array.isArray(proposal.summarySuggestions)
-          && proposal.summarySuggestions.every((item) => item && typeof item.label === "string" && typeof item.value === "string")
-          && Array.isArray(proposal.featureSuggestions)
-          && proposal.featureSuggestions.every((item) => typeof item === "string");
-        const organizeDescription = async () => {
-          if (!propertyDescriptionInput.value.trim()) return showToast("Primero escribí o pegá la descripción completa.");
-          if (isOrganizingDescription) return;
-          if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("¿Querés generar una nueva propuesta? La versión organizada actual será reemplazada.")) return;
-          if (!aiConfigured) {
-            applyBasicOrganization("La organización inteligente todavía no está configurada. Se aplicó el modo básico.");
+        const buildChatGptPrompt = () => buildChatGptDescriptionPrompt({
+          description: propertyDescriptionInput.value,
+          propertyName: nameInput.value,
+          location: subtitleFromLocation()
+        });
+        const copyChatGptPrompt = async () => {
+          const note = document.querySelector("#copy-chatgpt-note");
+          if (!propertyDescriptionInput.value.trim()) {
+            note.textContent = "Primero escribí o pegá la descripción completa.";
+            propertyDescriptionInput.focus();
             return;
           }
-          const button = document.querySelector("#organize-description");
-          const note = document.querySelector("#organize-description-note");
-          const controller = new AbortController();
-          const timeout = window.setTimeout(() => controller.abort(), aiTimeoutMs);
-          isOrganizingDescription = true;
-          button.disabled = true;
-          button.textContent = "Organizando descripción…";
-          note.textContent = "Organizando descripción…";
           try {
-            const response = await fetch(aiConfig.workerUrl.replace(/\/$/, "") + "/organize-description", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: controller.signal,
-              body: JSON.stringify({
-                description: propertyDescriptionInput.value.trim(),
-                propertyName: nameInput.value.trim(),
-                location: subtitleFromLocation()
-              })
-            });
-            const proposal = await response.json().catch(() => ({}));
-            if (response.status === 503 && proposal.code === "not_configured") {
-              applyBasicOrganization("La organización inteligente todavía no está configurada. Se aplicó el modo básico.");
-              return;
-            }
-            if (!response.ok || !validAiProposal(proposal)) throw new Error("invalid-proposal");
-            organizedHeadline = proposal.headline.trim();
-            organizedParagraphs = proposal.paragraphs.map((text, index) => ({ id: "paragraph-ai-" + Date.now() + "-" + index, text: text.trim() }));
-            aiSummarySuggestions = proposal.summarySuggestions.map((item) => ({ label: item.label.trim(), value: item.value.trim() }));
-            aiFeatureSuggestions = proposal.featureSuggestions.map((item) => item.trim());
-            renderOrganizedDescription();
-            renderAiSuggestions();
-            note.textContent = "✓ Propuesta creada. Revisá y editá todo antes de guardar.";
-            scheduleSave();
-          } catch (error) {
-            note.textContent = error?.name === "AbortError"
-              ? "La organización está demorando más de lo esperado. Podés intentar nuevamente."
-              : "No se pudo organizar la descripción. Tu texto original sigue guardado.";
-          } finally {
-            window.clearTimeout(timeout);
-            isOrganizingDescription = false;
-            button.disabled = false;
-            button.textContent = "Organizar descripción";
+            await navigator.clipboard.writeText(buildChatGptPrompt());
+            note.textContent = "✓ Mensaje copiado. Pegalo en ChatGPT.";
+          } catch {
+            note.textContent = "No pudimos copiar el mensaje. Revisá los permisos del portapapeles e intentá nuevamente.";
           }
+        };
+        const applyChatGptResponse = () => {
+          const responseInput = document.querySelector("#chatgpt-response");
+          const error = document.querySelector("#chatgpt-response-error");
+          error.textContent = "";
+          const parsed = parseChatGptDescriptionResponse(responseInput.value);
+          if (!parsed.ok) { error.textContent = parsed.error; return; }
+          if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("Ya existe una versión organizada. ¿Querés reemplazarla con esta nueva propuesta?")) return;
+          const proposal = parsed.value;
+          organizedHeadline = proposal.headline.trim();
+          organizedParagraphs = proposal.paragraphs.map((text, index) => ({ id: "paragraph-chatgpt-" + Date.now() + "-" + index, text: text.trim() }));
+          aiSummarySuggestions = proposal.summarySuggestions.map((item) => ({ label: item.label.trim(), value: item.value.trim() }));
+          aiFeatureSuggestions = proposal.featureSuggestions.map((item) => item.trim());
+          renderOrganizedDescription();
+          renderAiSuggestions();
+          responseInput.value = "";
+          showToast("Propuesta aplicada. Revisá y editá todo antes de guardar.");
+          scheduleSave();
         };
         const loadPropertyValues = (property) => {
           legacySectionName = property.sectionName ?? "La propiedad";
@@ -2069,7 +2048,8 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         });
         document.querySelector("#add-feature").addEventListener("click", () => addFeature());
         propertyDescriptionInput.addEventListener("input", scheduleSave);
-        document.querySelector("#organize-description").addEventListener("click", organizeDescription);
+        document.querySelector("#copy-chatgpt-prompt").addEventListener("click", copyChatGptPrompt);
+        document.querySelector("#apply-chatgpt-response").addEventListener("click", applyChatGptResponse);
         document.querySelector("#organized-headline").addEventListener("input", (event) => { organizedHeadline = event.target.value; scheduleSave(); });
         document.querySelector("#add-organized-paragraph").addEventListener("click", () => { organizedParagraphs.push({ id: "paragraph-" + Date.now(), text: "" }); document.querySelector("#organized-description").hidden = false; renderOrganizedDescription(); scheduleSave(); });
         document.querySelector("#add-all-summary-suggestions").addEventListener("click", () => {
@@ -2320,7 +2300,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
         document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
-        if (!aiConfigured) document.querySelector("#organize-description-note").textContent = "La organización inteligente todavía no está configurada.";
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
         ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
         ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
