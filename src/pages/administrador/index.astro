@@ -1232,7 +1232,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             ? [...property.galleryItems].sort((a, b) => (a.position || 0) - (b.position || 0))
             : [];
           if (!detected.length || editingId === originalProperty.id) {
-            return { items: saved, futureCoverId: property.futureCoverId || null, changed: false };
+            return { items: saved, futureCoverId: property.futureCoverId || null, presentationImages: property.presentationImages || {}, changed: false };
           }
 
           // Los archivos que el build detecta son la fuente de verdad. El borrador
@@ -1269,6 +1269,9 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               ...realItem,
               id: stableId,
               description: metadata?.description || "",
+              visible: metadata?.visible !== false,
+              remoteUrl: metadata?.remoteUrl || "",
+              objectKey: metadata?.objectKey || "",
               position: index + 1
             };
           });
@@ -1287,10 +1290,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           return {
             items: reconciled,
             futureCoverId,
+            presentationImages: Object.fromEntries(Object.entries(property.presentationImages || {}).map(([key, value]) => [key, migratedIds.get(value) || value || null])),
             changed: JSON.stringify(savedComparable) !== JSON.stringify(reconciledComparable) || previousCoverId !== futureCoverId
           };
         };
-        const serializeGallery = () => galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", position: index + 1 }));
+        const serializeGallery = () => galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 }));
         const moveGalleryItem = (item, direction) => {
           const index = galleryItems.indexOf(item);
           const target = index + direction;
@@ -1417,7 +1421,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           remoteCover = property.remoteCover || (property.coverPhotoSource?.startsWith("https://") && !property.coverPhotoSource.includes("raw.githubusercontent.com") ? { url: property.coverPhotoSource } : null);
           remoteVideo = property.remoteVideo || (property.videoSource?.startsWith("https://") && !property.videoSource.includes("raw.githubusercontent.com") ? { url: property.videoSource } : null);
           selectedFutureCoverId = reconciliation.futureCoverId;
-          presentationImages = { cover: null, property: null, features: null, final: null, ...(property.presentationImages || {}) };
+          presentationImages = { cover: null, property: null, features: null, final: null, ...(reconciliation.presentationImages || property.presentationImages || {}) };
           document.querySelector('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
           renderGallery();
           updateMediaStatus();
@@ -1671,9 +1675,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const features = values.features.filter((item) => item.label);
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
-            ? (external || remote ? galleryItems.filter((item) => item.visible !== false) : packageGalleryFiles).map((item, index) => ({
+            ? (external || remote ? galleryItems : packageGalleryFiles).map((item, index) => ({
                 source: external ? item.source || "" : remote ? item.remoteUrl || item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
-                alt: external ? item.description || "" : galleryItems[index]?.description || ""
+                alt: external ? item.description || "" : galleryItems[index]?.description || "",
+                visible: item.visible !== false
               })).filter((item) => item.source)
             : [];
           const coverSource = external || remote ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
@@ -1701,7 +1706,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           if (paragraphs.length) paragraphs.forEach((item) => lines.push("    - " + yamlText(item)));
           else lines.push("    []");
           lines.push("", "gallery:", "  enabled: " + (values.galleryEnabled ? "true" : "false"), "  images:");
-          if (gallery.length) gallery.forEach((item) => { lines.push("    - source: " + yamlText(item.source)); if (item.alt) lines.push("      alt: " + yamlText(item.alt)); });
+          if (gallery.length) gallery.forEach((item) => { lines.push("    - source: " + yamlText(item.source)); if (item.alt) lines.push("      alt: " + yamlText(item.alt)); if (item.visible === false) lines.push("      visible: false"); });
           else lines.push("    []");
           lines.push("", "features:");
           if (features.length) features.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    category: " + item.category));
