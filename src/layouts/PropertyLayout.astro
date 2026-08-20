@@ -6,7 +6,7 @@ const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
 const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
 const statIcons = { surface: "▣", home: "⌂", bed: "▰", bath: "◌", temperature: "♨", pool: "≈", land: "△", view: "◉", garage: "▱" };
-const statIconFor = (item, index) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : legacyStatIcons[index] || "•";
+const statIconFor = (item, index) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : property.slug === "atardecer-y-vides" ? legacyStatIcons[index] || "•" : "•";
 const coverImage = property.media?.cover || property.hero.coverImage;
 const galleryImages = property.gallery.images.filter((image) => image.visible !== false);
 const showGallery = property.gallery.enabled && galleryImages.length > 0;
