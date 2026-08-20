@@ -1732,7 +1732,11 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           lines.push("  coverImage: " + yamlText(coverSource), "  video:", "    enabled: " + (values.videoEnabled ? "true" : "false"));
           if (values.videoEnabled) lines.push("    source: " + yamlText(videoSource));
           lines.push("", "summary:");
-          if (visibleData.length) visibleData.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    value: " + yamlText(item.value)); if (item.icon) lines.push("    icon: " + item.icon); lines.push("    show: true"));
+          if (visibleData.length) visibleData.forEach((item) => {
+            lines.push("  - label: " + yamlText(item.label), "    value: " + yamlText(item.value));
+            if (item.icon) lines.push("    icon: " + item.icon);
+            lines.push("    show: true");
+          });
           else lines.push("  []");
           const imageReference = (key) => itemSource(selectedPresentationItem(key) || fallbackPresentationItem(key));
           const selectedCoverSource = imageReference("cover");
