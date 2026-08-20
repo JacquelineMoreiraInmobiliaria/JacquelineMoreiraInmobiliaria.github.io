@@ -1,0 +1,127 @@
+slug: "santa-clara"
+name: "Santa Clara"
+price: "USD 1.280.000"
+
+hero:
+  subtitle: "Piriápolis · Playa Hermosa · Uruguay"
+  description: "Oportunidad única de vivir en el campo y la playa a la vez."
+  coverImage: "/media/santa-clara/foto-02.jpg"
+  video:
+    enabled: false
+
+summary:
+  - label: "Superficie"
+    value: "6 Has."
+    icon: surface
+    show: true
+  - label: "Construcción principal"
+    value: "270 m²"
+    icon: home
+    show: true
+  - label: "Plantas"
+    value: "2"
+    icon: home
+    show: true
+  - label: "Suites"
+    value: "3"
+    icon: bed
+    show: true
+  - label: "Casa de caseros o huéspedes"
+    value: "2 dormitorios y 1 baño"
+    icon: home
+    show: true
+  - label: "Galpón"
+    value: "120 m²"
+    icon: garage
+    show: true
+  - label: "Pozos de agua"
+    value: "2"
+    icon: pool
+    show: true
+
+media:
+  cover: "/media/santa-clara/foto-02.jpg"
+  sections:
+    property: "/media/santa-clara/foto-01.jpg"
+    features: "/media/santa-clara/foto-14.jpg"
+    final: "/media/santa-clara/foto-18.jpg"
+
+property:
+  headline: "Chacra elevada con piscina climatizada y vista al mar."
+  paragraphs:
+    - "Santa Clara es una chacra alta y despejada ubicada detrás de los balnearios Playa Hermosa y Playa Verde. Integra campo y playa, con vistas al mar, al parque y al Cerro Pan de Azúcar."
+    - "La construcción principal tiene 270 m² distribuidos en 2 plantas y fue realizada con paredes dobles de ladrillo, losa de hormigón, aberturas dobles de aluminio —triples en las orientadas al sur— y pisos de porcelanato. En planta baja dispone de living comedor, cocina definida con pasaplatos y mobiliario a medida, y 2 suites de iguales dimensiones. La calefacción combina calefactores de alto rendimiento a leña y un sistema central mediante bomba de agua caliente, presente también en todas las habitaciones."
+    - "La suite principal ocupa la planta alta e incluye dormitorio con vista de 360 grados, balcón, toldo eléctrico en la ventana orientada al sur, baño completo, vestidor y oficina. La casa cuenta además con una barbacoa integrada con baño propio y calefactor a leña, conectada con otra barbacoa exterior techada y con la piscina climatizada."
+    - "La propiedad se completa con una casa para caseros o huéspedes de 2 dormitorios y 1 baño, un galpón de 120 m² para maquinaria, tajamar y 2 pozos de agua destinados al uso doméstico y al riego. Cuenta con 500 metros de empalizada, canillas de agua cada 25 metros y una plantación de más de 150 eucaliptos y pinos."
+
+gallery:
+  enabled: true
+  images:
+    - source: "/media/santa-clara/foto-01.jpg"
+    - source: "/media/santa-clara/foto-02.jpg"
+    - source: "/media/santa-clara/foto-03.jpg"
+    - source: "/media/santa-clara/foto-04.jpg"
+    - source: "/media/santa-clara/foto-05.jpg"
+    - source: "/media/santa-clara/foto-06.jpg"
+    - source: "/media/santa-clara/foto-08.jpg"
+    - source: "/media/santa-clara/foto-09.jpg"
+    - source: "/media/santa-clara/foto-10.jpg"
+    - source: "/media/santa-clara/foto-11.jpg"
+    - source: "/media/santa-clara/foto-13.jpg"
+    - source: "/media/santa-clara/foto-14.jpg"
+    - source: "/media/santa-clara/foto-15.jpg"
+    - source: "/media/santa-clara/foto-17.jpg"
+    - source: "/media/santa-clara/foto-18.jpg"
+    - source: "/media/santa-clara/foto-19.jpg"
+    - source: "/media/santa-clara/foto-20.jpg"
+    - source: "/media/santa-clara/foto-21.jpg"
+    - source: "/media/santa-clara/foto-22.jpg"
+    - source: "/media/santa-clara/foto-07.jpg"
+    - source: "/media/santa-clara/foto-12.jpg"
+    - source: "/media/santa-clara/foto-16.jpg"
+
+features:
+  - label: "Losa de hormigón"
+    category: structural
+  - label: "Paredes dobles de ladrillo"
+    category: structural
+  - label: "Aberturas dobles de aluminio"
+    category: structural
+  - label: "2 suites en planta baja con vista al Cerro Pan de Azúcar"
+    category: structural
+  - label: "Pisos de porcelanato"
+    category: structural
+  - label: "Suite principal con vista de 360 grados"
+    category: structural
+  - label: "Vista al mar"
+    category: structural
+  - label: "Piscina climatizada"
+    category: structural
+  - label: "Barbacoa integrada con baño propio"
+    category: structural
+  - label: "Calefacción central mediante bomba de agua caliente"
+    category: structural
+  - label: "2 pozos de agua para uso doméstico y riego"
+    category: structural
+  - label: "Tajamar"
+    category: structural
+
+location:
+  enabled: true
+  visibleName: "Piriápolis, Playa Hermosa"
+  address: "Camino de la Bodega"
+  latitude: -34.82449722290039
+  longitude: -55.28647232055664
+
+distances:
+  enabled: true
+  items:
+    - destination: "Centro de Piriápolis"
+      distance: "5 Min"
+    - destination: "Punta del Este"
+      distance: "30 Min"
+    - destination: "Montevideo"
+      distance: "1 Hora"
+
+contact:
+  useDefault: true
