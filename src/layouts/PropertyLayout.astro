@@ -37,6 +37,7 @@ const locationCoordinates = property.location.enabled === true &&
   ? { latitude: property.location.latitude, longitude: property.location.longitude }
   : null;
 const showLocation = locationCoordinates !== null;
+const distanceImage = property.media?.sections?.distances || fallbackAt(2);
 const showDistances = property.distances.enabled && property.distances.items.length > 0;
 const whatsapp = property.contact.useDefault ? settings.whatsapp : property.contact.whatsapp;
 const email = property.contact.useDefault ? settings.email : property.contact.email;
@@ -130,7 +131,7 @@ const mapBounds = locationCoordinates
       <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
     </section>}
 
-    {showDistances && <section class:list={["distances", { "has-presentation-media": Boolean(sectionImages?.distances) }]}>{sectionImages?.distances && <div class="distances-media"><img src={sectionImages.distances} alt="" loading="lazy" /></div>}<div class="distances-copy"><div class="kicker">Distancias</div><h2>Todo cerca.</h2><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.distance}</strong><span>{item.destination}</span></div>)}</div></div></section>}
+    {showDistances && <section class:list={["distances", { "has-presentation-media": Boolean(distanceImage) }]}>{distanceImage && <div class="distances-media"><img src={distanceImage} alt="" loading="lazy" /></div>}<div class="distances-copy"><div class="kicker">Distancias</div><h2>Todo cerca.</h2><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.distance}</strong><span>{item.destination}</span></div>)}</div></div></section>}
 
     <section id="contacto" class:list={["contact", { "has-presentation-media": Boolean(sectionImages?.final) }]}>{sectionImages?.final && <img class="contact-media" src={sectionImages.final} alt="" loading="lazy" />}<div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
     <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>
