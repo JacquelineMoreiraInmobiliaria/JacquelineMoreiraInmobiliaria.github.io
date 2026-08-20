@@ -1698,7 +1698,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           remoteCover = property.remoteCover || (property.coverPhotoSource?.startsWith("https://") && !property.coverPhotoSource.includes("raw.githubusercontent.com") ? { url: property.coverPhotoSource } : null);
           remoteVideo = property.remoteVideo || (property.videoSource?.startsWith("https://") && !property.videoSource.includes("raw.githubusercontent.com") ? { url: property.videoSource } : null);
           selectedFutureCoverId = reconciliation.futureCoverId;
-          presentationImages = { cover: null, property: null, features: null, final: null, ...(reconciliation.presentationImages || property.presentationImages || {}) };
+          presentationImages = { cover: null, property: null, features: null, distances: null, final: null, ...(reconciliation.presentationImages || property.presentationImages || {}) };
           requiredElement<HTMLInputElement>('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
           renderGallery();
           updateMediaStatus();
