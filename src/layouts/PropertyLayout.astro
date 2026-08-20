@@ -1,7 +1,18 @@
 ---
+import type { CollectionEntry } from "astro:content";
 import "../styles/master.css";
 
-const { property, settings } = Astro.props;
+type PropertyData = CollectionEntry<"properties">["data"];
+type SiteSettings = {
+  company: string;
+  website: string;
+  whatsapp: string;
+  email: string;
+  logo: string;
+};
+type Props = { property: PropertyData; settings: SiteSettings };
+
+const { property, settings } = Astro.props as Props;
 const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
 const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
