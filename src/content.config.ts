@@ -45,6 +45,7 @@ const properties = defineCollection({
       sections: z.object({
         property: z.string().min(1).optional(),
         features: z.string().min(1).optional(),
+        distances: z.string().min(1).optional(),
         final: z.string().min(1).optional()
       }).default({})
     }).optional(),

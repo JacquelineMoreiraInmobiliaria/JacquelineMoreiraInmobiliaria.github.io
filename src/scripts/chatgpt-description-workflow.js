@@ -13,27 +13,27 @@ export const buildChatGptDescriptionPrompt = ({ description, propertyName = "", 
 
   return `Sos editor de textos inmobiliarios para presentaciones premium.
 
-Organizá la descripción siguiente sin inventar ningún dato.
+Organizá la descripción como una pieza comercial breve. No intentes conservar toda la información original.
 
-Usá exclusivamente información explícitamente presente.
+Usá exclusivamente hechos explícitamente presentes para cualquier información objetiva. Priorizá superficie, distribución, dormitorios, baños, plantas, entorno, vistas, piscina, barbacoa, casa de huéspedes, construcciones auxiliares y cualidades realmente diferenciales cuando estén mencionadas. Omití detalles secundarios y no repitas datos que luego podrían aparecer como datos destacados o características.
 
 Generá:
 
 1. headline:
-un título breve, elegante y concreto de aproximadamente 8 a 12 palabras.
+una frase breve, editorial y evocativa de 5 a 10 palabras. Puede inspirarse en el entorno, el paisaje o el carácter de la propiedad aunque no sea una frase literal. No puede afirmar una característica objetiva que no exista en el texto.
 
 2. paragraphs:
-entre 2 y 4 párrafos coherentes, agrupando temas relacionados y sin repetir información.
+2 o 3 párrafos cortos, preferentemente 2. Cada párrafo debe tener aproximadamente 2 a 4 oraciones y concentrar información comercial relevante.
 
 3. summarySuggestions:
-datos destacados explícitos, por ejemplo superficie, dormitorios, baños, plantas u otros datos concretos.
+entre 4 y 6 datos destacados concretos y fáciles de escanear.
 
 4. featureSuggestions:
-características explícitas de la propiedad, ordenadas aproximadamente de mayor relevancia comercial a menor.
+entre 8 y 12 características comerciales realmente relevantes, ordenadas de mayor relevancia a menor.
 
 No inventes superficies, dormitorios, baños, materiales, servicios, ubicación, distancias ni ninguna otra característica.
 Si un dato no aparece expresamente, no lo incluyas.
-No agregues frases vacías ni exageraciones.
+No agregues frases vacías, exageraciones ni detalles técnicos secundarios.
 
 Respondé únicamente con JSON válido, sin markdown, sin comentarios y sin texto antes o después.
 
@@ -72,11 +72,15 @@ export const parseChatGptDescriptionResponse = (source) => {
     && Boolean(proposal.headline.trim())
     && Array.isArray(proposal.paragraphs)
     && proposal.paragraphs.length >= 2
-    && proposal.paragraphs.length <= 4
+    && proposal.paragraphs.length <= 3
     && proposal.paragraphs.every((item) => typeof item === "string" && item.trim())
     && Array.isArray(proposal.summarySuggestions)
+    && proposal.summarySuggestions.length >= 4
+    && proposal.summarySuggestions.length <= 6
     && proposal.summarySuggestions.every((item) => item && typeof item === "object" && typeof item.label === "string" && item.label.trim() && typeof item.value === "string" && item.value.trim())
     && Array.isArray(proposal.featureSuggestions)
+    && proposal.featureSuggestions.length >= 8
+    && proposal.featureSuggestions.length <= 12
     && proposal.featureSuggestions.every((item) => typeof item === "string" && item.trim());
   if (!valid) return { ok: false, error: "No pudimos leer la respuesta de ChatGPT. Revisá que hayas pegado el JSON completo." };
   return {

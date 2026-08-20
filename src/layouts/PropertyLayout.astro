@@ -17,8 +17,8 @@ const { property, settings } = Astro.props as Props;
 const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
 const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
-const statIcons = { surface: "▣", home: "⌂", bed: "▰", bath: "◌", temperature: "♨", pool: "≈", land: "△", view: "◉", garage: "▱" };
-const statIconFor = (item: SummaryItem, index: number) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : property.slug === "atardecer-y-vides" ? legacyStatIcons[index] || "•" : "•";
+const statIconFor = (item: SummaryItem) => item.icon || "home";
+const legacyStatIconFor = (index: number) => legacyStatIcons[index] || "•";
 const coverImage = property.media?.cover || property.hero.coverImage;
 const galleryImages = property.gallery.images.filter((image) => image.visible !== false);
 const showGallery = property.gallery.enabled && galleryImages.length > 0;
@@ -28,6 +28,7 @@ const fallbackAt = (index: number) => (fallbackImages[index] || fallbackImages[0
 const sectionImages = property.media?.sections ? {
   property: property.media.sections.property || fallbackAt(0),
   features: property.media.sections.features || fallbackAt(1),
+  distances: property.media.sections.distances || fallbackAt(2),
   final: property.media.sections.final || fallbackAt(2)
 } : null;
 const locationCoordinates = property.location.enabled === true &&
@@ -95,7 +96,7 @@ const mapBounds = locationCoordinates
       <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
     </section>}
 
-    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{statIconFor(item, index)}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
@@ -129,7 +130,7 @@ const mapBounds = locationCoordinates
       <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
     </section>}
 
-    {showDistances && <section class="section distances"><div class="gallery-head"><div class="kicker">Distancias</div><h2>Todo cerca.</h2></div><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.destination}</strong><span>{item.distance}</span></div>)}</div></section>}
+    {showDistances && <section class:list={["distances", { "has-presentation-media": Boolean(sectionImages?.distances) }]}>{sectionImages?.distances && <div class="distances-media"><img src={sectionImages.distances} alt="" loading="lazy" /></div>}<div class="distances-copy"><div class="kicker">Distancias</div><h2>Todo cerca.</h2><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.distance}</strong><span>{item.destination}</span></div>)}</div></div></section>}
 
     <section id="contacto" class:list={["contact", { "has-presentation-media": Boolean(sectionImages?.final) }]}>{sectionImages?.final && <img class="contact-media" src={sectionImages.final} alt="" loading="lazy" />}<div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
     <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>

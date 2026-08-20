@@ -15,9 +15,9 @@ type PublishedPropertyMedia = Record<string, {
   gallery: Array<{ source: string; visible: boolean }>;
   video: string;
 }>;
-type PresentationImageTarget = "cover" | "property" | "features" | "final";
+type PresentationImageTarget = "cover" | "property" | "features" | "distances" | "final";
 type PresentationImages = Record<PresentationImageTarget, string | null>;
-const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "final"];
+const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "distances", "final"];
 
 const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
 const mediaRoot = join(process.cwd(), "public", "media");
@@ -506,7 +506,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
       import JSZip from "jszip";
       import { buildChatGptDescriptionPrompt, normalizeSuggestion, parseChatGptDescriptionResponse } from "../../scripts/chatgpt-description-workflow.js";
       (() => {
-        type PresentationImageTarget = "cover" | "property" | "features" | "final";
+        type PresentationImageTarget = "cover" | "property" | "features" | "distances" | "final";
         type PresentationImages = Record<PresentationImageTarget, string | null>;
         type UploadKind = "cover" | "gallery" | "video";
         type GalleryStatus = "pending" | "temporary" | "missing" | "uploading" | "uploaded" | "error";
@@ -606,7 +606,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           return match;
         };
         const optionalInputValue = (selector: string): string => document.querySelector<HTMLInputElement>(selector)?.value || "";
-        const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "final"];
+        const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "distances", "final"];
         const storageKey = "moreira-property-admin-drafts-v1";
         const publishingChecklistKey = "moreira-property-publishing-checklist-v1";
         const listScreen = requiredElement("#property-list");
@@ -739,7 +739,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let draggedDataCard: HTMLElement | null = null;
         let galleryItems: GalleryItem[] = [];
         let selectedFutureCoverId: string | null = null;
-        let presentationImages: PresentationImages = { cover: null, property: null, features: null, final: null };
+        let presentationImages: PresentationImages = { cover: null, property: null, features: null, distances: null, final: null };
         let selectingPresentationImage: PresentationImageTarget | null = null;
         let pendingPresentationImageId: string | null = null;
         let draggedGalleryItem: GalleryItem | null = null;
@@ -765,15 +765,15 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let toastTimer: number | null = null;
 
         const iconCatalog = [
-          { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
-          { key: "home", label: "Casa", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg>' },
-          { key: "bed", label: "Dormitorio", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19v-8h18v8M3 15h18M6 11V7h5a3 3 0 0 1 3 3v1M3 21v-2M21 21v-2"/></svg>' },
-          { key: "bath", label: "Baño", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM7 13V6a3 3 0 0 1 6 0M4 22l2-3M20 22l-2-3"/></svg>' },
-          { key: "temperature", label: "Calefacción", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z"/><path d="M10 5v11M8 18h4"/></svg>' },
-          { key: "pool", label: "Piscina", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 16c2 0 2 1.5 4 1.5S8 16 10 16s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M2 20c2 0 2 1.5 4 1.5S8 20 10 20s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M7 16V5a3 3 0 0 1 6 0M7 9h6"/></svg>' },
-          { key: "land", label: "Terreno", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 18 5-7 4 4 3-5 6 8H3Z"/><path d="M3 21h18M18 4v6M15 7h6"/></svg>' },
-          { key: "view", label: "Vista", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>' },
-          { key: "garage", label: "Cochera", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13M6 21v-9h12v9M6 16h12"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>' }
+          { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#surface"></use></svg>' },
+          { key: "home", label: "Casa", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#home"></use></svg>' },
+          { key: "bed", label: "Dormitorio", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#bed"></use></svg>' },
+          { key: "bath", label: "Baño", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#bath"></use></svg>' },
+          { key: "temperature", label: "Calefacción", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#temperature"></use></svg>' },
+          { key: "pool", label: "Piscina", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#pool"></use></svg>' },
+          { key: "land", label: "Terreno", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#land"></use></svg>' },
+          { key: "view", label: "Vista", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#view"></use></svg>' },
+          { key: "garage", label: "Cochera", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/summary-icons.svg#garage"></use></svg>' }
         ];
 
         const originalProperty: StoredProperty = {
@@ -1598,12 +1598,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const fallbackPresentationItem = (key: PresentationImageTarget) => {
           const images = availableGalleryImages(); const cover = selectedPresentationItem("cover");
           const withoutCover = images.filter((item) => item !== cover);
-          const positions: Record<PresentationImageTarget, number> = { cover: 0, property: 0, features: 1, final: 2 };
+          const positions: Record<PresentationImageTarget, number> = { cover: 0, property: 0, features: 1, distances: 2, final: 2 };
           const position = positions[key];
           return withoutCover[position] || withoutCover[0] || images[position] || images[0] || null;
         };
         const renderPresentationImages = () => {
-          const labels: Record<PresentationImageTarget, string> = { cover: "Portada", property: "Imagen de “La propiedad”", features: "Imagen de “Características”", final: "Imagen final / “Una propiedad excepcional”" };
+          const labels: Record<PresentationImageTarget, string> = { cover: "Portada", property: "Imagen de “La propiedad”", features: "Imagen de “Características”", distances: "Imagen de “Distancias”", final: "Imagen final / “Una propiedad excepcional”" };
           presentationImageCards.replaceChildren(...presentationImageTargets.map((key) => {
             const label = labels[key];
             const item = selectedPresentationItem(key); const fallback = fallbackPresentationItem(key);
@@ -1979,7 +1979,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           lines.push("", "media:");
           if (selectedCoverSource) lines.push("  cover: " + yamlText(selectedCoverSource));
           lines.push("  sections:");
-          (["property", "features", "final"] as PresentationImageTarget[]).forEach((key) => { const source = imageReference(key); if (source) lines.push("    " + key + ": " + yamlText(source)); });
+          (["property", "features", "distances", "final"] as PresentationImageTarget[]).forEach((key) => { const source = imageReference(key); if (source) lines.push("    " + key + ": " + yamlText(source)); });
           lines.push("", "property:");
           if (values.sectionName) lines.push("  sectionTitle: " + yamlText(values.sectionName));
           if (values.propertyHeadline) lines.push("  headline: " + yamlText(values.propertyHeadline));
