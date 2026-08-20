@@ -24,6 +24,7 @@ const properties = defineCollection({
     summary: z.array(z.object({
       label: z.string().min(1),
       value: z.string().min(1),
+      icon: z.enum(["surface", "home", "bed", "bath", "temperature", "pool", "land", "view", "garage"]).optional(),
       show: z.boolean().default(true)
     })).default([]),
     property: z.object({
