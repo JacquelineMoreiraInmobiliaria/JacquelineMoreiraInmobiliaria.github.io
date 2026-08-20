@@ -546,7 +546,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const galleryEmptyNote = document.querySelector("#gallery-empty-note");
         const originalGalleryNote = document.querySelector("#original-gallery-note");
         const galleryInput = document.querySelector("#gallery-input");
-        const galleryDropzone = document.querySelector("#gallery-dropzone");
+        const galleryDropzone = document.querySelector<HTMLElement>("#gallery-dropzone");
         const galleryList = document.querySelector("#gallery-list");
         const galleryWarning = document.querySelector("#gallery-warning");
         const galleryCoverName = document.querySelector("#gallery-cover-name");
@@ -565,7 +565,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const nameError = document.querySelector("#name-error");
         const coverDescription = document.querySelector("#cover-description");
         const photoInput = document.querySelector("#cover-photo-input");
-        const photoDropzone = document.querySelector("#photo-dropzone");
+        const photoDropzone = document.querySelector<HTMLElement>("#photo-dropzone");
         const photoEmpty = document.querySelector("#photo-empty");
         const photoPreview = document.querySelector("#photo-preview");
         const photoPreviewImage = document.querySelector("#photo-preview-image");
@@ -2288,8 +2288,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           event.preventDefault();
           photoDropzone.classList.remove("dragging");
         }));
-        photoDropzone.addEventListener("drop", (event) => {
-          const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("image/"));
+        photoDropzone.addEventListener("drop", (event: DragEvent) => {
+          const files = event.dataTransfer?.files;
+          if (!files) return;
+          const file = [...files].find((item) => item.type.startsWith("image/"));
           if (!file) {
             photoError.textContent = "Seleccioná un archivo de imagen.";
             return;
@@ -2441,7 +2443,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
         ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
         ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
-        galleryDropzone.addEventListener("drop", (event) => addTemporaryGalleryFiles(event.dataTransfer.files));
+        galleryDropzone.addEventListener("drop", (event: DragEvent) => {
+          if (!event.dataTransfer) return;
+          addTemporaryGalleryFiles(event.dataTransfer.files);
+        });
         renderDraftCards();
       })();
     </script>
