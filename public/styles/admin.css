@@ -788,3 +788,14 @@ form > div:empty {
   .suggestion-card .button { width: 100%; }
 }
 
+
+/* Selector de imágenes de la presentación */
+.presentation-image-option { width: 100%; cursor: pointer; text-align: left; }
+.presentation-image-option:hover { border-color: var(--olive); }
+.presentation-image-option.selected,
+.presentation-image-option[aria-pressed="true"] { border: 3px solid var(--olive); background: var(--green-soft); box-shadow: 0 0 0 3px rgba(125,155,47,.18); }
+.presentation-image-option:focus-visible { outline: 4px solid rgba(125,155,47,.4); outline-offset: 3px; }
+.presentation-image-option .selection-state { color: var(--green); font-size: .78rem; font-weight: 700; }
+.presentation-image-option.selected .selection-state { color: #4d6820; }
+.gallery-visible { grid-template-columns: auto 1fr !important; align-items: center; text-transform: none !important; letter-spacing: 0 !important; }
+.gallery-visible input { width: 20px !important; min-height: 20px !important; padding: 0 !important; accent-color: var(--olive); }
