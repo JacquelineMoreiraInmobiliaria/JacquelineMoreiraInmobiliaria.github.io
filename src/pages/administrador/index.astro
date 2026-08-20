@@ -491,159 +491,245 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
       import JSZip from "jszip";
       import { buildChatGptDescriptionPrompt, normalizeSuggestion, parseChatGptDescriptionResponse } from "../../scripts/chatgpt-description-workflow.js";
       (() => {
+        type PresentationImageTarget = "cover" | "property" | "features" | "final";
+        type PresentationImages = Record<PresentationImageTarget, string | null>;
+        type UploadKind = "cover" | "gallery" | "video";
+        type GalleryStatus = "pending" | "temporary" | "missing" | "uploading" | "uploaded" | "error";
+        type RemoteMedia = { url: string; objectKey?: string; contentType?: string };
+        type GalleryItem = {
+          id: string;
+          name: string;
+          originalName: string;
+          status: GalleryStatus;
+          description: string;
+          external?: boolean;
+          source?: string;
+          visible?: boolean;
+          remoteUrl?: string;
+          objectKey?: string;
+          contentType?: string;
+          position?: number;
+          file?: File;
+          progress?: number;
+        };
+        type FeaturedDataItem = { icon: string; label: string; value: string; show: boolean };
+        type FeatureCategory = "structural" | "exterior";
+        type FeatureItem = { id: string; label: string; category: FeatureCategory; order?: number };
+        type DistanceItem = { id: string; destination: string; distance: string; order?: number };
+        type OrganizedParagraph = { id: string; text: string };
+        type SummarySuggestion = { label: string; value: string };
+        type PublicationState = { status: "unpublished" | "published"; publishedAt: string; publishedRevision: string };
+        type SessionMedia = { photo: File | null; photoUrl: string | null; video: File | null };
+        type MediaInventoryItem = { cover: boolean; gallery: string[]; video: boolean };
+        type PropertyDraft = {
+          id: string;
+          slug: string;
+          name: string;
+          price: string;
+          subtitle: string;
+          coverDescription: string;
+          coverPhotoName: string;
+          coverPhotoSource: string;
+          remoteCover: RemoteMedia | null;
+          videoEnabled: boolean;
+          videoName: string;
+          videoSource: string;
+          remoteVideo: RemoteMedia | null;
+          galleryEnabled: boolean;
+          galleryItems: GalleryItem[];
+          futureCoverId: string | null;
+          presentationImages: PresentationImages;
+          publication: PublicationState;
+          features: FeatureItem[];
+          locationEnabled: boolean;
+          locationName: string;
+          locationAddress: string;
+          latitude: string;
+          longitude: string;
+          distancesEnabled: boolean;
+          distances: DistanceItem[];
+          propertyDescription: string;
+          descriptionSource: string;
+          organizedDescription: { headline: string; paragraphs: string[] };
+          aiSuggestions: { summary: SummarySuggestion[]; features: string[] };
+          sectionName: string;
+          propertyHeadline: string;
+          paragraphs: string[];
+          featuredData: FeaturedDataItem[];
+          updatedAt: string;
+        };
+        type PropertyRecord = Partial<PropertyDraft>;
+        type StoredProperty = PropertyRecord & Pick<PropertyDraft, "id" | "slug" | "name">;
+        type R2Config = { workerUrl?: string; maxImageBytes?: number; maxVideoBytes?: number };
+        type SignedUpload = { uploadUrl: string; publicUrl: string; key: string };
+        type PackageGalleryFile = { file: File; itemId: string };
+
+        const requiredElement = <T extends Element = HTMLElement>(selector: string, root: ParentNode = document): T => {
+          const element = root.querySelector<T>(selector);
+          if (!element) throw new Error(`Falta el elemento requerido: ${selector}`);
+          return element;
+        };
+        const requiredClosest = <T extends Element = HTMLElement>(element: Element, selector: string): T => {
+          const match = element.closest<T>(selector);
+          if (!match) throw new Error(`Falta el contenedor requerido: ${selector}`);
+          return match;
+        };
+        const optionalInputValue = (selector: string): string => document.querySelector<HTMLInputElement>(selector)?.value || "";
+        const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "final"];
         const storageKey = "moreira-property-admin-drafts-v1";
         const publishingChecklistKey = "moreira-property-publishing-checklist-v1";
-        const listScreen = document.querySelector("#property-list");
-        const editorScreen = document.querySelector("#editor");
-        const form = document.querySelector("#basic-form");
-        const coverForm = document.querySelector("#cover-form");
-        const propertyForm = document.querySelector("#property-form");
-        const dataForm = document.querySelector("#data-form");
-        const galleryForm = document.querySelector("#gallery-form");
-        const featuresForm = document.querySelector("#features-form");
-        const locationForm = document.querySelector("#location-form");
-        const distancesForm = document.querySelector("#distances-form");
-        const reviewStep = document.querySelector("#review-step");
+        const listScreen = requiredElement("#property-list");
+        const editorScreen = requiredElement("#editor");
+        const form = requiredElement<HTMLFormElement>("#basic-form");
+        const coverForm = requiredElement<HTMLFormElement>("#cover-form");
+        const propertyForm = requiredElement<HTMLFormElement>("#property-form");
+        const dataForm = requiredElement<HTMLFormElement>("#data-form");
+        const galleryForm = requiredElement<HTMLFormElement>("#gallery-form");
+        const featuresForm = requiredElement<HTMLFormElement>("#features-form");
+        const locationForm = requiredElement<HTMLFormElement>("#location-form");
+        const distancesForm = requiredElement<HTMLFormElement>("#distances-form");
+        const reviewStep = requiredElement("#review-step");
 
-        const locationFields = document.querySelector("#location-fields");
-        const locationHiddenNote = document.querySelector("#location-hidden-note");
-        const locationNameInput = document.querySelector("#location-name");
-        const locationAddressInput = document.querySelector("#location-address");
-        const latitudeInput = document.querySelector("#location-latitude");
-        const longitudeInput = document.querySelector("#location-longitude");
-        const coordinatesWarning = document.querySelector("#coordinates-warning");
-        const locationMapPreview = document.querySelector("#location-map-preview");
-        const distancesControls = document.querySelector("#distances-controls");
-        const distancesHiddenNote = document.querySelector("#distances-hidden-note");
-        const distancesList = document.querySelector("#distances-list");
-        const reviewPropertyName = document.querySelector("#review-property-name");
-        const reviewGeneral = document.querySelector("#review-general");
-        const reviewCards = document.querySelector("#review-cards");
-        const reviewPending = document.querySelector("#review-pending");
-        const preparationDialog = document.querySelector<HTMLDialogElement>("#preparation-dialog");
-        const preparationIntro = document.querySelector("#preparation-intro");
-        const preparationFields = document.querySelector("#preparation-fields");
-        const preparationCoverInput = document.querySelector<HTMLInputElement>("#preparation-cover-input");
-        const preparationGalleryInput = document.querySelector<HTMLInputElement>("#preparation-gallery-input");
-        const preparationVideoInput = document.querySelector<HTMLInputElement>("#preparation-video-input");
-        const preparationCoverStatus = document.querySelector("#preparation-cover-status");
-        const preparationGalleryStatus = document.querySelector("#preparation-gallery-status");
-        const preparationVideoStatus = document.querySelector("#preparation-video-status");
-        const preparationGallerySection = document.querySelector("#preparation-gallery-section");
-        const preparationVideoSection = document.querySelector("#preparation-video-section");
-        const preparationGalleryList = document.querySelector("#preparation-gallery-list");
-        const preparationSummary = document.querySelector("#preparation-summary");
-        const preparationProgress = document.querySelector("#preparation-progress");
-        const downloadPackage = document.querySelector("#download-package");
-        const continuePublication = document.querySelector("#continue-publication");
-        const publicationDialog = document.querySelector<HTMLDialogElement>("#publication-dialog");
-        const publicationConfirmDialog = document.querySelector<HTMLDialogElement>("#publication-confirm-dialog");
-        const publicationPropertyName = document.querySelector("#publication-property-name");
-        const publicationGuide = document.querySelector("#publication-guide");
-        const publicationChecklist = document.querySelector("#publication-checklist");
-        const galleryControls = document.querySelector("#gallery-controls");
-        const galleryHiddenNote = document.querySelector("#gallery-hidden-note");
-        const galleryFolder = document.querySelector("#gallery-folder");
-        const galleryDetectedCount = document.querySelector("#gallery-detected-count");
-        const galleryDetectedList = document.querySelector("#gallery-detected-list");
-        const galleryEmptyNote = document.querySelector("#gallery-empty-note");
-        const originalGalleryNote = document.querySelector("#original-gallery-note");
-        const galleryInput = document.querySelector<HTMLInputElement>("#gallery-input");
-        const galleryDropzone = document.querySelector<HTMLElement>("#gallery-dropzone");
-        const galleryList = document.querySelector("#gallery-list");
-        const galleryWarning = document.querySelector("#gallery-warning");
-        const galleryCoverName = document.querySelector("#gallery-cover-name");
-        const galleryCoverStatus = document.querySelector("#gallery-cover-status");
-        const galleryRecommendation = document.querySelector("#gallery-recommendation");
-        const presentationImageCards = document.querySelector("#presentation-image-cards");
-        const presentationImageDialog = document.querySelector<HTMLDialogElement>("#presentation-image-dialog");
-        const presentationImageOptions = document.querySelector("#presentation-image-options");
-        const title = document.querySelector("#editor-title");
-        const intro = document.querySelector("#editor-intro");
-        const stepCount = document.querySelector("#step-count");
-        const saveState = document.querySelector("#save-state");
-        const nameInput = document.querySelector("#property-name");
-        const priceInput = document.querySelector("#property-price");
-        const propertyDescriptionInput = document.querySelector("#property-description");
-        const nameError = document.querySelector("#name-error");
-        const coverDescription = document.querySelector("#cover-description");
-        const photoInput = document.querySelector<HTMLInputElement>("#cover-photo-input");
-        const photoDropzone = document.querySelector<HTMLElement>("#photo-dropzone");
-        const photoEmpty = document.querySelector("#photo-empty");
-        const photoPreview = document.querySelector("#photo-preview");
-        const photoPreviewImage = document.querySelector("#photo-preview-image");
-        const photoName = document.querySelector("#photo-name");
-        const photoError = document.querySelector("#photo-error");
-        const videoField = document.querySelector("#video-field");
-        const videoInput = document.querySelector<HTMLInputElement>("#cover-video-input");
-        const videoEmpty = document.querySelector("#video-empty");
-        const videoSelected = document.querySelector("#video-selected");
-        const videoName = document.querySelector("#video-name");
-        const videoError = document.querySelector("#video-error");
-        const expectedFolder = document.querySelector("#expected-folder");
-        const legacyMediaFolder = document.querySelector("#legacy-media-folder");
-        const legacyGalleryMedia = document.querySelector("#legacy-gallery-media");
-        const galleryFormIntro = document.querySelector("#gallery-form-intro");
-        const gallerySelectionHelp = document.querySelector("#gallery-selection-help");
-        const deletePropertyDialog = document.querySelector<HTMLDialogElement>("#delete-property-dialog");
-        const deletePropertyMessage = document.querySelector("#delete-property-message");
-        const deletePropertyName = document.querySelector("#delete-property-name");
-        const deletePropertyPublishedWarning = document.querySelector("#delete-property-published-warning");
-        const confirmDeleteProperty = document.querySelector("#confirm-delete-property");
-        const statusPhoto = document.querySelector("#status-photo");
-        const statusGallery = document.querySelector("#status-gallery");
-        const statusVideo = document.querySelector("#status-video");
-        const statusGeneral = document.querySelector("#status-general");
-        const missingFiles = document.querySelector("#missing-files");
-        const missingFilesList = document.querySelector("#missing-files-list");
-        const externalMediaNote = document.querySelector("#external-media-note");
-        const featuresList = document.querySelector("#features-list");
-        const featuredDataList = document.querySelector("#featured-data-list");
-        const toast = document.querySelector("#toast");
-        const detectedMedia = JSON.parse(document.querySelector("#media-inventory").textContent || "{}");
-        const publishedProperties = new Set(JSON.parse(document.querySelector("#published-properties").textContent || "[]"));
-        const r2Config = window.MOREIRA_R2_UPLOAD || {};
+        const locationFields = requiredElement("#location-fields");
+        const locationHiddenNote = requiredElement("#location-hidden-note");
+        const locationNameInput = requiredElement<HTMLInputElement>("#location-name");
+        const locationAddressInput = requiredElement<HTMLInputElement>("#location-address");
+        const latitudeInput = requiredElement<HTMLInputElement>("#location-latitude");
+        const longitudeInput = requiredElement<HTMLInputElement>("#location-longitude");
+        const coordinatesWarning = requiredElement("#coordinates-warning");
+        const locationMapPreview = requiredElement("#location-map-preview");
+        const distancesControls = requiredElement("#distances-controls");
+        const distancesHiddenNote = requiredElement("#distances-hidden-note");
+        const distancesList = requiredElement("#distances-list");
+        const reviewPropertyName = requiredElement("#review-property-name");
+        const reviewGeneral = requiredElement("#review-general");
+        const reviewCards = requiredElement("#review-cards");
+        const reviewPending = requiredElement("#review-pending");
+        const preparationDialog = requiredElement<HTMLDialogElement>("#preparation-dialog");
+        const preparationIntro = requiredElement("#preparation-intro");
+        const preparationFields = requiredElement("#preparation-fields");
+        const preparationCoverInput = requiredElement<HTMLInputElement>("#preparation-cover-input");
+        const preparationGalleryInput = requiredElement<HTMLInputElement>("#preparation-gallery-input");
+        const preparationVideoInput = requiredElement<HTMLInputElement>("#preparation-video-input");
+        const preparationCoverStatus = requiredElement("#preparation-cover-status");
+        const preparationGalleryStatus = requiredElement("#preparation-gallery-status");
+        const preparationVideoStatus = requiredElement("#preparation-video-status");
+        const preparationGallerySection = requiredElement("#preparation-gallery-section");
+        const preparationVideoSection = requiredElement("#preparation-video-section");
+        const preparationGalleryList = requiredElement("#preparation-gallery-list");
+        const preparationSummary = requiredElement("#preparation-summary");
+        const preparationProgress = requiredElement("#preparation-progress");
+        const downloadPackage = requiredElement<HTMLButtonElement>("#download-package");
+        const continuePublication = requiredElement<HTMLButtonElement>("#continue-publication");
+        const publicationDialog = requiredElement<HTMLDialogElement>("#publication-dialog");
+        const publicationConfirmDialog = requiredElement<HTMLDialogElement>("#publication-confirm-dialog");
+        const publicationPropertyName = requiredElement("#publication-property-name");
+        const publicationGuide = requiredElement("#publication-guide");
+        const publicationChecklist = requiredElement("#publication-checklist");
+        const galleryControls = requiredElement("#gallery-controls");
+        const galleryHiddenNote = requiredElement("#gallery-hidden-note");
+        const galleryFolder = requiredElement("#gallery-folder");
+        const galleryDetectedCount = requiredElement("#gallery-detected-count");
+        const galleryDetectedList = requiredElement("#gallery-detected-list");
+        const galleryEmptyNote = requiredElement("#gallery-empty-note");
+        const originalGalleryNote = requiredElement("#original-gallery-note");
+        const galleryInput = requiredElement<HTMLInputElement>("#gallery-input");
+        const galleryDropzone = requiredElement<HTMLElement>("#gallery-dropzone");
+        const galleryList = requiredElement("#gallery-list");
+        const galleryWarning = requiredElement("#gallery-warning");
+        const galleryCoverName = requiredElement("#gallery-cover-name");
+        const galleryCoverStatus = requiredElement("#gallery-cover-status");
+        const galleryRecommendation = requiredElement("#gallery-recommendation");
+        const presentationImageCards = requiredElement("#presentation-image-cards");
+        const presentationImageDialog = requiredElement<HTMLDialogElement>("#presentation-image-dialog");
+        const presentationImageOptions = requiredElement("#presentation-image-options");
+        const title = requiredElement("#editor-title");
+        const intro = requiredElement("#editor-intro");
+        const stepCount = requiredElement("#step-count");
+        const saveState = requiredElement("#save-state");
+        const nameInput = requiredElement<HTMLInputElement>("#property-name");
+        const priceInput = requiredElement<HTMLInputElement>("#property-price");
+        const propertyDescriptionInput = requiredElement<HTMLTextAreaElement>("#property-description");
+        const nameError = requiredElement("#name-error");
+        const coverDescription = requiredElement<HTMLTextAreaElement>("#cover-description");
+        const photoInput = requiredElement<HTMLInputElement>("#cover-photo-input");
+        const photoDropzone = requiredElement<HTMLElement>("#photo-dropzone");
+        const photoEmpty = requiredElement("#photo-empty");
+        const photoPreview = requiredElement("#photo-preview");
+        const photoPreviewImage = requiredElement<HTMLImageElement>("#photo-preview-image");
+        const photoName = requiredElement("#photo-name");
+        const photoError = requiredElement("#photo-error");
+        const videoField = requiredElement("#video-field");
+        const videoInput = requiredElement<HTMLInputElement>("#cover-video-input");
+        const videoEmpty = requiredElement("#video-empty");
+        const videoSelected = requiredElement("#video-selected");
+        const videoName = requiredElement("#video-name");
+        const videoError = requiredElement("#video-error");
+        const expectedFolder = requiredElement("#expected-folder");
+        const legacyMediaFolder = requiredElement("#legacy-media-folder");
+        const legacyGalleryMedia = requiredElement("#legacy-gallery-media");
+        const galleryFormIntro = requiredElement("#gallery-form-intro");
+        const gallerySelectionHelp = requiredElement("#gallery-selection-help");
+        const deletePropertyDialog = requiredElement<HTMLDialogElement>("#delete-property-dialog");
+        const deletePropertyMessage = requiredElement("#delete-property-message");
+        const deletePropertyName = requiredElement("#delete-property-name");
+        const deletePropertyPublishedWarning = requiredElement("#delete-property-published-warning");
+        const confirmDeleteProperty = requiredElement<HTMLButtonElement>("#confirm-delete-property");
+        const statusPhoto = requiredElement("#status-photo");
+        const statusGallery = requiredElement("#status-gallery");
+        const statusVideo = requiredElement("#status-video");
+        const statusGeneral = requiredElement("#status-general");
+        const missingFiles = requiredElement("#missing-files");
+        const missingFilesList = requiredElement("#missing-files-list");
+        const externalMediaNote = requiredElement("#external-media-note");
+        const featuresList = requiredElement("#features-list");
+        const featuredDataList = requiredElement("#featured-data-list");
+        const toast = requiredElement("#toast");
+        const detectedMedia = JSON.parse(requiredElement("#media-inventory").textContent || "{}") as Record<string, MediaInventoryItem>;
+        const publishedProperties = new Set<string>(JSON.parse(requiredElement("#published-properties").textContent || "[]") as string[]);
+        const r2Config = ((window as Window & { MOREIRA_R2_UPLOAD?: R2Config }).MOREIRA_R2_UPLOAD || {});
         const r2Configured = Boolean(r2Config.workerUrl);
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
         const r2VideoLimit = Number(r2Config.maxVideoBytes) || 250 * 1024 * 1024;
-        let editingId = null;
-        let saveTimer = null;
-        let selectedPhoto = null;
-        let selectedVideo = null;
-        let photoObjectUrl = null;
+        let editingId: string | null = null;
+        let saveTimer: number | null = null;
+        let selectedPhoto: File | null = null;
+        let selectedVideo: File | null = null;
+        let photoObjectUrl: string | null = null;
         let photoRemoved = false;
         let videoRemoved = false;
-        let remoteCover = null;
-        let remoteVideo = null;
-        let pendingDelete = null;
+        let remoteCover: RemoteMedia | null = null;
+        let remoteVideo: RemoteMedia | null = null;
+        let pendingDelete: StoredProperty | null = null;
         let deleteConfirmationStage = 1;
         let activeUploads = 0;
-        const sessionMedia = new Map();
-        let draggedDataCard = null;
-        let galleryItems = [];
-        let selectedFutureCoverId = null;
+        const sessionMedia = new Map<string, SessionMedia>();
+        let draggedDataCard: HTMLElement | null = null;
+        let galleryItems: GalleryItem[] = [];
+        let selectedFutureCoverId: string | null = null;
         let presentationImages: PresentationImages = { cover: null, property: null, features: null, final: null };
         let selectingPresentationImage: PresentationImageTarget | null = null;
         let pendingPresentationImageId: string | null = null;
-        let draggedGalleryItem = null;
-        let featureItems = [];
-        let draggedFeatureItem = null;
-        let distanceItems = [];
-        let draggedDistanceItem = null;
-        let packageCoverFile = null;
-        let packageGalleryFiles = [];
-        let packageVideoFile = null;
+        let draggedGalleryItem: GalleryItem | null = null;
+        let featureItems: FeatureItem[] = [];
+        let draggedFeatureItem: FeatureItem | null = null;
+        let distanceItems: DistanceItem[] = [];
+        let draggedDistanceItem: DistanceItem | null = null;
+        let packageCoverFile: File | null = null;
+        let packageGalleryFiles: File[] = [];
+        let packageVideoFile: File | null = null;
         let packageUsesExternalMedia = false;
-        let draggedPackageGalleryFile = null;
+        let draggedPackageGalleryFile: File | null = null;
         let legacySubtitle = "";
-        let publication = { status: "unpublished", publishedAt: "", publishedRevision: "" };
+        let publication: PublicationState = { status: "unpublished", publishedAt: "", publishedRevision: "" };
         let legacySectionName = "La propiedad";
         let legacyPropertyHeadline = "";
         let organizedHeadline = "";
-        let organizedParagraphs = [];
-        let aiSummarySuggestions = [];
-        let aiFeatureSuggestions = [];
-        let draggedOrganizedParagraph = null;
+        let organizedParagraphs: OrganizedParagraph[] = [];
+        let aiSummarySuggestions: SummarySuggestion[] = [];
+        let aiFeatureSuggestions: string[] = [];
+        let draggedOrganizedParagraph: OrganizedParagraph | null = null;
+        let toastTimer: number | null = null;
 
         const iconCatalog = [
           { key: "surface", label: "Superficie", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></svg>' },
@@ -657,7 +743,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           { key: "garage", label: "Cochera", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13M6 21v-9h12v9M6 16h12"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>' }
         ];
 
-        const originalProperty = {
+        const originalProperty: StoredProperty = {
           id: "atardecer-y-vides",
           slug: "atardecer-y-vides",
           name: "Atardecer y Vides",
@@ -690,9 +776,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           futureCoverId: null,
           features: [
             "Paredes dobles", "Aberturas de aluminio con DVH", "4 dormitorios", "3 baños", "Living-comedor con estufa a leña", "Barbacoa integrada", "Pisos de porcelanato", "Losa radiante eléctrica independiente"
-          ].map((label, index) => ({ id: "structural-" + (index + 1), label, category: "structural" })).concat([
+          ].map((label, index): FeatureItem => ({ id: "structural-" + (index + 1), label, category: "structural" })).concat([
             "Vista panorámica de 180° al mar", "Piscina climatizada con jacuzzi", "Viñedo de 4 años", "Tajamar", "Dos accesos independientes", "Cochera"
-          ].map((label, index) => ({ id: "exterior-" + (index + 1), label, category: "exterior" }))),
+          ].map((label, index): FeatureItem => ({ id: "exterior-" + (index + 1), label, category: "exterior" }))),
           locationEnabled: true,
           locationName: "Piriápolis, Playa Hermosa",
           locationAddress: "Calle 29 y Vecinal a la Bodega, en la zona alta de Piriápolis.",
@@ -702,7 +788,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           distances: []
         };
 
-        const slugify = (value) => value
+        const slugify = (value: string) => value
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
           .toLowerCase()
@@ -710,15 +796,20 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "");
 
-        const readDrafts = () => {
+        const readDrafts = (): Record<string, StoredProperty> => {
           try {
-            return JSON.parse(localStorage.getItem(storageKey) || "{}");
+            const parsed: unknown = JSON.parse(localStorage.getItem(storageKey) || "{}");
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+            return Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, StoredProperty] => {
+              const value = entry[1];
+              return Boolean(value && typeof value === "object" && "id" in value && typeof value.id === "string" && "slug" in value && typeof value.slug === "string" && "name" in value && typeof value.name === "string");
+            }));
           } catch {
             return {};
           }
         };
 
-        const writeDrafts = (drafts) => localStorage.setItem(storageKey, JSON.stringify(drafts));
+        const writeDrafts = (drafts: Record<string, StoredProperty>) => localStorage.setItem(storageKey, JSON.stringify(drafts));
 
         const subtitleFromLocation = () => {
           const visibleName = locationNameInput?.value.trim();
@@ -727,8 +818,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (!parts.some((part) => part.toLowerCase() === "uruguay")) parts.push("Uruguay");
           return parts.join(" · ");
         };
-        const descriptionParagraphs = (description) => description.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
-        const currentValues = () => ({
+        const descriptionParagraphs = (description: string) => description.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
+        const currentValues = (): PropertyDraft => ({
           id: editingId || ("draft-" + Date.now()),
           slug: slugify(nameInput.value) || "nueva-propiedad",
           name: nameInput.value.trim(),
@@ -736,24 +827,24 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           subtitle: subtitleFromLocation(),
           coverDescription: coverDescription.value.trim(),
           coverPhotoName: selectedPhoto?.name || photoName.textContent || "",
-          coverPhotoSource: itemSource(selectedPresentationItem("cover")) || remoteCover?.url || (editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource : ""),
+          coverPhotoSource: itemSource(selectedPresentationItem("cover")) || remoteCover?.url || (editingId === originalProperty.id && !selectedPhoto && !photoRemoved ? originalProperty.coverPhotoSource || "" : ""),
           remoteCover: remoteCover ? { ...remoteCover } : null,
-          videoEnabled: document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes",
+          videoEnabled: optionalInputValue('input[name="videoEnabled"]:checked') === "yes",
           videoName: selectedVideo?.name || videoName.textContent || "",
-          videoSource: remoteVideo?.url || (editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource : ""),
+          videoSource: remoteVideo?.url || (editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource || "" : ""),
           remoteVideo: remoteVideo ? { ...remoteVideo } : null,
-          galleryEnabled: document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no",
+          galleryEnabled: optionalInputValue('input[name="galleryEnabled"]:checked') !== "no",
           galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           presentationImages: { ...presentationImages },
           publication: { ...publication },
           features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
-          locationEnabled: document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes",
+          locationEnabled: optionalInputValue('input[name="locationEnabled"]:checked') === "yes",
           locationName: locationNameInput.value.trim(),
           locationAddress: locationAddressInput.value.trim(),
           latitude: latitudeInput.value.trim(),
           longitude: longitudeInput.value.trim(),
-          distancesEnabled: document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes",
+          distancesEnabled: optionalInputValue('input[name="distancesEnabled"]:checked') === "yes",
           distances: distanceItems.map((item, index) => ({ id: item.id, destination: item.destination || "", distance: item.distance || "", order: index + 1 })),
           propertyDescription: propertyDescriptionInput.value.trim(),
           descriptionSource: propertyDescriptionInput.value.trim(),
@@ -766,21 +857,21 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           propertyHeadline: organizedHeadline.trim() || legacyPropertyHeadline,
           paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean).length ? organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) : descriptionParagraphs(propertyDescriptionInput.value),
           featuredData: [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
-            icon: card.dataset.icon || "home",
-            label: card.querySelector("[data-field='label']").value.trim(),
-            value: card.querySelector("[data-field='value']").value.trim(),
-            show: card.querySelector("input[type='radio']:checked")?.value !== "no"
+            icon: (card as HTMLElement).dataset.icon || "home",
+            label: requiredElement<HTMLInputElement>("[data-field='label']", card).value.trim(),
+            value: requiredElement<HTMLInputElement>("[data-field='value']", card).value.trim(),
+            show: card.querySelector<HTMLInputElement>("input[type='radio']:checked")?.value !== "no"
           })),
           updatedAt: new Date().toISOString()
         });
 
-        const publicationFor = (property) => property?.publication?.status === "published" ? property.publication : null;
-        const validSavedLocation = (property) => {
+        const publicationFor = (property: PropertyRecord | null | undefined) => property?.publication?.status === "published" ? property.publication : null;
+        const validSavedLocation = (property: PropertyRecord | null | undefined) => {
           const latitude = Number(String(property?.latitude || "").replace(",", "."));
           const longitude = Number(String(property?.longitude || "").replace(",", "."));
           return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
         };
-        const draftIsReady = (property) => {
+        const draftIsReady = (property: PropertyRecord | null | undefined) => {
           const slug = property?.slug || slugify(property?.name || "");
           const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
           const cover = Boolean(property?.coverPhotoSource || property?.remoteCover?.url || media.cover);
@@ -790,13 +881,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const location = property?.locationEnabled !== true || validSavedLocation(property);
           return Boolean(property?.name?.trim()) && cover && video && gallery && location;
         };
-        const publicationCardState = (property, isOriginal = false) => {
-          const published = isOriginal || publicationFor(property);
+        const publicationCardState = (property: PropertyRecord, isOriginal = false) => {
+          if (isOriginal) return { label: "PUBLICADA", className: "published" };
+          const published = publicationFor(property);
           if (!published) return draftIsReady(property) ? { label: "LISTA PARA PUBLICAR", className: "ready" } : { label: "BORRADOR", className: "draft" };
-          const changed = !isOriginal && published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt);
+          const changed = Boolean(published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt));
           return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
         };
-        const loadPublication = (property, isOriginal = false) => {
+        const loadPublication = (property: PropertyRecord | null, isOriginal = false) => {
           publication = isOriginal ? { status: "published", publishedAt: "2026-01-01T00:00:00.000Z", publishedRevision: "" } : (property?.publication?.status === "published" ? { ...property.publication } : { status: "unpublished", publishedAt: "", publishedRevision: "" });
         };
         const markPublished = () => {
@@ -835,15 +927,15 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
         const scheduleSave = () => {
           saveState.textContent = "Guardando…";
-          window.clearTimeout(saveTimer);
+          if (saveTimer !== null) window.clearTimeout(saveTimer);
           saveTimer = window.setTimeout(saveDraft, 500);
         };
 
-        const showToast = (message) => {
+        const showToast = (message: string) => {
           toast.textContent = message;
           toast.hidden = false;
-          window.clearTimeout(toast.hideTimer);
-          toast.hideTimer = window.setTimeout(() => { toast.hidden = true; }, 3200);
+          if (toastTimer !== null) window.clearTimeout(toastTimer);
+          toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3200);
         };
 
         const showList = () => {
@@ -853,9 +945,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           window.scrollTo({ top: 0, behavior: "smooth" });
         };
 
-        const setStep = (step) => {
+        const setStep = (step: number) => {
           document.querySelectorAll(".step").forEach((item) => {
-            const itemStep = Number(item.dataset.step);
+            const itemStep = Number((item as HTMLElement).dataset.step);
             const active = itemStep === step;
             item.classList.toggle("active", active);
             item.classList.toggle("completed", itemStep < step && itemStep <= 4);
@@ -875,19 +967,19 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (step === 9) renderReview();
         };
 
-        const setVideoEnabled = (enabled) => {
-          document.querySelector(`input[name="videoEnabled"][value="${enabled ? "yes" : "no"}"]`).checked = true;
+        const setVideoEnabled = (enabled: boolean) => {
+          requiredElement<HTMLInputElement>(`input[name="videoEnabled"][value="${enabled ? "yes" : "no"}"]`).checked = true;
           videoField.hidden = !enabled;
           updateMediaStatus();
         };
 
-        const setStatus = (element, text, complete = false) => {
+        const setStatus = (element: HTMLElement, text: string, complete = false) => {
           element.textContent = text;
           element.classList.toggle("status-success", complete);
           element.classList.toggle("status-warning", !complete);
         };
 
-        const hasRemoteMedia = (property = null) => {
+        const hasRemoteMedia = (property: PropertyRecord | null = null) => {
           const cover = property ? property.remoteCover : remoteCover;
           const video = property ? property.remoteVideo : remoteVideo;
           const items = property ? (property.galleryItems || []) : galleryItems;
@@ -907,7 +999,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const hasCover = legacyMode ? (detected.cover || usesExternalOriginal) : Boolean(remoteCover?.url);
           const galleryCount = legacyMode ? Math.max(detected.gallery.length, usesExternalOriginal ? 8 : 0) : remoteGalleryCount;
           const hasVideo = legacyMode ? (detected.video || usesExternalOriginal) : Boolean(remoteVideo?.url);
-          const videoRequired = document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes";
+          const videoRequired = optionalInputValue('input[name="videoEnabled"]:checked') === "yes";
           const galleryRequired = currentGalleryEnabled();
           const missing = [];
 
@@ -943,7 +1035,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           externalMediaNote.hidden = !usesExternalOriginal;
         };
 
-        const showPhoto = (source, name) => {
+        const showPhoto = (source: string, name: string) => {
           photoPreviewImage.src = source;
           photoName.textContent = name;
           photoEmpty.hidden = true;
@@ -957,7 +1049,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           photoObjectUrl = null;
           selectedPhoto = null;
           photoRemoved = true;
-          photoInput?.value = "";
+          photoInput.value = "";
           photoPreviewImage.removeAttribute("src");
           photoName.textContent = "";
           photoPreview.hidden = true;
@@ -966,7 +1058,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           scheduleSave();
         };
 
-        const showVideo = (name) => {
+        const showVideo = (name: string) => {
           videoName.textContent = name;
           videoEmpty.hidden = true;
           videoSelected.hidden = false;
@@ -976,7 +1068,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const clearVideo = () => {
           selectedVideo = null;
           videoRemoved = true;
-          videoInput?.value = "";
+          videoInput.value = "";
           videoName.textContent = "";
           videoSelected.hidden = true;
           videoEmpty.hidden = false;
@@ -984,9 +1076,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
 
         const renderOrganizedDescription = () => {
-          const section = document.querySelector("#organized-description");
-          const list = document.querySelector("#organized-paragraphs");
-          const headline = document.querySelector("#organized-headline");
+          const section = requiredElement("#organized-description");
+          const list = requiredElement("#organized-paragraphs");
+          const headline = requiredElement<HTMLInputElement>("#organized-headline");
           section.hidden = !(organizedHeadline || organizedParagraphs.length);
           headline.value = organizedHeadline;
           list.replaceChildren(...organizedParagraphs.map((item, index) => {
@@ -994,12 +1086,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             card.className = "feature-card";
             card.draggable = true;
             card.innerHTML = '<header class="feature-card-header"><div class="drag-handle">↕</div><strong>Párrafo ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><textarea rows="5" placeholder="Escribir párrafo"></textarea>';
-            const input = card.querySelector("textarea"); input.value = item.text || "";
+            const input = requiredElement<HTMLTextAreaElement>("textarea", card); input.value = item.text || "";
             input.addEventListener("input", () => { item.text = input.value; scheduleSave(); });
-            card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === organizedParagraphs.length - 1;
-            card.querySelector("[data-up]").addEventListener("click", () => { [organizedParagraphs[index - 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index - 1]]; renderOrganizedDescription(); scheduleSave(); });
-            card.querySelector("[data-down]").addEventListener("click", () => { [organizedParagraphs[index + 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index + 1]]; renderOrganizedDescription(); scheduleSave(); });
-            card.querySelector("[data-remove]").addEventListener("click", () => { if (window.confirm("¿Eliminar este párrafo?")) { organizedParagraphs.splice(index, 1); renderOrganizedDescription(); scheduleSave(); } });
+            requiredElement<HTMLButtonElement>("[data-up]", card).disabled = index === 0; requiredElement<HTMLButtonElement>("[data-down]", card).disabled = index === organizedParagraphs.length - 1;
+            requiredElement<HTMLButtonElement>("[data-up]", card).addEventListener("click", () => { [organizedParagraphs[index - 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index - 1]]; renderOrganizedDescription(); scheduleSave(); });
+            requiredElement<HTMLButtonElement>("[data-down]", card).addEventListener("click", () => { [organizedParagraphs[index + 1], organizedParagraphs[index]] = [organizedParagraphs[index], organizedParagraphs[index + 1]]; renderOrganizedDescription(); scheduleSave(); });
+            requiredElement<HTMLButtonElement>("[data-remove]", card).addEventListener("click", () => { if (window.confirm("¿Eliminar este párrafo?")) { organizedParagraphs.splice(index, 1); renderOrganizedDescription(); scheduleSave(); } });
             card.addEventListener("dragstart", () => { draggedOrganizedParagraph = item; });
             card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedOrganizedParagraph || draggedOrganizedParagraph === item) return; const from = organizedParagraphs.indexOf(draggedOrganizedParagraph); organizedParagraphs.splice(from, 1); organizedParagraphs.splice(index, 0, draggedOrganizedParagraph); renderOrganizedDescription(); });
             card.addEventListener("dragend", () => { draggedOrganizedParagraph = null; scheduleSave(); });
@@ -1009,7 +1101,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           renderPresentationImages();
         };
         const normalizedSuggestion = normalizeSuggestion;
-        const suggestedIcon = (label) => {
+        const suggestedIcon = (label: string) => {
           const value = normalizedSuggestion(label);
           if (value.includes("dormitorio")) return "bed";
           if (value.includes("bano")) return "bath";
@@ -1020,9 +1112,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (value.includes("vista")) return "view";
           return "home";
         };
-        const addSummarySuggestion = (suggestion) => {
+        const addSummarySuggestion = (suggestion: SummarySuggestion) => {
           const key = normalizedSuggestion(suggestion.label);
-          const duplicate = [...featuredDataList.querySelectorAll(".data-card")].some((card) => normalizedSuggestion(card.querySelector("[data-field='label']").value) === key);
+          const duplicate = [...featuredDataList.querySelectorAll<HTMLElement>(".data-card")].some((card) => normalizeSuggestion(requiredElement<HTMLInputElement>("[data-field='label']", card).value) === key);
           if (duplicate) {
             showToast("Ese dato ya está agregado.");
           } else {
@@ -1033,7 +1125,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           renderAiSuggestions();
           scheduleSave();
         };
-        const addFeatureSuggestion = (suggestion) => {
+        const addFeatureSuggestion = (suggestion: string) => {
           const key = normalizedSuggestion(suggestion);
           const duplicate = featureItems.some((item) => normalizedSuggestion(item.label) === key);
           if (duplicate) {
@@ -1046,7 +1138,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           renderAiSuggestions();
           scheduleSave();
         };
-        const suggestionCard = (title, subtitle, onAdd, onIgnore) => {
+        const suggestionCard = (title: string, subtitle: string, onAdd: () => void, onIgnore: () => void) => {
           const card = document.createElement("article");
           card.className = "suggestion-card";
           const copy = document.createElement("div");
@@ -1074,9 +1166,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           return card;
         };
         function renderAiSuggestions() {
-          const container = document.querySelector("#ai-suggestions");
-          const summaryList = document.querySelector("#summary-suggestions");
-          const featureList = document.querySelector("#feature-suggestions");
+          const container = requiredElement("#ai-suggestions");
+          const summaryList = requiredElement("#summary-suggestions");
+          const featureList = requiredElement("#feature-suggestions");
           summaryList.replaceChildren(...aiSummarySuggestions.map((suggestion) => suggestionCard(
             suggestion.label,
             suggestion.value,
@@ -1089,8 +1181,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             () => addFeatureSuggestion(suggestion),
             () => { aiFeatureSuggestions = aiFeatureSuggestions.filter((item) => item !== suggestion); renderAiSuggestions(); scheduleSave(); }
           )));
-          summaryList.closest(".suggestion-section").hidden = !aiSummarySuggestions.length;
-          featureList.closest(".suggestion-section").hidden = !aiFeatureSuggestions.length;
+          requiredClosest<HTMLElement>(summaryList, ".suggestion-section").hidden = !aiSummarySuggestions.length;
+          requiredClosest<HTMLElement>(featureList, ".suggestion-section").hidden = !aiFeatureSuggestions.length;
           container.hidden = !aiSummarySuggestions.length && !aiFeatureSuggestions.length;
         }
         const buildChatGptPrompt = () => buildChatGptDescriptionPrompt({
@@ -1099,7 +1191,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           location: subtitleFromLocation()
         });
         const copyChatGptPrompt = async () => {
-          const note = document.querySelector("#copy-chatgpt-note");
+          const note = requiredElement("#copy-chatgpt-note");
           if (!propertyDescriptionInput.value.trim()) {
             note.textContent = "Primero escribí o pegá la descripción completa.";
             propertyDescriptionInput.focus();
@@ -1113,24 +1205,24 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           }
         };
         const applyChatGptResponse = () => {
-          const responseInput = document.querySelector("#chatgpt-response");
-          const error = document.querySelector("#chatgpt-response-error");
+          const responseInput = requiredElement<HTMLTextAreaElement>("#chatgpt-response");
+          const error = requiredElement("#chatgpt-response-error");
           error.textContent = "";
           const parsed = parseChatGptDescriptionResponse(responseInput.value);
-          if (!parsed.ok) { error.textContent = parsed.error; return; }
+          if (!parsed.ok || !parsed.value) { error.textContent = parsed.error || "No pudimos leer la respuesta de ChatGPT. Revisá que hayas pegado el contenido completo."; return; }
           if ((organizedHeadline || organizedParagraphs.length) && !window.confirm("Ya existe una versión organizada. ¿Querés reemplazarla con esta nueva propuesta?")) return;
           const proposal = parsed.value;
           organizedHeadline = proposal.headline.trim();
-          organizedParagraphs = proposal.paragraphs.map((text, index) => ({ id: "paragraph-chatgpt-" + Date.now() + "-" + index, text: text.trim() }));
-          aiSummarySuggestions = proposal.summarySuggestions.map((item) => ({ label: item.label.trim(), value: item.value.trim() }));
-          aiFeatureSuggestions = proposal.featureSuggestions.map((item) => item.trim());
+          organizedParagraphs = proposal.paragraphs.map((text: string, index: number) => ({ id: "paragraph-chatgpt-" + Date.now() + "-" + index, text: text.trim() }));
+          aiSummarySuggestions = proposal.summarySuggestions.map((item: SummarySuggestion) => ({ label: item.label.trim(), value: item.value.trim() }));
+          aiFeatureSuggestions = proposal.featureSuggestions.map((item: string) => item.trim());
           renderOrganizedDescription();
           renderAiSuggestions();
           responseInput.value = "";
           showToast("Propuesta aplicada. Revisá y editá todo antes de guardar.");
           scheduleSave();
         };
-        const loadPropertyValues = (property) => {
+        const loadPropertyValues = (property: PropertyRecord) => {
           legacySectionName = property.sectionName ?? "La propiedad";
           legacyPropertyHeadline = property.propertyHeadline || "";
           const legacyContent = [legacySectionName, legacyPropertyHeadline, ...(Array.isArray(property.paragraphs) ? property.paragraphs : [])].filter(Boolean).join("\n\n");
@@ -1147,22 +1239,22 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const renumberDataCards = () => {
           const cards = [...featuredDataList.querySelectorAll(".data-card")];
           cards.forEach((card, index) => {
-            card.querySelector("[data-card-number]").textContent = `Dato ${index + 1}`;
-            card.querySelector("[data-move-up]").disabled = index === 0;
-            card.querySelector("[data-move-down]").disabled = index === cards.length - 1;
+            requiredElement("[data-card-number]", card).textContent = `Dato ${index + 1}`;
+            requiredElement<HTMLButtonElement>("[data-move-up]", card).disabled = index === 0;
+            requiredElement<HTMLButtonElement>("[data-move-down]", card).disabled = index === cards.length - 1;
           });
         };
 
-        const selectDataIcon = (card, iconKey) => {
+        const selectDataIcon = (card: HTMLElement, iconKey: string) => {
           card.dataset.icon = iconKey;
-          card.querySelectorAll("[data-icon-option]").forEach((button) => {
+          card.querySelectorAll<HTMLButtonElement>("[data-icon-option]").forEach((button) => {
             const selected = button.dataset.iconOption === iconKey;
             button.classList.toggle("selected", selected);
             button.setAttribute("aria-pressed", String(selected));
           });
         };
 
-        const moveDataCard = (card, direction) => {
+        const moveDataCard = (card: HTMLElement, direction: number) => {
           if (direction < 0 && card.previousElementSibling) {
             featuredDataList.insertBefore(card, card.previousElementSibling);
           } else if (direction > 0 && card.nextElementSibling) {
@@ -1219,19 +1311,19 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             </fieldset>`;
 
           const radioName = `show-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          card.querySelector(".drag-handle").draggable = true;
-          card.querySelectorAll(".show-field input").forEach((input) => { input.name = radioName; });
-          card.querySelector(`.show-field input[value="${data.show === false ? "no" : "yes"}"]`).checked = true;
-          card.querySelector("[data-field='label']").value = data.label || "";
-          card.querySelector("[data-field='value']").value = data.value || "";
-          card.querySelectorAll("[data-icon-option]").forEach((button) => button.addEventListener("click", () => {
-            selectDataIcon(card, button.dataset.iconOption);
+          requiredElement<HTMLElement>(".drag-handle", card).draggable = true;
+          card.querySelectorAll<HTMLInputElement>(".show-field input").forEach((input) => { input.name = radioName; });
+          requiredElement<HTMLInputElement>(`.show-field input[value="${data.show === false ? "no" : "yes"}"]`, card).checked = true;
+          requiredElement<HTMLInputElement>("[data-field='label']", card).value = data.label || "";
+          requiredElement<HTMLInputElement>("[data-field='value']", card).value = data.value || "";
+          card.querySelectorAll<HTMLButtonElement>("[data-icon-option]").forEach((button) => button.addEventListener("click", () => {
+            selectDataIcon(card, button.dataset.iconOption || "home");
             scheduleSave();
           }));
           card.querySelectorAll("input").forEach((input) => input.addEventListener("input", scheduleSave));
-          card.querySelector("[data-move-up]").addEventListener("click", () => moveDataCard(card, -1));
-          card.querySelector("[data-move-down]").addEventListener("click", () => moveDataCard(card, 1));
-          card.querySelector("[data-remove-data]").addEventListener("click", () => {
+          requiredElement<HTMLButtonElement>("[data-move-up]", card).addEventListener("click", () => moveDataCard(card, -1));
+          requiredElement<HTMLButtonElement>("[data-move-down]", card).addEventListener("click", () => moveDataCard(card, 1));
+          requiredElement<HTMLButtonElement>("[data-remove-data]", card).addEventListener("click", () => {
             if (!window.confirm("¿Eliminar este dato?")) return;
             card.remove();
             if (!featuredDataList.children.length) addDataCard();
@@ -1262,7 +1354,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           return card;
         };
 
-        const loadFeaturedData = (property) => {
+        const loadFeaturedData = (property: PropertyRecord) => {
           featuredDataList.replaceChildren();
           const items = Array.isArray(property.featuredData) && property.featuredData.length
             ? property.featuredData
@@ -1271,15 +1363,15 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
 
 
-        const currentGalleryEnabled = () => document.querySelector('input[name="galleryEnabled"]:checked')?.value !== "no";
-        const galleryFileName = (index) => "foto-" + String(index + 1).padStart(2, "0") + ".jpg";
+        const currentGalleryEnabled = () => optionalInputValue('input[name="galleryEnabled"]:checked') !== "no";
+        const galleryFileName = (index: number) => "foto-" + String(index + 1).padStart(2, "0") + ".jpg";
         const slugForGallery = () => slugify(nameInput.value) || "nueva-propiedad";
-        const detectedGalleryItems = () => {
+        const detectedGalleryItems = (): GalleryItem[] => {
           const slug = slugForGallery();
           const detected = detectedMedia[slug]?.gallery || [];
           return detected.map((name, index) => ({ id: "uploaded-" + name, name, originalName: name, source: "/media/" + slug + "/" + name, status: "uploaded", external: false, description: "", position: index + 1 }));
         };
-        const reconcileGalleryItems = (property) => {
+        const reconcileGalleryItems = (property: PropertyRecord) => {
           const detected = detectedGalleryItems();
           const saved = Array.isArray(property.galleryItems)
             ? [...property.galleryItems].sort((a, b) => (a.position || 0) - (b.position || 0))
@@ -1307,8 +1399,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           // numérico real foto-01.jpg, foto-02.jpg, etc.
           const stableSaved = saved.filter((item) => detectedByName.has(String(item.name || item.originalName || "").toLowerCase()));
           const hasConfirmedOrder = stableSaved.length > 0 && stableSaved.length === saved.length;
-          const orderedDetected = hasConfirmedOrder
-            ? stableSaved.map((item) => detectedByName.get(String(item.name || item.originalName || "").toLowerCase()))
+          const orderedDetected: GalleryItem[] = hasConfirmedOrder
+            ? stableSaved.flatMap((item) => {
+                const detectedItem = detectedByName.get(String(item.name || item.originalName || "").toLowerCase());
+                return detectedItem ? [detectedItem] : [];
+              })
             : detected;
 
           const usedNames = new Set();
@@ -1348,39 +1443,39 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           };
         };
         const serializeGallery = () => galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 }));
-        const moveGalleryItem = (item, direction) => {
+        const moveGalleryItem = (item: GalleryItem, direction: number) => {
           const index = galleryItems.indexOf(item);
           const target = index + direction;
           if (target < 0 || target >= galleryItems.length) return;
           galleryItems.splice(index, 1); galleryItems.splice(target, 0, item);
           renderGallery(); scheduleSave();
         };
-        const isR2Image = (file) => Boolean(file) && ["image/jpeg", "image/png", "image/webp"].includes(file.type);
-        const extensionFor = (type) => ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4" }[type] || "");
+        const isR2Image = (file: File | null): file is File => file !== null && ["image/jpeg", "image/png", "image/webp"].includes(file.type);
         const r2Notice = () => {
           const text = r2Configured ? "Podés subir directamente. Los archivos se guardarán de forma segura." : "La carga directa todavía no está configurada. Podés continuar con el flujo manual actual.";
-          document.querySelector("#r2-cover-note").textContent = text;
-          document.querySelector("#r2-gallery-note").textContent = text;
+          requiredElement("#r2-cover-note").textContent = text;
+          requiredElement("#r2-gallery-note").textContent = text;
           updateMediaStatus();
-          document.querySelector("#upload-cover-r2").hidden = !r2Configured;
-          document.querySelector("#upload-video-r2").hidden = !r2Configured;
-          document.querySelector("#upload-gallery-r2").hidden = !r2Configured;
+          requiredElement("#upload-cover-r2").hidden = !r2Configured;
+          requiredElement("#upload-video-r2").hidden = !r2Configured;
+          requiredElement("#upload-gallery-r2").hidden = !r2Configured;
         };
-        const signedUpload = async (kind, file, id) => {
+        const signedUpload = async (kind: UploadKind, file: File, id: string): Promise<SignedUpload> => {
+          if (!r2Config.workerUrl) throw new Error("La carga directa no está configurada.");
           const response = await fetch(r2Config.workerUrl.replace(/\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugify(nameInput.value) || "nueva-propiedad", kind, contentType: file.type, id }) });
           if (!response.ok) throw new Error("No se pudo solicitar permiso de carga.");
-          return response.json();
+          return response.json() as Promise<SignedUpload>;
         };
-        const putFile = (url, file, progress) => new Promise((resolve, reject) => {
+        const putFile = (url: string, file: File, progress: (value: number) => void) => new Promise<void>((resolve, reject) => {
           const request = new XMLHttpRequest(); request.open("PUT", url); request.setRequestHeader("Content-Type", file.type);
           request.upload.onprogress = (event) => { if (event.lengthComputable) progress(Math.round(event.loaded / event.total * 100)); };
           request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("No se pudo subir el archivo."));
           request.onerror = () => reject(new Error("No se pudo subir el archivo.")); request.send(file);
         });
-        const uploadR2File = async (kind, file, id, progress) => { activeUploads++; try { const signed = await signedUpload(kind, file, id); await putFile(signed.uploadUrl, file, progress); return signed; } finally { activeUploads--; } };
+        const uploadR2File = async (kind: UploadKind, file: File, id: string, progress: (value: number) => void) => { activeUploads++; try { const signed = await signedUpload(kind, file, id); await putFile(signed.uploadUrl, file, progress); return signed; } finally { activeUploads--; } };
         window.addEventListener("beforeunload", (event) => { if (activeUploads) { event.preventDefault(); event.returnValue = ""; } });
 
-        const itemSource = (item) => item?.remoteUrl || item?.source || (item?.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item?.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : "");
+        const itemSource = (item: GalleryItem | null | undefined) => item?.remoteUrl || item?.source || (item?.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item?.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : "");
         const availableGalleryImages = () => galleryItems.filter((item) => Boolean(itemSource(item)));
         const selectedPresentationItem = (key: PresentationImageTarget) => availableGalleryImages().find((item) => item.id === presentationImages[key]) || null;
         const fallbackPresentationItem = (key: PresentationImageTarget) => {
@@ -1397,10 +1492,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             const item = selectedPresentationItem(key); const fallback = fallbackPresentationItem(key);
             const card = document.createElement("article"); card.className = "gallery-editor-card";
             card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>' + label + '</strong><span class="gallery-status"></span></div><div class="gallery-actions"><button type="button" data-choose>Elegir imagen</button><button type="button" data-clear>Quitar selección</button></div>';
-            const thumb = card.querySelector(".gallery-thumb"); const shown = item || fallback;
-            if (shown) { const image = document.createElement("img"); image.src = itemSource(shown); image.alt = shown.description || label; thumb.appendChild(image); card.querySelector(".gallery-status").textContent = item ? "✓ Seleccionada" : "Se usará una imagen automática"; } else { thumb.textContent = "—"; card.querySelector(".gallery-status").textContent = "La imagen seleccionada ya no está disponible."; }
-            card.querySelector("[data-choose]").addEventListener("click", () => openPresentationImageSelector(key));
-            const clear = card.querySelector("[data-clear]"); clear.hidden = !item; clear.addEventListener("click", () => { presentationImages[key] = null; renderPresentationImages(); scheduleSave(); });
+            const thumb = requiredElement(".gallery-thumb", card); const shown = item || fallback;
+            if (shown) { const image = document.createElement("img"); image.src = itemSource(shown); image.alt = shown.description || label; thumb.appendChild(image); requiredElement(".gallery-status", card).textContent = item ? "✓ Seleccionada" : "Se usará una imagen automática"; } else { thumb.textContent = "—"; requiredElement(".gallery-status", card).textContent = "La imagen seleccionada ya no está disponible."; }
+            requiredElement<HTMLButtonElement>("[data-choose]", card).addEventListener("click", () => openPresentationImageSelector(key));
+            const clear = requiredElement<HTMLButtonElement>("[data-clear]", card); clear.hidden = !item; clear.addEventListener("click", () => { presentationImages[key] = null; renderPresentationImages(); scheduleSave(); });
             return card;
           }));
         };
@@ -1410,8 +1505,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           selectingPresentationImage = key; pendingPresentationImageId = presentationImages[key] && items.some((item) => item.id === presentationImages[key]) ? presentationImages[key] : null;
           presentationImageOptions.replaceChildren(...items.map((item, index) => {
             const card = document.createElement("button"); card.type = "button"; card.className = "gallery-editor-card presentation-image-option"; card.setAttribute("aria-pressed", String(item.id === pendingPresentationImageId)); card.innerHTML = '<span class="gallery-thumb"></span><span class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="selection-state">' + (item.id === pendingPresentationImageId ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen")) + '</span></span>';
-            const img = document.createElement("img"); img.src = itemSource(item); img.alt = item.description || "Foto " + (index + 1); card.querySelector(".gallery-thumb").appendChild(img);
-            const mark = (selected) => { card.classList.toggle("selected", selected); card.setAttribute("aria-pressed", String(selected)); card.querySelector(".selection-state").textContent = selected ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen"); };
+            const img = document.createElement("img"); img.src = itemSource(item); img.alt = item.description || "Foto " + (index + 1); requiredElement(".gallery-thumb", card).appendChild(img);
+            const mark = (selected: boolean) => { card.classList.toggle("selected", selected); card.setAttribute("aria-pressed", String(selected)); requiredElement(".selection-state", card).textContent = selected ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen"); };
             mark(item.id === pendingPresentationImageId); card.addEventListener("click", () => { pendingPresentationImageId = item.id; [...presentationImageOptions.children].forEach((element) => { const selected = element === card; element.classList.toggle("selected", selected); element.setAttribute("aria-pressed", String(selected)); const state = element.querySelector(".selection-state"); if (state) state.textContent = selected ? "✓ Seleccionada" : "Elegir esta imagen"; }); }); return card;
           }));
           presentationImageDialog.showModal();
@@ -1426,7 +1521,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const slug = slugForGallery();
           const detected = detectedMedia[slug]?.gallery || [];
           galleryFolder.textContent = "public/media/" + slug + "/";
-          galleryDetectedCount.textContent = detected.length;
+          galleryDetectedCount.textContent = String(detected.length);
           galleryDetectedList.replaceChildren(...detected.map((name) => { const item = document.createElement("span"); item.textContent = name; return item; }));
           galleryEmptyNote.hidden = detected.length > 0 || editingId === originalProperty.id;
           originalGalleryNote.hidden = editingId !== originalProperty.id;
@@ -1442,25 +1537,25 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             card.className = "gallery-editor-card";
             card.draggable = true;
             card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label class="gallery-visible"><input type="checkbox" /> Mostrar en galería</label><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
-            const thumb = card.querySelector(".gallery-thumb");
-            if (item.source || item.remoteUrl) { const image = document.createElement("img"); image.src = item.remoteUrl || item.source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
-            card.querySelector(".gallery-internal").textContent = (index + 1) + " → " + galleryFileName(index);
-            const status = card.querySelector(".gallery-status");
+            const thumb = requiredElement(".gallery-thumb", card);
+            if (item.source || item.remoteUrl) { const image = document.createElement("img"); image.src = item.remoteUrl || item.source || ""; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
+            requiredElement(".gallery-internal", card).textContent = (index + 1) + " → " + galleryFileName(index);
+            const status = requiredElement(".gallery-status", card);
             status.textContent = item.status === "uploading" ? "Subiendo… " + (item.progress || 0) + "%" : item.status === "error" ? "⚠ Error — Reintentar" : item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "Pendiente";
             status.className = "gallery-status " + (item.status === "missing" ? "status-warning" : item.status === "uploaded" || item.external ? "status-success" : "status-neutral");
-            const visible = card.querySelector(".gallery-visible input"); visible.checked = item.visible !== false; visible.addEventListener("change", () => { item.visible = visible.checked; renderGallery(); scheduleSave(); });
-            const description = card.querySelector("label:not(.gallery-visible) input"); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
-            const cover = card.querySelector("[data-cover]"); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; presentationImages.cover = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
-            card.querySelector("[data-up]").disabled = index === 0; card.querySelector("[data-down]").disabled = index === galleryItems.length - 1;
-            card.querySelector("[data-up]").addEventListener("click", () => moveGalleryItem(item, -1)); card.querySelector("[data-down]").addEventListener("click", () => moveGalleryItem(item, 1));
-            card.querySelector("[data-remove]").textContent = "Quitar de la galería"; card.querySelector("[data-remove]").addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
+            const visible = requiredElement<HTMLInputElement>(".gallery-visible input", card); visible.checked = item.visible !== false; visible.addEventListener("change", () => { item.visible = visible.checked; renderGallery(); scheduleSave(); });
+            const description = requiredElement<HTMLInputElement>("label:not(.gallery-visible) input", card); description.value = item.description || ""; description.addEventListener("input", () => { item.description = description.value; scheduleSave(); });
+            const cover = requiredElement<HTMLButtonElement>("[data-cover]", card); cover.textContent = selectedFutureCoverId === item.id ? "Futura portada elegida" : "Usar como futura portada"; cover.classList.toggle("selected", selectedFutureCoverId === item.id); cover.addEventListener("click", () => { selectedFutureCoverId = item.id; presentationImages.cover = item.id; if (item.remoteUrl) remoteCover = { url: item.remoteUrl, objectKey: item.objectKey || "", contentType: item.contentType || "" }; renderGallery(); scheduleSave(); });
+            requiredElement<HTMLButtonElement>("[data-up]", card).disabled = index === 0; requiredElement<HTMLButtonElement>("[data-down]", card).disabled = index === galleryItems.length - 1;
+            requiredElement<HTMLButtonElement>("[data-up]", card).addEventListener("click", () => moveGalleryItem(item, -1)); requiredElement<HTMLButtonElement>("[data-down]", card).addEventListener("click", () => moveGalleryItem(item, 1));
+            requiredElement<HTMLButtonElement>("[data-remove]", card).textContent = "Quitar de la galería"; requiredElement<HTMLButtonElement>("[data-remove]", card).addEventListener("click", () => { galleryItems = galleryItems.filter((entry) => entry !== item); if (selectedFutureCoverId === item.id) selectedFutureCoverId = null; renderGallery(); scheduleSave(); });
             card.addEventListener("dragstart", () => { draggedGalleryItem = item; card.classList.add("dragging"); });
             card.addEventListener("dragend", () => { draggedGalleryItem = null; card.classList.remove("dragging"); scheduleSave(); });
             card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedGalleryItem || draggedGalleryItem === item) return; const from = galleryItems.indexOf(draggedGalleryItem); const to = galleryItems.indexOf(item); galleryItems.splice(from, 1); galleryItems.splice(to, 0, draggedGalleryItem); renderGallery(); });
             return card;
           }));
         };
-        const addTemporaryGalleryFiles = (files) => {
+        const addTemporaryGalleryFiles = (files: File[]) => {
           [...files].forEach((file) => {
             if (!isR2Image(file)) return showToast("Esta imagen no tiene un formato compatible.");
             if (file.size > r2ImageLimit) return showToast("Una imagen supera el tamaño permitido.");
@@ -1468,11 +1563,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           });
           renderGallery(); scheduleSave();
         };
-        const loadGalleryValues = (property) => {
+        const loadGalleryValues = (property: PropertyRecord) => {
           const reconciliation = reconcileGalleryItems(property);
-          const sourceItems = reconciliation.items.length
+          const sourceItems: GalleryItem[] = reconciliation.items.length
             ? reconciliation.items
-            : (editingId === originalProperty.id ? originalProperty.galleryItems : detectedGalleryItems());
+            : (editingId === originalProperty.id ? originalProperty.galleryItems || [] : detectedGalleryItems());
           galleryItems = sourceItems.map((item) => ({
             ...item,
             remoteUrl: item.remoteUrl || "",
@@ -1485,14 +1580,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           remoteVideo = property.remoteVideo || (property.videoSource?.startsWith("https://") && !property.videoSource.includes("raw.githubusercontent.com") ? { url: property.videoSource } : null);
           selectedFutureCoverId = reconciliation.futureCoverId;
           presentationImages = { cover: null, property: null, features: null, final: null, ...(reconciliation.presentationImages || property.presentationImages || {}) };
-          document.querySelector('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
+          requiredElement<HTMLInputElement>('input[name="galleryEnabled"][value="' + ((property.galleryEnabled === false) ? "no" : "yes") + '"]').checked = true;
           renderGallery();
           updateMediaStatus();
           if (reconciliation.changed) scheduleSave();
         };
 
 
-        const moveFeature = (item, direction) => {
+        const moveFeature = (item: FeatureItem, direction: number) => {
           const index = featureItems.indexOf(item);
           const target = featureItems[index + direction];
           if (!target) return;
@@ -1500,24 +1595,24 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           featureItems[index + direction] = item;
           renderFeatures(); scheduleSave();
         };
-        const removeFeature = (item) => {
+        const removeFeature = (item: FeatureItem) => {
           if (!window.confirm("¿Eliminar esta característica?")) return;
           featureItems = featureItems.filter((entry) => entry !== item);
           renderFeatures(); scheduleSave();
         };
-        const buildFeatureCard = (item, index) => {
+        const buildFeatureCard = (item: FeatureItem, index: number) => {
           const card = document.createElement("article");
           card.className = "feature-card";
           card.draggable = true;
           card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Característica ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="field compact-field"><label>Característica</label><p class="field-help">Escribí una característica que quieras destacar en la presentación.</p><input type="text" placeholder="Escribir característica" /><p class="example">Ejemplo: Aberturas de aluminio con DVH</p></div>';
-          const input = card.querySelector("input");
+          const input = requiredElement<HTMLInputElement>("input", card);
           input.value = item.label || "";
           input.addEventListener("input", () => { item.label = input.value; scheduleSave(); });
-          card.querySelector("[data-up]").disabled = index === 0;
-          card.querySelector("[data-down]").disabled = index === featureItems.length - 1;
-          card.querySelector("[data-up]").addEventListener("click", () => moveFeature(item, -1));
-          card.querySelector("[data-down]").addEventListener("click", () => moveFeature(item, 1));
-          card.querySelector("[data-remove]").addEventListener("click", () => removeFeature(item));
+          requiredElement<HTMLButtonElement>("[data-up]", card).disabled = index === 0;
+          requiredElement<HTMLButtonElement>("[data-down]", card).disabled = index === featureItems.length - 1;
+          requiredElement<HTMLButtonElement>("[data-up]", card).addEventListener("click", () => moveFeature(item, -1));
+          requiredElement<HTMLButtonElement>("[data-down]", card).addEventListener("click", () => moveFeature(item, 1));
+          requiredElement<HTMLButtonElement>("[data-remove]", card).addEventListener("click", () => removeFeature(item));
           card.addEventListener("dragstart", () => { draggedFeatureItem = item; card.classList.add("dragging"); });
           card.addEventListener("dragend", () => { draggedFeatureItem = null; card.classList.remove("dragging"); scheduleSave(); });
           card.addEventListener("dragover", (event) => {
@@ -1542,11 +1637,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           featureItems.forEach((item, index) => featuresList.appendChild(buildFeatureCard(item, index)));
         };
         const addFeature = (label = "") => {
-          const item = { id: "feature-" + Date.now() + "-" + Math.random().toString(16).slice(2), label, category: "structural" };
+          const item: FeatureItem = { id: "feature-" + Date.now() + "-" + Math.random().toString(16).slice(2), label, category: "structural" };
           featureItems.push(item); renderFeatures(); scheduleSave();
           window.setTimeout(() => featuresList.querySelector("input")?.focus(), 0);
         };
-        const loadFeatures = (property) => {
+        const loadFeatures = (property: PropertyRecord) => {
           const saved = Array.isArray(property.features) ? property.features : [];
           featureItems = saved.map((item, index) => ({ id: item.id || "feature-loaded-" + index, label: item.label || "", category: item.category === "exterior" ? "exterior" : "structural" }));
           renderFeatures();
@@ -1558,7 +1653,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180 ? { latitude, longitude } : null;
         };
         const renderLocation = () => {
-          const enabled = document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes";
+          const enabled = optionalInputValue('input[name="locationEnabled"]:checked') === "yes";
           locationFields.hidden = !enabled;
           locationHiddenNote.hidden = enabled;
           if (!enabled) return;
@@ -1573,9 +1668,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" + encodeURIComponent(bbox) + "&layer=mapnik&marker=" + encodeURIComponent(coordinates.latitude + "," + coordinates.longitude);
           locationMapPreview.innerHTML = '<iframe title="Vista previa de la ubicación" loading="lazy" src="' + mapUrl + '"></iframe>';
         };
-        const loadLocationValues = (property) => {
+        const loadLocationValues = (property: PropertyRecord) => {
           const enabled = property.locationEnabled === true;
-          document.querySelector('input[name="locationEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
+          requiredElement<HTMLInputElement>('input[name="locationEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
           locationNameInput.value = property.locationName || "";
           locationAddressInput.value = property.locationAddress || "";
           latitudeInput.value = property.latitude || "";
@@ -1583,7 +1678,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           renderLocation();
         };
 
-        const moveDistance = (item, direction) => {
+        const moveDistance = (item: DistanceItem, direction: number) => {
           const index = distanceItems.indexOf(item);
           const target = distanceItems[index + direction];
           if (!target) return;
@@ -1591,27 +1686,27 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           distanceItems[index + direction] = item;
           renderDistances(); scheduleSave();
         };
-        const removeDistance = (item) => {
+        const removeDistance = (item: DistanceItem) => {
           if (!window.confirm("¿Eliminar esta distancia?")) return;
           distanceItems = distanceItems.filter((entry) => entry !== item);
           renderDistances(); scheduleSave();
         };
-        const buildDistanceCard = (item, index) => {
+        const buildDistanceCard = (item: DistanceItem, index: number) => {
           const card = document.createElement("article");
           card.className = "distance-card";
           card.draggable = true;
           card.innerHTML = '<header class="feature-card-header"><div class="drag-handle" aria-label="Arrastrar para cambiar el orden">↕</div><strong>Distancia ' + (index + 1) + '</strong><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div><button class="remove-data" type="button" data-remove>Eliminar</button></header><div class="distance-fields"><div class="field compact-field"><label>Destino</label><p class="field-help">Indicá el lugar o punto de referencia.</p><input type="text" data-destination placeholder="Destino" /><p class="example">Ejemplo: Centro de Piriápolis</p></div><div class="field compact-field"><label>Distancia</label><p class="field-help">Escribí la distancia o el tiempo de viaje como querés que aparezca.</p><input type="text" data-distance placeholder="Distancia" /><p class="example">Ejemplo: 5 km</p></div></div>';
-          const destination = card.querySelector("[data-destination]");
-          const distance = card.querySelector("[data-distance]");
+          const destination = requiredElement<HTMLInputElement>("[data-destination]", card);
+          const distance = requiredElement<HTMLInputElement>("[data-distance]", card);
           destination.value = item.destination || "";
           distance.value = item.distance || "";
           destination.addEventListener("input", () => { item.destination = destination.value; scheduleSave(); });
           distance.addEventListener("input", () => { item.distance = distance.value; scheduleSave(); });
-          card.querySelector("[data-up]").disabled = index === 0;
-          card.querySelector("[data-down]").disabled = index === distanceItems.length - 1;
-          card.querySelector("[data-up]").addEventListener("click", () => moveDistance(item, -1));
-          card.querySelector("[data-down]").addEventListener("click", () => moveDistance(item, 1));
-          card.querySelector("[data-remove]").addEventListener("click", () => removeDistance(item));
+          requiredElement<HTMLButtonElement>("[data-up]", card).disabled = index === 0;
+          requiredElement<HTMLButtonElement>("[data-down]", card).disabled = index === distanceItems.length - 1;
+          requiredElement<HTMLButtonElement>("[data-up]", card).addEventListener("click", () => moveDistance(item, -1));
+          requiredElement<HTMLButtonElement>("[data-down]", card).addEventListener("click", () => moveDistance(item, 1));
+          requiredElement<HTMLButtonElement>("[data-remove]", card).addEventListener("click", () => removeDistance(item));
           card.addEventListener("dragstart", () => { draggedDistanceItem = item; card.classList.add("dragging"); });
           card.addEventListener("dragend", () => { draggedDistanceItem = null; card.classList.remove("dragging"); scheduleSave(); });
           card.addEventListener("dragover", (event) => {
@@ -1625,7 +1720,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           return card;
         };
         const renderDistances = () => {
-          const enabled = document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes";
+          const enabled = optionalInputValue('input[name="distancesEnabled"]:checked') === "yes";
           distancesControls.hidden = !enabled;
           distancesHiddenNote.hidden = enabled;
           if (!enabled) return;
@@ -1642,27 +1737,27 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const addDistance = () => {
           const item = { id: "distance-" + Date.now() + "-" + Math.random().toString(16).slice(2), destination: "", distance: "" };
           distanceItems.push(item); renderDistances(); scheduleSave();
-          window.setTimeout(() => distancesList.querySelector("[data-destination]")?.focus(), 0);
+          window.setTimeout(() => distancesList.querySelector<HTMLInputElement>("[data-destination]")?.focus(), 0);
         };
-        const loadDistances = (property) => {
+        const loadDistances = (property: PropertyRecord) => {
           const saved = Array.isArray(property.distances) ? property.distances : [];
           distanceItems = saved.map((item, index) => ({ id: item.id || "distance-loaded-" + index, destination: item.destination || "", distance: item.distance || "" }));
           const enabled = property.distancesEnabled === true;
-          document.querySelector('input[name="distancesEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
+          requiredElement<HTMLInputElement>('input[name="distancesEnabled"][value="' + (enabled ? "yes" : "no") + '"]').checked = true;
           renderDistances();
         };
 
-        const escapeReview = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
-        const reviewStatus = (ok, positive = "✓ Completa", pending = "⚠ Requiere atención") => '<span class="review-status ' + (ok ? "is-ok" : "is-pending") + '">' + (ok ? positive : pending) + '</span>';
-        const reviewOptional = (text) => '<span class="review-status is-neutral">○ ' + text + '</span>';
+        const escapeReview = (value: unknown) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character as "&" | "<" | ">" | '"' | "'"]);
+        const reviewStatus = (ok: boolean, positive = "✓ Completa", pending = "⚠ Requiere atención") => '<span class="review-status ' + (ok ? "is-ok" : "is-pending") + '">' + (ok ? positive : pending) + '</span>';
+        const reviewOptional = (text: string) => '<span class="review-status is-neutral">○ ' + text + '</span>';
         const getReviewState = () => {
           const slug = slugify(nameInput.value) || "nueva-propiedad";
           const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
           const externalOriginal = editingId === originalProperty.id;
-          const videoEnabled = document.querySelector('input[name="videoEnabled"]:checked')?.value === "yes";
+          const videoEnabled = optionalInputValue('input[name="videoEnabled"]:checked') === "yes";
           const galleryEnabled = currentGalleryEnabled();
-          const locationEnabled = document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes";
-          const distancesEnabled = document.querySelector('input[name="distancesEnabled"]:checked')?.value === "yes";
+          const locationEnabled = optionalInputValue('input[name="locationEnabled"]:checked') === "yes";
+          const distancesEnabled = optionalInputValue('input[name="distancesEnabled"]:checked') === "yes";
           const coverAvailable = (externalOriginal && !photoRemoved) || media.cover || Boolean(remoteCover?.url);
           const videoAvailable = (externalOriginal && !videoRemoved) || media.video || Boolean(remoteVideo?.url);
           const availableGalleryItems = galleryItems.filter((item) => item.status === "uploaded" || item.external);
@@ -1674,9 +1769,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             : (availableGalleryItems.length > 0 || media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg"));
           const featureCount = featureItems.filter((item) => item.label.trim()).length;
           const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
-            label: card.querySelector("[data-field='label']").value.trim(),
-            value: card.querySelector("[data-field='value']").value.trim(),
-            show: card.querySelector("input[type='radio']:checked")?.value === "yes"
+            label: requiredElement<HTMLInputElement>("[data-field='label']", card).value.trim(),
+            value: requiredElement<HTMLInputElement>("[data-field='value']", card).value.trim(),
+            show: card.querySelector<HTMLInputElement>("input[type='radio']:checked")?.value === "yes"
           }));
           const visibleData = featured.filter((item) => item.show && item.label && item.value).length;
           const validParagraphs = descriptionParagraphs(propertyDescriptionInput.value).length;
@@ -1710,7 +1805,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             const element = document.createElement("article");
             element.className = "review-card";
             element.innerHTML = '<div><h3>' + card.title + '</h3>' + card.status + '</div><div class="review-card-copy">' + card.body + '</div><button class="button button-secondary" type="button">Editar</button>';
-            element.querySelector("button").addEventListener("click", () => { setStep(card.step); window.scrollTo({ top: 0, behavior: "smooth" }); });
+            requiredElement<HTMLButtonElement>("button", element).addEventListener("click", () => { setStep(card.step); window.scrollTo({ top: 0, behavior: "smooth" }); });
             return element;
           }));
           if (!state.pending.length) {
@@ -1725,24 +1820,30 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           }
         };
 
-        const isJpegFile = (file) => Boolean(file) && (file.type === "image/jpeg" || /\.jpe?g$/i.test(file.name));
-        const isMp4File = (file) => Boolean(file) && (file.type === "video/mp4" || /\.mp4$/i.test(file.name));
-        const yamlText = (value) => JSON.stringify(String(value));
+        const isJpegFile = (file: File | null): file is File => file !== null && (file.type === "image/jpeg" || /\.jpe?g$/i.test(file.name));
+        const isMp4File = (file: File | null): file is File => file !== null && (file.type === "video/mp4" || /\.mp4$/i.test(file.name));
+        const yamlText = (value: unknown) => JSON.stringify(String(value));
         const buildPropertyYaml = () => {
           const values = currentValues();
           const slug = values.slug;
           const external = packageUsesExternalMedia;
           const remote = Boolean(values.remoteCover?.url || galleryItems.some((item) => item.remoteUrl) || values.remoteVideo?.url);
-          const local = (name) => "/media/" + slug + "/" + name;
+          const local = (name: string) => "/media/" + slug + "/" + name;
           const visibleData = values.featuredData.filter((item) => item.show && item.label && item.value);
           const features = values.features.filter((item) => item.label);
           const paragraphs = values.paragraphs.filter(Boolean);
           const gallery = values.galleryEnabled
-            ? (external || remote ? galleryItems : packageGalleryFiles).map((item, index) => ({
-                source: external ? item.source || "" : remote ? item.remoteUrl || item.source || "" : local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
-                alt: external ? item.description || "" : galleryItems[index]?.description || "",
-                visible: item.visible !== false
-              })).filter((item) => item.source)
+            ? (external || remote
+                ? galleryItems.map((item) => ({
+                    source: external ? item.source || "" : item.remoteUrl || item.source || "",
+                    alt: item.description || "",
+                    visible: item.visible !== false
+                  }))
+                : packageGalleryFiles.map((_file, index) => ({
+                    source: local("foto-" + String(index + 1).padStart(2, "0") + ".jpg"),
+                    alt: galleryItems[index]?.description || "",
+                    visible: galleryItems[index]?.visible !== false
+                  }))).filter((item) => item.source)
             : [];
           const coverSource = external || remote ? (values.coverPhotoSource || originalProperty.coverPhotoSource) : local("portada.jpg");
           const videoSource = external || remote ? (values.videoSource || originalProperty.videoSource) : local("video.mp4");
@@ -1760,12 +1861,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             lines.push("    show: true");
           });
           else lines.push("  []");
-          const imageReference = (key) => itemSource(selectedPresentationItem(key) || fallbackPresentationItem(key));
+          const imageReference = (key: PresentationImageTarget) => itemSource(selectedPresentationItem(key) || fallbackPresentationItem(key));
           const selectedCoverSource = imageReference("cover");
           lines.push("", "media:");
           if (selectedCoverSource) lines.push("  cover: " + yamlText(selectedCoverSource));
           lines.push("  sections:");
-          ["property", "features", "final"].forEach((key) => { const source = imageReference(key); if (source) lines.push("    " + key + ": " + yamlText(source)); });
+          (["property", "features", "final"] as PresentationImageTarget[]).forEach((key) => { const source = imageReference(key); if (source) lines.push("    " + key + ": " + yamlText(source)); });
           lines.push("", "property:");
           if (values.sectionName) lines.push("  sectionTitle: " + yamlText(values.sectionName));
           if (values.propertyHeadline) lines.push("  headline: " + yamlText(values.propertyHeadline));
@@ -1799,9 +1900,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const coverReady = packageUsesExternalMedia || isJpegFile(packageCoverFile);
           const galleryReady = !galleryRequired || packageUsesExternalMedia || packageGalleryFiles.length > 0;
           const videoReady = !videoRequired || packageUsesExternalMedia || isMp4File(packageVideoFile);
-          preparationCoverStatus.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza la foto de la presentación original." : "✓ Foto principal ya subida.") : coverReady ? "✓ " + packageCoverFile.name + " → portada.jpg" : "Falta seleccionar la foto principal.";
+          preparationCoverStatus.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza la foto de la presentación original." : "✓ Foto principal ya subida.") : coverReady ? "✓ " + (packageCoverFile?.name || "") + " → portada.jpg" : "Falta seleccionar la foto principal.";
           preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza fotos de la presentación original." : "✓ Fotos de galería ya subidas.") : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
-          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza el video de la presentación original." : "✓ Video ya subido.") : videoReady ? "✓ " + packageVideoFile.name + " → video.mp4" : "Falta seleccionar el video.";
+          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza el video de la presentación original." : "✓ Video ya subido.") : videoReady ? "✓ " + (packageVideoFile?.name || "") + " → video.mp4" : "Falta seleccionar el video.";
           preparationGallerySection.hidden = !galleryRequired || packageUsesExternalMedia;
           preparationVideoSection.hidden = !videoRequired || packageUsesExternalMedia;
           const ready = coverReady && galleryReady && videoReady;
@@ -1816,10 +1917,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             card.draggable = true;
             const preview = URL.createObjectURL(file);
             card.innerHTML = '<img alt="" src="' + preview + '" /><div><strong>' + (index + 1) + ' → foto-' + String(index + 1).padStart(2, "0") + '.jpg</strong><span>' + escapeReview(file.name) + '</span></div><div class="order-actions"><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button></div>';
-            card.querySelector("[data-up]").disabled = index === 0;
-            card.querySelector("[data-down]").disabled = index === packageGalleryFiles.length - 1;
-            card.querySelector("[data-up]").addEventListener("click", () => { const target = packageGalleryFiles[index - 1]; packageGalleryFiles[index - 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
-            card.querySelector("[data-down]").addEventListener("click", () => { const target = packageGalleryFiles[index + 1]; packageGalleryFiles[index + 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
+            requiredElement<HTMLButtonElement>("[data-up]", card).disabled = index === 0;
+            requiredElement<HTMLButtonElement>("[data-down]", card).disabled = index === packageGalleryFiles.length - 1;
+            requiredElement<HTMLButtonElement>("[data-up]", card).addEventListener("click", () => { const target = packageGalleryFiles[index - 1]; packageGalleryFiles[index - 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
+            requiredElement<HTMLButtonElement>("[data-down]", card).addEventListener("click", () => { const target = packageGalleryFiles[index + 1]; packageGalleryFiles[index + 1] = file; packageGalleryFiles[index] = target; renderPackageGallery(); refreshPackageSummary(); });
             card.addEventListener("dragstart", () => { draggedPackageGalleryFile = file; card.classList.add("dragging"); });
             card.addEventListener("dragend", () => { draggedPackageGalleryFile = null; card.classList.remove("dragging"); });
             card.addEventListener("dragover", (event) => { event.preventDefault(); if (!draggedPackageGalleryFile || draggedPackageGalleryFile === file) return; const from = packageGalleryFiles.indexOf(draggedPackageGalleryFile); const to = packageGalleryFiles.indexOf(file); packageGalleryFiles.splice(from, 1); packageGalleryFiles.splice(to, 0, draggedPackageGalleryFile); renderPackageGallery(); refreshPackageSummary(); });
@@ -1858,10 +1959,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             const zip = new JSZip();
             const root = values.slug + "/";
             zip.file(root + values.slug + ".yaml", buildPropertyYaml());
-            if (!packageUsesExternalMedia) {
+            if (!packageUsesExternalMedia && packageCoverFile) {
               zip.file(root + "media/portada.jpg", packageCoverFile);
               packageGalleryFiles.forEach((file, index) => zip.file(root + "media/foto-" + String(index + 1).padStart(2, "0") + ".jpg", file));
-              if (values.videoEnabled) zip.file(root + "media/video.mp4", packageVideoFile);
+              if (values.videoEnabled && packageVideoFile) zip.file(root + "media/video.mp4", packageVideoFile);
             }
             const blob = await zip.generateAsync({ type: "blob" }, (metadata) => { preparationProgress.textContent = "Preparando archivos… " + Math.round(metadata.percent) + "%"; });
             const url = URL.createObjectURL(blob);
@@ -1881,12 +1982,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           try { return JSON.parse(localStorage.getItem(publishingChecklistKey) || "{}"); }
           catch { return {}; }
         };
-        const writePublishingChecklist = (value) => localStorage.setItem(publishingChecklistKey, JSON.stringify(value));
-        const copyPublicationPath = async (value) => {
+        const writePublishingChecklist = (value: Record<string, Record<string, boolean>>) => localStorage.setItem(publishingChecklistKey, JSON.stringify(value));
+        const copyPublicationPath = async (value: string) => {
           try { await navigator.clipboard.writeText(value); showToast("Ruta copiada."); }
           catch { showToast("No se pudo copiar la ruta. Podés seleccionarla manualmente."); }
         };
-        const previewUrlFor = (slug) => window.location.origin + "/propiedades/" + slug + "/";
+        const previewUrlFor = (slug: string) => window.location.origin + "/propiedades/" + slug + "/";
         const openExpectedPreview = () => {
           const slug = currentValues().slug;
           window.open("/propiedades/" + slug + "/", "_blank", "noopener");
@@ -1916,7 +2017,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           publicationChecklist.replaceChildren(...checklistItems.map(([key, label]) => {
             const labelElement = document.createElement("label");
             labelElement.innerHTML = '<input type="checkbox" /> <span>' + escapeReview(label) + '</span>';
-            const input = labelElement.querySelector("input");
+            const input = requiredElement<HTMLInputElement>("input", labelElement);
             input.checked = Boolean(checklist[key]);
             input.addEventListener("change", () => {
               const all = readPublishingChecklist();
@@ -1925,8 +2026,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             });
             return labelElement;
           }));
-          publicationGuide.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", () => copyPublicationPath(button.dataset.copy)));
-          publicationGuide.querySelector("#recheck-preview").addEventListener("click", openExpectedPreview);
+          publicationGuide.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => button.addEventListener("click", () => copyPublicationPath(button.dataset.copy || "")));
+          requiredElement<HTMLButtonElement>("#recheck-preview", publicationGuide).addEventListener("click", openExpectedPreview);
           publicationGuide.querySelector<HTMLButtonElement>("#mark-published")?.addEventListener("click", () => { if (publicationConfirmDialog) publicationConfirmDialog.showModal(); });
         };
         const openPublicationGuide = () => {
@@ -1935,7 +2036,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
         const closePublicationGuide = () => { if (publicationDialog?.open) publicationDialog.close(); };
 
-        const loadCoverValues = (property, propertyId = null) => {
+        const loadCoverValues = (property: PropertyRecord, propertyId: string | null = null) => {
           selectedPhoto = null;
           selectedVideo = null;
           photoRemoved = false;
@@ -1967,7 +2068,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           updateMediaStatus();
         };
 
-        const openEditor = (mode, property = null) => {
+        const openEditor = (mode: "new" | "edit", property: PropertyRecord | null = null) => {
           listScreen.hidden = true;
           editorScreen.hidden = false;
           setStep(1);
@@ -2017,12 +2118,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const drafts = readDrafts();
           const edited = drafts[originalProperty.id];
           const originalCard = document.querySelector('[data-card="atardecer-y-vides"]');
-          if (originalCard && !originalCard.querySelector(".publication-badge")) { const badge = document.createElement("span"); badge.className = "publication-badge published"; badge.textContent = "PUBLICADA"; originalCard.querySelector(".property-content > div").appendChild(badge); }
+          if (originalCard && !originalCard.querySelector(".publication-badge")) { const badge = document.createElement("span"); badge.className = "publication-badge published"; badge.textContent = "PUBLICADA"; requiredElement(".property-content > div", originalCard).appendChild(badge); }
           if (edited && originalCard) {
-            originalCard.querySelector("[data-card-name]").textContent = edited.name || originalProperty.name;
-            originalCard.querySelector("[data-card-price]").textContent = edited.price || "Precio sin completar";
-            originalCard.querySelector("[data-card-subtitle]").textContent = edited.subtitle || "Subtítulo sin completar";
-            let badge = originalCard.querySelector(".publication-badge"); if (!badge) { badge = document.createElement("span"); badge.className = "publication-badge"; originalCard.querySelector(".property-content > div").appendChild(badge); } const originalStatus = publicationCardState(edited || originalProperty, true); badge.textContent = originalStatus.label; badge.className = "publication-badge " + originalStatus.className;
+            requiredElement("[data-card-name]", originalCard).textContent = edited.name || originalProperty.name;
+            requiredElement("[data-card-price]", originalCard).textContent = edited.price || "Precio sin completar";
+            requiredElement("[data-card-subtitle]", originalCard).textContent = edited.subtitle || "Subtítulo sin completar";
+            let badge = originalCard.querySelector<HTMLElement>(".publication-badge"); if (!badge) { badge = document.createElement("span"); badge.className = "publication-badge"; requiredElement(".property-content > div", originalCard).appendChild(badge); } const originalStatus = publicationCardState(edited || originalProperty, true); badge.textContent = originalStatus.label; badge.className = "publication-badge " + originalStatus.className;
           }
 
           document.querySelectorAll("[data-draft-card]").forEach((card) => card.remove());
@@ -2045,12 +2146,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
                   <button class="button button-danger" type="button" data-delete-draft>Eliminar</button>
                 </div>
               </div>`;
-            card.querySelector("h2").textContent = draft.name;
-            card.querySelector(".draft-subtitle").textContent = draft.subtitle || "Subtítulo sin completar";
-            card.querySelector(".property-price").textContent = draft.price || "Precio sin completar";
-            const cardState = publicationCardState(draft); const badge = card.querySelector(".publication-badge"); badge.textContent = cardState.label; badge.className = "publication-badge " + cardState.className;
-            const publicationLink = card.querySelector("[data-publication-link]"); if (cardState.className.includes("published")) { publicationLink.href = "/propiedades/" + draft.slug + "/"; publicationLink.hidden = false; }
-            card.querySelector("[data-edit-draft]").addEventListener("click", () => {
+            requiredElement("h2", card).textContent = draft.name;
+            requiredElement(".draft-subtitle", card).textContent = draft.subtitle || "Subtítulo sin completar";
+            requiredElement(".property-price", card).textContent = draft.price || "Precio sin completar";
+            const cardState = publicationCardState(draft); const badge = requiredElement<HTMLElement>(".publication-badge", card); badge.textContent = cardState.label; badge.className = "publication-badge " + cardState.className;
+            const publicationLink = requiredElement<HTMLAnchorElement>("[data-publication-link]", card); if (cardState.className.includes("published")) { publicationLink.href = "/propiedades/" + draft.slug + "/"; publicationLink.hidden = false; }
+            requiredElement<HTMLButtonElement>("[data-edit-draft]", card).addEventListener("click", () => {
               editingId = draft.id;
               listScreen.hidden = true;
               editorScreen.hidden = false;
@@ -2070,8 +2171,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               setStep(1);
               window.scrollTo({ top: 0, behavior: "smooth" });
             });
-            card.querySelector("[data-delete-draft]").addEventListener("click", () => openDeleteProperty(draft));
-            document.querySelector("#property-cards").appendChild(card);
+            requiredElement<HTMLButtonElement>("[data-delete-draft]", card).addEventListener("click", () => openDeleteProperty(draft));
+            requiredElement("#property-cards").appendChild(card);
           });
         };
 
@@ -2082,13 +2183,13 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           confirmDeleteProperty.disabled = false;
           confirmDeleteProperty.textContent = "Eliminar propiedad";
         };
-        const removePublishingChecklist = (draft) => {
+        const removePublishingChecklist = (draft: StoredProperty) => {
           const all = readPublishingChecklist();
           delete all[draft.slug];
           delete all[draft.id];
           writePublishingChecklist(all);
         };
-        const finishLocalDeletion = (draft, deletedRemoteCount = null) => {
+        const finishLocalDeletion = (draft: StoredProperty) => {
           const drafts = readDrafts();
           delete drafts[draft.id];
           writeDrafts(drafts);
@@ -2101,7 +2202,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             : "";
           showToast("Propiedad eliminada." + publishedNotice);
         };
-        const openDeleteProperty = (draft) => {
+        const openDeleteProperty = (draft: StoredProperty) => {
           if (!draft || draft.id === originalProperty.id || draft.slug === originalProperty.slug) return;
           pendingDelete = draft;
           deleteConfirmationStage = 1;
@@ -2111,7 +2212,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           confirmDeleteProperty.textContent = "Eliminar propiedad";
           if (deletePropertyDialog) deletePropertyDialog.showModal();
         };
-        const deleteRemotePropertyMedia = async (slug) => {
+        const deleteRemotePropertyMedia = async (slug: string) => {
+          if (!r2Config.workerUrl) throw new Error("La carga directa no está configurada.");
           const response = await fetch(r2Config.workerUrl.replace(/\/$/, "") + "/property-media", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
@@ -2144,37 +2246,37 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             showToast("No se pudieron eliminar todos los archivos. La propiedad no fue eliminada del administrador.");
           }
         });
-        document.querySelector("#close-delete-property").addEventListener("click", closeDeleteProperty);
-        document.querySelector("#cancel-delete-property").addEventListener("click", closeDeleteProperty);
+        requiredElement("#close-delete-property").addEventListener("click", closeDeleteProperty);
+        requiredElement("#cancel-delete-property").addEventListener("click", closeDeleteProperty);
         deletePropertyDialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeDeleteProperty(); });
 
-        document.querySelector("#new-property").addEventListener("click", () => openEditor("new"));
-        document.querySelector("[data-edit='atardecer-y-vides']").addEventListener("click", () => openEditor("edit", originalProperty));
+        requiredElement("#new-property").addEventListener("click", () => openEditor("new"));
+        requiredElement<HTMLButtonElement>("[data-edit='atardecer-y-vides']").addEventListener("click", () => openEditor("edit", originalProperty));
         document.querySelectorAll("[data-duplicate]").forEach((button) => button.addEventListener("click", () => showToast("La duplicación estará disponible en una próxima etapa.")));
-        document.querySelector("#cancel").addEventListener("click", showList);
-        document.querySelector("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#data-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
-        document.querySelector("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
-        document.querySelector("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
-        document.querySelector("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
-        document.querySelector("#gallery-back").addEventListener("click", () => { saveDraft(); setStep(4); });
-        document.querySelector("#gallery-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La galería quedó guardada como borrador."); });
-        document.querySelector("#features-back").addEventListener("click", () => { saveDraft(); setStep(5); });
-        document.querySelector("#features-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las características quedaron guardadas como borrador."); });
-        document.querySelector("#location-back").addEventListener("click", () => { saveDraft(); setStep(6); });
-        document.querySelector("#location-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La ubicación quedó guardada como borrador."); });
-        document.querySelector("#distances-back").addEventListener("click", () => { saveDraft(); setStep(7); });
-        document.querySelector("#distances-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las distancias quedaron guardadas como borrador."); });
-        document.querySelector("#review-back").addEventListener("click", () => { saveDraft(); setStep(8); });
-        document.querySelector("#review-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La revisión quedó guardada en el borrador."); });
-        document.querySelector("#prepare-presentation").addEventListener("click", () => { saveDraft(); openPreparation(); });
-        document.querySelector("#close-preparation").addEventListener("click", closePreparation);
-        document.querySelector("#preparation-cancel").addEventListener("click", closePreparation);
-        const preparationCoverSelect = document.querySelector<HTMLButtonElement>("#preparation-cover-select");
-        const preparationGallerySelect = document.querySelector<HTMLButtonElement>("#preparation-gallery-select");
-        const preparationVideoSelect = document.querySelector<HTMLButtonElement>("#preparation-video-select");
+        requiredElement("#cancel").addEventListener("click", showList);
+        requiredElement("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        requiredElement("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        requiredElement("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        requiredElement("#data-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        requiredElement("#cover-back").addEventListener("click", () => { saveDraft(); setStep(1); });
+        requiredElement("#property-back").addEventListener("click", () => { saveDraft(); setStep(2); });
+        requiredElement("#data-back").addEventListener("click", () => { saveDraft(); setStep(3); });
+        requiredElement("#gallery-back").addEventListener("click", () => { saveDraft(); setStep(4); });
+        requiredElement("#gallery-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La galería quedó guardada como borrador."); });
+        requiredElement("#features-back").addEventListener("click", () => { saveDraft(); setStep(5); });
+        requiredElement("#features-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las características quedaron guardadas como borrador."); });
+        requiredElement("#location-back").addEventListener("click", () => { saveDraft(); setStep(6); });
+        requiredElement("#location-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La ubicación quedó guardada como borrador."); });
+        requiredElement("#distances-back").addEventListener("click", () => { saveDraft(); setStep(7); });
+        requiredElement("#distances-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("Las distancias quedaron guardadas como borrador."); });
+        requiredElement("#review-back").addEventListener("click", () => { saveDraft(); setStep(8); });
+        requiredElement("#review-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La revisión quedó guardada en el borrador."); });
+        requiredElement("#prepare-presentation").addEventListener("click", () => { saveDraft(); openPreparation(); });
+        requiredElement("#close-preparation").addEventListener("click", closePreparation);
+        requiredElement("#preparation-cancel").addEventListener("click", closePreparation);
+        const preparationCoverSelect = requiredElement<HTMLButtonElement>("#preparation-cover-select");
+        const preparationGallerySelect = requiredElement<HTMLButtonElement>("#preparation-gallery-select");
+        const preparationVideoSelect = requiredElement<HTMLButtonElement>("#preparation-video-select");
         if (preparationCoverInput) {
           preparationCoverSelect?.addEventListener("click", () => preparationCoverInput.click());
           preparationCoverInput.addEventListener("change", () => {
@@ -2203,28 +2305,28 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         }
         downloadPackage.addEventListener("click", downloadPreparedPackage);
         continuePublication.addEventListener("click", openPublicationGuide);
-        document.querySelector("#close-publication").addEventListener("click", closePublicationGuide);
-        document.querySelector("#close-publication-bottom").addEventListener("click", closePublicationGuide);
-        document.querySelector("#open-preview").addEventListener("click", openExpectedPreview);
-        document.querySelector("#add-featured-data").addEventListener("click", () => {
+        requiredElement("#close-publication").addEventListener("click", closePublicationGuide);
+        requiredElement("#close-publication-bottom").addEventListener("click", closePublicationGuide);
+        requiredElement("#open-preview").addEventListener("click", openExpectedPreview);
+        requiredElement("#add-featured-data").addEventListener("click", () => {
           const card = addDataCard();
-          card.querySelector("[data-field='label']").focus();
+          requiredElement<HTMLInputElement>("[data-field='label']", card).focus();
           scheduleSave();
         });
-        document.querySelector("#add-feature").addEventListener("click", () => addFeature());
+        requiredElement("#add-feature").addEventListener("click", () => addFeature());
         propertyDescriptionInput.addEventListener("input", scheduleSave);
-        document.querySelector("#copy-chatgpt-prompt").addEventListener("click", copyChatGptPrompt);
-        document.querySelector("#apply-chatgpt-response").addEventListener("click", applyChatGptResponse);
-        document.querySelector("#organized-headline").addEventListener("input", (event) => { organizedHeadline = event.target.value; scheduleSave(); });
-        document.querySelector("#add-organized-paragraph").addEventListener("click", () => { organizedParagraphs.push({ id: "paragraph-" + Date.now(), text: "" }); document.querySelector("#organized-description").hidden = false; renderOrganizedDescription(); scheduleSave(); });
-        document.querySelector("#add-all-summary-suggestions").addEventListener("click", () => {
+        requiredElement("#copy-chatgpt-prompt").addEventListener("click", copyChatGptPrompt);
+        requiredElement("#apply-chatgpt-response").addEventListener("click", applyChatGptResponse);
+        requiredElement<HTMLInputElement>("#organized-headline").addEventListener("input", (event) => { organizedHeadline = (event.currentTarget as HTMLInputElement).value; scheduleSave(); });
+        requiredElement("#add-organized-paragraph").addEventListener("click", () => { organizedParagraphs.push({ id: "paragraph-" + Date.now(), text: "" }); requiredElement("#organized-description").hidden = false; renderOrganizedDescription(); scheduleSave(); });
+        requiredElement("#add-all-summary-suggestions").addEventListener("click", () => {
           [...aiSummarySuggestions].forEach(addSummarySuggestion);
         });
-        document.querySelector("#add-all-feature-suggestions").addEventListener("click", () => {
+        requiredElement("#add-all-feature-suggestions").addEventListener("click", () => {
           [...aiFeatureSuggestions].forEach(addFeatureSuggestion);
         });
 
-        document.querySelectorAll(".step").forEach((step) => step.addEventListener("click", () => {
+        document.querySelectorAll<HTMLElement>(".step").forEach((step) => step.addEventListener("click", () => {
           const number = Number(step.dataset.step);
           if (number === 1) setStep(1);
           else if (number === 2) {
@@ -2248,10 +2350,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               setStep(2);
               photoError.textContent = "Seleccioná una foto principal para continuar.";
               photoDropzone?.focus();
-            } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+            } else if (optionalInputValue('input[name="videoEnabled"]:checked') === "yes" && !videoName.textContent) {
               setStep(2);
               videoError.textContent = "Seleccioná un video MP4 o elegí No.";
-              document.querySelector("#select-video").focus();
+              requiredElement("#select-video").focus();
             } else {
               saveDraft();
               setStep(3);
@@ -2267,10 +2369,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               setStep(2);
               photoError.textContent = "Seleccioná una foto principal para continuar.";
               photoDropzone?.focus();
-            } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+            } else if (optionalInputValue('input[name="videoEnabled"]:checked') === "yes" && !videoName.textContent) {
               setStep(2);
               videoError.textContent = "Seleccioná un video MP4 o elegí No.";
-              document.querySelector("#select-video").focus();
+              requiredElement("#select-video").focus();
             } else {
               saveDraft();
               setStep(4);
@@ -2307,9 +2409,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         });
 
         const choosePhoto = () => photoInput?.click();
-        document.querySelector("#select-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
-        document.querySelector("#change-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
-        document.querySelector("#remove-photo").addEventListener("click", (event) => { event.stopPropagation(); clearPhoto(); });
+        requiredElement("#select-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
+        requiredElement("#change-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
+        requiredElement("#remove-photo").addEventListener("click", (event) => { event.stopPropagation(); clearPhoto(); });
         if (photoDropzone) {
           photoDropzone.addEventListener("click", () => { if (!photoDropzone.classList.contains("has-file")) choosePhoto(); });
           photoDropzone.addEventListener("keydown", (event) => {
@@ -2355,20 +2457,20 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           });
         }
 
-        document.querySelectorAll('input[name="videoEnabled"]').forEach((input) => input.addEventListener("change", () => {
+        document.querySelectorAll<HTMLInputElement>('input[name="videoEnabled"]').forEach((input) => input.addEventListener("change", () => {
           setVideoEnabled(input.value === "yes");
           scheduleSave();
         }));
         const chooseVideo = () => videoInput?.click();
-        document.querySelector("#select-video").addEventListener("click", chooseVideo);
-        document.querySelector("#change-video").addEventListener("click", chooseVideo);
-        document.querySelector("#remove-video").addEventListener("click", clearVideo);
+        requiredElement("#select-video").addEventListener("click", chooseVideo);
+        requiredElement("#change-video").addEventListener("click", chooseVideo);
+        requiredElement("#remove-video").addEventListener("click", clearVideo);
         videoInput.addEventListener("change", () => {
-          const file = videoInput.files[0];
+          const file = videoInput.files?.[0];
           if (!file) return;
           if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) {
             videoError.textContent = "Seleccioná un video en formato MP4.";
-            videoInput?.value = "";
+            videoInput.value = "";
             return;
           }
           selectedVideo = file;
@@ -2384,9 +2486,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             photoDropzone?.focus();
             return;
           }
-          if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
+          if (optionalInputValue('input[name="videoEnabled"]:checked') === "yes" && !videoName.textContent) {
             videoError.textContent = "Seleccioná un video MP4 o elegí No.";
-            document.querySelector("#select-video").focus();
+            requiredElement("#select-video").focus();
             return;
           }
           saveDraft();
@@ -2416,13 +2518,13 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         distancesForm.addEventListener("submit", (event) => {
           event.preventDefault(); saveDraft(); setStep(9); window.scrollTo({ top: 0, behavior: "smooth" });
         });
-        document.querySelector("#add-distance").addEventListener("click", addDistance);
+        requiredElement("#add-distance").addEventListener("click", addDistance);
         document.querySelectorAll('input[name="distancesEnabled"]').forEach((input) => input.addEventListener("change", () => { renderDistances(); scheduleSave(); }));
         document.querySelectorAll('input[name="locationEnabled"]').forEach((input) => input.addEventListener("change", () => { renderLocation(); scheduleSave(); }));
         [locationNameInput, locationAddressInput, latitudeInput, longitudeInput].forEach((input) => input.addEventListener("input", () => { renderLocation(); scheduleSave(); }));
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
-        const gallerySelect = document.querySelector<HTMLButtonElement>("#gallery-select");
-        document.querySelector("#upload-gallery-r2").addEventListener("click", async () => {
+        const gallerySelect = requiredElement<HTMLButtonElement>("#gallery-select");
+        requiredElement("#upload-gallery-r2").addEventListener("click", async () => {
           const batchItems = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
           if (!batchItems.length) return showToast("No hay fotos pendientes para subir.");
           const renderGalleryUploadSummary = (finished = false) => {
@@ -2431,7 +2533,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             const errors = batchItems.filter((item) => item.status === "error").length;
             const uploading = batchItems.filter((item) => item.status === "uploading").length;
             const pending = batchItems.filter((item) => item.status === "pending").length;
-            const progress = document.querySelector("#gallery-upload-progress");
+            const progress = requiredElement("#gallery-upload-progress");
             if (finished && uploaded === total) {
               progress.textContent = "✓ " + total + (total === 1 ? " foto subida" : " fotos subidas");
             } else if (finished || errors) {
@@ -2447,6 +2549,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               item.progress = 0;
               renderGallery();
               try {
+                if (!item.file) continue;
                 const result = await uploadR2File("gallery", item.file, item.id, (value) => { item.progress = value; renderGallery(); });
                 item.remoteUrl = result.publicUrl;
                 item.objectKey = result.key;
@@ -2467,12 +2570,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             updateMediaStatus();
           }
         });
-        document.querySelector("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { document.querySelector("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => document.querySelector("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; document.querySelector("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
-        document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
+        requiredElement("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { requiredElement("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => requiredElement("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; requiredElement("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { requiredElement("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
+        requiredElement("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { requiredElement("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => requiredElement("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; requiredElement("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { requiredElement("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
-        document.querySelector("#confirm-publication").addEventListener("click", markPublished);
-        const closePublicationConfirmButton = document.querySelector<HTMLButtonElement>("#close-publication-confirm");
-        const cancelPublicationConfirmButton = document.querySelector<HTMLButtonElement>("#cancel-publication-confirm");
+        requiredElement("#confirm-publication").addEventListener("click", markPublished);
+        const closePublicationConfirmButton = requiredElement<HTMLButtonElement>("#close-publication-confirm");
+        const cancelPublicationConfirmButton = requiredElement<HTMLButtonElement>("#cancel-publication-confirm");
         if (publicationConfirmDialog) {
           [closePublicationConfirmButton, cancelPublicationConfirmButton]
             .filter((button): button is HTMLButtonElement => Boolean(button))
@@ -2481,9 +2584,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             }));
         }
 
-        const confirmPresentationImageButton = document.querySelector<HTMLButtonElement>("#confirm-presentation-image");
-        const closePresentationImageButton = document.querySelector<HTMLButtonElement>("#close-presentation-image-dialog");
-        const cancelPresentationImageButton = document.querySelector<HTMLButtonElement>("#cancel-presentation-image");
+        const confirmPresentationImageButton = requiredElement<HTMLButtonElement>("#confirm-presentation-image");
+        const closePresentationImageButton = requiredElement<HTMLButtonElement>("#close-presentation-image-dialog");
+        const cancelPresentationImageButton = requiredElement<HTMLButtonElement>("#cancel-presentation-image");
         if (presentationImageDialog) {
           confirmPresentationImageButton?.addEventListener("click", () => {
             if (!selectingPresentationImage || !pendingPresentationImageId) { showToast("Elegí una imagen primero."); return; }
@@ -2498,7 +2601,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         if (galleryInput) {
           gallerySelect?.addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
           galleryInput.addEventListener("change", () => {
-            if (galleryInput.files) addTemporaryGalleryFiles(galleryInput.files);
+            if (galleryInput.files) addTemporaryGalleryFiles(Array.from(galleryInput.files));
             galleryInput.value = "";
           });
         }
@@ -2508,7 +2611,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
           galleryDropzone.addEventListener("drop", (event: DragEvent) => {
             if (!event.dataTransfer) return;
-            addTemporaryGalleryFiles(event.dataTransfer.files);
+            addTemporaryGalleryFiles(Array.from(event.dataTransfer.files));
           });
         }
         renderDraftCards();
