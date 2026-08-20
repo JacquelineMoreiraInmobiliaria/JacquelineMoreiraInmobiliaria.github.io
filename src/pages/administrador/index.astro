@@ -1,18 +1,28 @@
 ---
+import type { Dirent } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
+type MediaInventoryItem = {
+  cover: boolean;
+  gallery: string[];
+  video: boolean;
+};
+type MediaInventory = Record<string, MediaInventoryItem>;
+
 const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
 const mediaRoot = join(process.cwd(), "public", "media");
-const mediaDirectories = await readdir(mediaRoot, { withFileTypes: true }).catch(() => []);
+const mediaDirectories: Dirent[] = await readdir(mediaRoot, { withFileTypes: true }).catch((): Dirent[] => []);
 const propertiesRoot = join(process.cwd(), "src", "data", "properties");
-const propertyFiles = await readdir(propertiesRoot).catch(() => []);
-const publishedSlugs = propertyFiles.filter((name) => /\.ya?ml$/i.test(name)).map((name) => name.replace(/\.ya?ml$/i, ""));
-const mediaInventory = Object.fromEntries(await Promise.all(
+const propertyFiles: string[] = await readdir(propertiesRoot).catch((): string[] => []);
+const publishedSlugs: string[] = propertyFiles
+  .filter((name) => /\.ya?ml$/i.test(name))
+  .map((name) => name.replace(/\.ya?ml$/i, ""));
+const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
   mediaDirectories
     .filter((entry) => entry.isDirectory())
-    .map(async (entry) => {
-      const files = await readdir(join(mediaRoot, entry.name)).catch(() => []);
+    .map(async (entry): Promise<[string, MediaInventoryItem]> => {
+      const files: string[] = await readdir(join(mediaRoot, entry.name)).catch((): string[] => []);
       const gallery = files
         .filter((name) => /^foto-(\d+)\.jpg$/i.test(name))
         .sort((a, b) => Number(a.match(/\d+/)?.[0]) - Number(b.match(/\d+/)?.[0]));
