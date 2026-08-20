@@ -27,13 +27,18 @@ const propertyFiles: string[] = await readdir(propertiesRoot).catch((): string[]
 const publishedSlugs: string[] = propertyFiles
   .filter((name) => /\.ya?ml$/i.test(name))
   .map((name) => name.replace(/\.ya?ml$/i, ""));
-const publishedPropertyMedia: PublishedPropertyMedia = Object.fromEntries((await getCollection("properties")).map((entry) => [
+const publishedEntries = await getCollection("properties");
+const publishedPropertyMedia: PublishedPropertyMedia = Object.fromEntries(publishedEntries.map((entry) => [
   entry.data.slug,
   {
     cover: entry.data.hero.coverImage,
     gallery: entry.data.gallery.images.map((image) => ({ source: image.source, visible: image.visible })),
     video: entry.data.hero.video.source || ""
   }
+]));
+const publishedPropertyInventory = Object.fromEntries(publishedEntries.map((entry) => [
+  entry.data.slug,
+  { ...entry.data, yamlPath: "src/data/properties/" + entry.data.slug + ".yaml" }
 ]));
 const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
   mediaDirectories
@@ -501,6 +506,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
     <script id="published-properties" type="application/json" set:html={JSON.stringify(publishedSlugs)}></script>
     <script id="published-property-media" type="application/json" set:html={JSON.stringify(publishedPropertyMedia)}></script>
+    <script id="published-property-inventory" type="application/json" set:html={JSON.stringify(publishedPropertyInventory)}></script>
 
     <script>
       import JSZip from "jszip";
@@ -537,6 +543,23 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         type SessionMedia = { photo: File | null; photoUrl: string | null; video: File | null };
         type MediaInventoryItem = { cover: boolean; gallery: string[]; video: boolean };
         type PublishedMediaItem = { cover: string; gallery: Array<{ source: string; visible: boolean }>; video: string };
+        type ContactData = { useDefault: boolean; whatsapp?: string; email?: string };
+        type MediaData = { cover?: string; sections?: Partial<Record<"property" | "features" | "distances" | "final", string>> };
+        type PublishedProperty = {
+          slug: string;
+          name: string;
+          price?: string;
+          hero: { subtitle?: string; description?: string; coverImage: string; video: { enabled: boolean; source?: string } };
+          summary: Array<{ icon?: string; label: string; value: string; show?: boolean }>;
+          property: { sectionTitle?: string; headline?: string; paragraphs: string[] };
+          gallery: { enabled: boolean; images: Array<{ source: string; alt?: string; visible?: boolean }> };
+          media?: MediaData;
+          features: Array<{ label: string; category: FeatureCategory }>;
+          location: { enabled: boolean; visibleName?: string; address?: string; latitude?: number; longitude?: number };
+          distances: { enabled: boolean; items: Array<{ destination: string; distance: string }> };
+          contact: ContactData;
+          yamlPath: string;
+        };
         type PropertyDraft = {
           id: string;
           slug: string;
@@ -574,7 +597,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           featuredData: FeaturedDataItem[];
           updatedAt: string;
           hero?: { coverImage?: string };
-          media?: { cover?: string };
+          media?: MediaData;
+          contact?: ContactData;
           remoteGallery?: GalleryItem[];
         };
         type PropertyRecord = Partial<PropertyDraft>;
@@ -719,6 +743,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const detectedMedia = JSON.parse(requiredElement("#media-inventory").textContent || "{}") as Record<string, MediaInventoryItem>;
         const publishedProperties = new Set<string>(JSON.parse(requiredElement("#published-properties").textContent || "[]") as string[]);
         const publishedMedia = JSON.parse(requiredElement("#published-property-media").textContent || "{}") as Record<string, PublishedMediaItem>;
+        const publishedPropertyInventory = JSON.parse(requiredElement("#published-property-inventory").textContent || "{}") as Record<string, PublishedProperty>;
         const r2Config = ((window as Window & { MOREIRA_R2_UPLOAD?: R2Config }).MOREIRA_R2_UPLOAD || {});
         const r2Configured = Boolean(r2Config.workerUrl);
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
@@ -732,6 +757,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let videoRemoved = false;
         let remoteCover: RemoteMedia | null = null;
         let remoteVideo: RemoteMedia | null = null;
+        let preservedMedia: MediaData | undefined;
+        let preservedContact: ContactData = { useDefault: true };
         let pendingDelete: StoredProperty | null = null;
         let deleteConfirmationStage = 1;
         let activeUploads = 0;
@@ -866,6 +893,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           videoName: selectedVideo?.name || videoName.textContent || "",
           videoSource: remoteVideo?.url || (editingId === originalProperty.id && !selectedVideo && !videoRemoved ? originalProperty.videoSource || "" : ""),
           remoteVideo: remoteVideo ? { ...remoteVideo } : null,
+          media: preservedMedia ? { ...preservedMedia, sections: preservedMedia.sections ? { ...preservedMedia.sections } : undefined } : undefined,
+          contact: { ...preservedContact },
           galleryEnabled: optionalInputValue('input[name="galleryEnabled"]:checked') !== "no",
           galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
@@ -914,9 +943,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const location = property?.locationEnabled !== true || validSavedLocation(property);
           return Boolean(property?.name?.trim()) && cover && video && gallery && location;
         };
-        const publicationCardState = (property: PropertyRecord, isOriginal = false) => {
+        const publicationCardState = (property: PropertyRecord, isOriginal = false, isPublished = publishedProperties.has(property.slug || "")) => {
           if (isOriginal) return { label: "PUBLICADA", className: "published" };
           const published = publicationFor(property);
+          if (isPublished) {
+            if (!published) return { label: "PUBLICADA · CAMBIOS PENDIENTES", className: "published pending" };
+            const changed = Boolean(published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt));
+            return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
+          }
           if (!published) return draftIsReady(property) ? { label: "LISTA PARA PUBLICAR", className: "ready" } : { label: "BORRADOR", className: "draft" };
           const changed = Boolean(published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt));
           return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
@@ -2003,7 +2037,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const distances = values.distances.filter((item) => item.destination && item.distance);
           if (values.distancesEnabled && distances.length) distances.forEach((item) => lines.push("    - destination: " + yamlText(item.destination), "      distance: " + yamlText(item.distance)));
           else lines.push("    []");
-          lines.push("", "contact:", "  useDefault: true", "");
+          lines.push("", "contact:", "  useDefault: " + (values.contact?.useDefault !== false ? "true" : "false"));
+          if (values.contact?.useDefault === false && values.contact.whatsapp) lines.push("  whatsapp: " + yamlText(values.contact.whatsapp));
+          if (values.contact?.useDefault === false && values.contact.email) lines.push("  email: " + yamlText(values.contact.email));
+          lines.push("");
           return lines.join("\n");
         };
         const refreshPackageSummary = () => {
@@ -2184,6 +2221,104 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           updateMediaStatus();
         };
 
+        const findDraftBySlug = (drafts: Record<string, StoredProperty>, slug: string) =>
+          Object.values(drafts).find((draft) => draft.slug === slug) || null;
+
+        const draftFromPublishedProperty = (property: PublishedProperty): PropertyDraft => {
+          const galleryItems: GalleryItem[] = property.gallery.images.map((image, index) => ({
+            id: "published-" + property.slug + "-" + index,
+            name: image.source.split("/").pop() || "foto-" + (index + 1),
+            originalName: image.source.split("/").pop() || "foto-" + (index + 1),
+            status: "uploaded",
+            description: image.alt || "",
+            source: image.source,
+            visible: image.visible !== false,
+            position: index + 1
+          }));
+          const sections = property.media?.sections || {};
+          [property.media?.cover, sections.property, sections.features, sections.distances, sections.final]
+            .filter((source): source is string => Boolean(source) && !galleryItems.some((item) => item.source === source))
+            .forEach((source, index) => {
+              galleryItems.push({
+                id: "published-section-" + property.slug + "-" + index,
+                name: source.split("/").pop() || "imagen-de-presentacion",
+                originalName: source.split("/").pop() || "imagen-de-presentacion",
+                status: "uploaded",
+                description: "",
+                source,
+                visible: false,
+                position: galleryItems.length + 1
+              });
+            });
+          const findImageId = (source: string | undefined) => galleryItems.find((item) => item.source === source)?.id || null;
+          const now = new Date().toISOString();
+          return {
+            id: property.slug,
+            slug: property.slug,
+            name: property.name,
+            price: property.price || "",
+            subtitle: property.hero.subtitle || "",
+            coverDescription: property.hero.description || "",
+            coverPhotoName: (property.media?.cover || property.hero.coverImage).split("/").pop() || "",
+            coverPhotoSource: property.media?.cover || property.hero.coverImage,
+            remoteCover: null,
+            videoEnabled: property.hero.video.enabled,
+            videoName: property.hero.video.source?.split("/").pop() || "",
+            videoSource: property.hero.video.source || "",
+            remoteVideo: null,
+            galleryEnabled: property.gallery.enabled,
+            galleryItems,
+            futureCoverId: findImageId(property.media?.cover || property.hero.coverImage),
+            presentationImages: {
+              cover: findImageId(property.media?.cover || property.hero.coverImage),
+              property: findImageId(sections.property),
+              features: findImageId(sections.features),
+              distances: findImageId(sections.distances),
+              final: findImageId(sections.final)
+            },
+            publication: { status: "published", publishedAt: now, publishedRevision: property.yamlPath },
+            features: property.features.map((item, index) => ({ id: "published-feature-" + index, label: item.label, category: item.category, order: index + 1 })),
+            locationEnabled: property.location.enabled,
+            locationName: property.location.visibleName || "",
+            locationAddress: property.location.address || "",
+            latitude: typeof property.location.latitude === "number" ? String(property.location.latitude) : "",
+            longitude: typeof property.location.longitude === "number" ? String(property.location.longitude) : "",
+            distancesEnabled: property.distances.enabled,
+            distances: property.distances.items.map((item, index) => ({ id: "published-distance-" + index, destination: item.destination, distance: item.distance, order: index + 1 })),
+            propertyDescription: property.property.paragraphs.join("\n\n"),
+            descriptionSource: property.property.paragraphs.join("\n\n"),
+            organizedDescription: { headline: property.property.headline || "", paragraphs: [...property.property.paragraphs] },
+            aiSuggestions: { summary: [], features: [] },
+            sectionName: property.property.sectionTitle || "",
+            propertyHeadline: property.property.headline || "",
+            paragraphs: [...property.property.paragraphs],
+            featuredData: property.summary.map((item) => ({ icon: item.icon || "home", label: item.label, value: item.value, show: item.show !== false })),
+            updatedAt: now,
+            hero: { coverImage: property.hero.coverImage },
+            media: property.media ? { cover: property.media.cover, sections: { ...sections } } : undefined,
+            contact: { ...property.contact }
+          };
+        };
+
+        const loadExistingDraft = (draft: PropertyRecord, isOriginal = false) => {
+          editingId = draft.id || null;
+          title.textContent = "Editar propiedad";
+          intro.textContent = "Revisá y actualizá la información básica.";
+          nameInput.value = draft.name || "";
+          priceInput.value = draft.price || "";
+          legacySubtitle = draft.subtitle || "";
+          preservedMedia = draft.media ? { ...draft.media, sections: draft.media.sections ? { ...draft.media.sections } : undefined } : undefined;
+          preservedContact = draft.contact ? { ...draft.contact } : { useDefault: true };
+          loadPublication(draft, isOriginal);
+          loadCoverValues(draft, editingId);
+          loadPropertyValues(draft);
+          loadFeaturedData(draft);
+          loadGalleryValues(draft);
+          loadFeatures(draft);
+          loadLocationValues(draft);
+          loadDistances(draft);
+        };
+
         const openEditor = (mode: "new" | "edit", property: PropertyRecord | null = null) => {
           listScreen.hidden = true;
           editorScreen.hidden = false;
@@ -2193,21 +2328,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
           if (mode === "edit") {
             const drafts = readDrafts();
-            const saved = drafts[originalProperty.id] || property || originalProperty;
-            editingId = originalProperty.id;
-            title.textContent = "Editar propiedad";
-            intro.textContent = "Revisá y actualizá la información básica.";
-            nameInput.value = saved.name || "";
-            priceInput.value = saved.price || "";
-            legacySubtitle = saved.subtitle || "";
-            loadPublication(saved, editingId === originalProperty.id);
-            loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
-            loadPropertyValues({ ...originalProperty, ...saved });
-            loadFeaturedData({ ...originalProperty, ...saved });
-            loadGalleryValues({ ...originalProperty, ...saved });
-            loadFeatures({ ...originalProperty, ...saved });
-            loadLocationValues({ ...originalProperty, ...saved });
-            loadDistances({ ...originalProperty, ...saved });
+            const requested = property || originalProperty;
+            const saved = findDraftBySlug(drafts, requested.slug || "") || requested;
+            loadExistingDraft(requested.slug === originalProperty.slug ? { ...originalProperty, ...saved } : saved, requested.slug === originalProperty.slug);
           } else {
             editingId = null;
             title.textContent = "Nueva propiedad";
@@ -2216,6 +2339,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             legacySubtitle = "";
             legacySectionName = "La propiedad";
             legacyPropertyHeadline = "";
+            preservedMedia = undefined;
+            preservedContact = { useDefault: true };
             loadPublication(null, false);
             loadCoverValues({ videoEnabled: false });
             loadPropertyValues({ propertyDescription: "", sectionName: "", propertyHeadline: "", paragraphs: [] });
@@ -2230,76 +2355,96 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           window.setTimeout(() => nameInput.focus(), 200);
         };
 
+        const renderPublishedOrDraftCard = (draft: StoredProperty, isPublished: boolean) => {
+          const card = document.createElement("article");
+          card.className = "property-card draft-card";
+          card.dataset.draftCard = draft.id;
+          card.innerHTML = `
+            <div class="draft-thumb" aria-hidden="true"></div>
+            <div class="property-content">
+              <div>
+                <h2></h2>
+                <p class="draft-subtitle"></p>
+                <p class="property-price"></p><span class="publication-badge"></span>
+              </div>
+              <div class="card-actions">
+                <button class="button button-secondary" type="button" data-edit-draft>Editar</button>
+                <button class="button button-quiet" type="button" data-duplicate>Duplicar</button>
+                <a class="button button-quiet" data-publication-link target="_blank" rel="noopener" hidden>Ver publicación</a>
+                <button class="button button-danger" type="button" data-delete-draft hidden>Eliminar</button>
+              </div>
+            </div>`;
+          requiredElement("h2", card).textContent = draft.name;
+          const draftMedia = resolvePropertyMediaState(draft, detectedMedia[draft.slug] || { cover: false, gallery: [], video: false });
+          const draftThumb = requiredElement<HTMLElement>(".draft-thumb", card);
+          if (draftMedia.coverSource) {
+            const image = document.createElement("img");
+            image.src = draftMedia.coverSource;
+            image.alt = "";
+            draftThumb.appendChild(image);
+          } else {
+            draftThumb.textContent = "Sin portada";
+          }
+          requiredElement(".draft-subtitle", card).textContent = draft.subtitle || "Subtítulo sin completar";
+          requiredElement(".property-price", card).textContent = draft.price || "Precio sin completar";
+          const cardState = publicationCardState(draft, false, isPublished);
+          const badge = requiredElement<HTMLElement>(".publication-badge", card);
+          badge.textContent = cardState.label;
+          badge.className = "publication-badge " + cardState.className;
+          const publicationLink = requiredElement<HTMLAnchorElement>("[data-publication-link]", card);
+          if (isPublished) {
+            publicationLink.href = "/propiedades/" + draft.slug + "/";
+            publicationLink.hidden = false;
+          }
+          const localDraft = findDraftBySlug(readDrafts(), draft.slug);
+          const deleteButton = requiredElement<HTMLButtonElement>("[data-delete-draft]", card);
+          deleteButton.hidden = !localDraft;
+          requiredElement<HTMLButtonElement>("[data-edit-draft]", card).addEventListener("click", () => {
+            const drafts = readDrafts();
+            const existing = findDraftBySlug(drafts, draft.slug);
+            const editable = existing || draft;
+            if (!existing && isPublished) {
+              drafts[editable.id] = editable;
+              writeDrafts(drafts);
+            }
+            openEditor("edit", editable);
+          });
+          deleteButton.addEventListener("click", () => {
+            const latest = findDraftBySlug(readDrafts(), draft.slug);
+            if (latest) openDeleteProperty(latest);
+          });
+          requiredElement("#property-cards").appendChild(card);
+        };
+
         const renderDraftCards = () => {
           const drafts = readDrafts();
-          const edited = drafts[originalProperty.id];
+          const edited = findDraftBySlug(drafts, originalProperty.slug);
           const originalCard = document.querySelector('[data-card="atardecer-y-vides"]');
-          if (originalCard && !originalCard.querySelector(".publication-badge")) { const badge = document.createElement("span"); badge.className = "publication-badge published"; badge.textContent = "PUBLICADA"; requiredElement(".property-content > div", originalCard).appendChild(badge); }
+          if (originalCard && !originalCard.querySelector(".publication-badge")) {
+            const badge = document.createElement("span");
+            badge.className = "publication-badge published";
+            badge.textContent = "PUBLICADA";
+            requiredElement(".property-content > div", originalCard).appendChild(badge);
+          }
           if (edited && originalCard) {
             requiredElement("[data-card-name]", originalCard).textContent = edited.name || originalProperty.name;
             requiredElement("[data-card-price]", originalCard).textContent = edited.price || "Precio sin completar";
             requiredElement("[data-card-subtitle]", originalCard).textContent = edited.subtitle || "Subtítulo sin completar";
-            let badge = originalCard.querySelector<HTMLElement>(".publication-badge"); if (!badge) { badge = document.createElement("span"); badge.className = "publication-badge"; requiredElement(".property-content > div", originalCard).appendChild(badge); } const originalStatus = publicationCardState(edited || originalProperty, true); badge.textContent = originalStatus.label; badge.className = "publication-badge " + originalStatus.className;
+            const badge = requiredElement<HTMLElement>(".publication-badge", originalCard);
+            const state = publicationCardState(edited, true, true);
+            badge.textContent = state.label;
+            badge.className = "publication-badge " + state.className;
           }
-
           document.querySelectorAll("[data-draft-card]").forEach((card) => card.remove());
-          Object.values(drafts).filter((draft) => draft.id !== originalProperty.id && draft.name).forEach((draft) => {
-            const card = document.createElement("article");
-            card.className = "property-card draft-card";
-            card.dataset.draftCard = draft.id;
-            card.innerHTML = `
-              <div class="draft-thumb" aria-hidden="true"></div>
-              <div class="property-content">
-                <div>
-                  <h2></h2>
-                  <p class="draft-subtitle"></p>
-                  <p class="property-price"></p><span class="publication-badge"></span>
-                </div>
-                <div class="card-actions">
-                  <button class="button button-secondary" type="button" data-edit-draft>Editar</button>
-                  <button class="button button-quiet" type="button" data-duplicate>Duplicar</button>
-                  <a class="button button-quiet" data-publication-link target="_blank" rel="noopener" hidden>Ver publicación</a>
-                  <button class="button button-danger" type="button" data-delete-draft>Eliminar</button>
-                </div>
-              </div>`;
-            requiredElement("h2", card).textContent = draft.name;
-            const draftMedia = resolvePropertyMediaState(draft, detectedMedia[draft.slug] || { cover: false, gallery: [], video: false });
-            const draftThumb = requiredElement<HTMLElement>(".draft-thumb", card);
-            if (draftMedia.coverSource) {
-              const image = document.createElement("img");
-              image.src = draftMedia.coverSource;
-              image.alt = "";
-              draftThumb.appendChild(image);
-            } else {
-              draftThumb.textContent = "Sin portada";
-            }
-            requiredElement(".draft-subtitle", card).textContent = draft.subtitle || "Subtítulo sin completar";
-            requiredElement(".property-price", card).textContent = draft.price || "Precio sin completar";
-            const cardState = publicationCardState(draft); const badge = requiredElement<HTMLElement>(".publication-badge", card); badge.textContent = cardState.label; badge.className = "publication-badge " + cardState.className;
-            const publicationLink = requiredElement<HTMLAnchorElement>("[data-publication-link]", card); if (cardState.className.includes("published")) { publicationLink.href = "/propiedades/" + draft.slug + "/"; publicationLink.hidden = false; }
-            requiredElement<HTMLButtonElement>("[data-edit-draft]", card).addEventListener("click", () => {
-              editingId = draft.id;
-              listScreen.hidden = true;
-              editorScreen.hidden = false;
-              title.textContent = "Editar propiedad";
-              intro.textContent = "Revisá y actualizá la información básica.";
-              nameInput.value = draft.name || "";
-              priceInput.value = draft.price || "";
-              legacySubtitle = draft.subtitle || "";
-              loadPublication(draft, false);
-              loadCoverValues(draft, draft.id);
-              loadPropertyValues(draft);
-              loadFeaturedData(draft);
-              loadGalleryValues(draft);
-              loadFeatures(draft);
-              loadLocationValues(draft);
-              loadDistances(draft);
-              setStep(1);
-              window.scrollTo({ top: 0, behavior: "smooth" });
+          Object.values(publishedPropertyInventory)
+            .filter((property) => property.slug !== originalProperty.slug)
+            .forEach((property) => {
+              const localDraft = findDraftBySlug(drafts, property.slug);
+              renderPublishedOrDraftCard(localDraft || draftFromPublishedProperty(property), true);
             });
-            requiredElement<HTMLButtonElement>("[data-delete-draft]", card).addEventListener("click", () => openDeleteProperty(draft));
-            requiredElement("#property-cards").appendChild(card);
-          });
+          Object.values(drafts)
+            .filter((draft) => draft.slug !== originalProperty.slug && !publishedProperties.has(draft.slug))
+            .forEach((draft) => renderPublishedOrDraftCard(draft, false));
         };
 
         const closeDeleteProperty = () => {
