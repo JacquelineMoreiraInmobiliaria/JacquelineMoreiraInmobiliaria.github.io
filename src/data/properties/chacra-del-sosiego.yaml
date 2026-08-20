@@ -12,18 +12,23 @@ hero:
 summary:
   - label: "Superficie Total"
     value: "5 Ha"
+    icon: surface
     show: true
   - label: "Viviendas"
     value: "2"
+    icon: home
     show: true
   - label: "Dormitorios"
     value: "3"
+    icon: bed
     show: true
   - label: "Baños"
     value: "3"
+    icon: bath
     show: true
   - label: "Distancia a Minas"
     value: "3 km"
+    icon: land
     show: true
 
 media:
@@ -31,6 +36,7 @@ media:
   sections:
     property: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/4ffeb3eb-8059-4001-9f31-4fa8d4a9a9fb.jpg"
     features: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/ed40650d-08a6-4d82-86b8-859a132ff4d9.jpg"
+    distances: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/071a2e12-1177-4805-8ee0-48c343dfd13e.jpg"
     final: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/abf0ef10-bf63-48ba-8c6d-4c87795f43e5.jpg"
 
 property:
@@ -80,9 +86,12 @@ location:
   longitude: -55.21657180786133
 
 distances:
-  enabled: false
+  enabled: true
   items:
-    []
+    - destination: "Ruta 60"
+      distance: "800 m"
+    - destination: "Ciudad de Minas"
+      distance: "3 Km"
 
 contact:
   useDefault: true
