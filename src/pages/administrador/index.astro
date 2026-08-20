@@ -946,7 +946,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           photoEmpty.hidden = true;
           photoPreview.hidden = false;
           photoError.textContent = "";
-          photoDropzone.classList.add("has-file");
+          photoDropzone?.classList.add("has-file");
         };
 
         const clearPhoto = () => {
@@ -959,7 +959,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           photoName.textContent = "";
           photoPreview.hidden = true;
           photoEmpty.hidden = false;
-          photoDropzone.classList.remove("has-file");
+          photoDropzone?.classList.remove("has-file");
           scheduleSave();
         };
 
@@ -2210,7 +2210,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             } else if (!photoName.textContent) {
               setStep(2);
               photoError.textContent = "Seleccioná una foto principal para continuar.";
-              photoDropzone.focus();
+              photoDropzone?.focus();
             } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
               setStep(2);
               videoError.textContent = "Seleccioná un video MP4 o elegí No.";
@@ -2229,7 +2229,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             } else if (!photoName.textContent) {
               setStep(2);
               photoError.textContent = "Seleccioná una foto principal para continuar.";
-              photoDropzone.focus();
+              photoDropzone?.focus();
             } else if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
               setStep(2);
               videoError.textContent = "Seleccioná un video MP4 o elegí No.";
@@ -2273,36 +2273,38 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#select-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
         document.querySelector("#change-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
         document.querySelector("#remove-photo").addEventListener("click", (event) => { event.stopPropagation(); clearPhoto(); });
-        photoDropzone.addEventListener("click", () => { if (!photoDropzone.classList.contains("has-file")) choosePhoto(); });
-        photoDropzone.addEventListener("keydown", (event) => {
-          if ((event.key === "Enter" || event.key === " ") && !photoDropzone.classList.contains("has-file")) {
+        if (photoDropzone) {
+          photoDropzone.addEventListener("click", () => { if (!photoDropzone.classList.contains("has-file")) choosePhoto(); });
+          photoDropzone.addEventListener("keydown", (event) => {
+            if ((event.key === "Enter" || event.key === " ") && !photoDropzone.classList.contains("has-file")) {
+              event.preventDefault();
+              choosePhoto();
+            }
+          });
+          ["dragenter", "dragover"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
             event.preventDefault();
-            choosePhoto();
-          }
-        });
-        ["dragenter", "dragover"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
-          event.preventDefault();
-          photoDropzone.classList.add("dragging");
-        }));
-        ["dragleave", "drop"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
-          event.preventDefault();
-          photoDropzone.classList.remove("dragging");
-        }));
-        photoDropzone.addEventListener("drop", (event: DragEvent) => {
-          const files = event.dataTransfer?.files;
-          if (!files) return;
-          const file = [...files].find((item) => item.type.startsWith("image/"));
-          if (!file) {
-            photoError.textContent = "Seleccioná un archivo de imagen.";
-            return;
-          }
-          selectedPhoto = file;
-          photoRemoved = false;
-          if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
-          photoObjectUrl = URL.createObjectURL(file);
-          showPhoto(photoObjectUrl, file.name);
-          scheduleSave();
-        });
+            photoDropzone.classList.add("dragging");
+          }));
+          ["dragleave", "drop"].forEach((name) => photoDropzone.addEventListener(name, (event) => {
+            event.preventDefault();
+            photoDropzone.classList.remove("dragging");
+          }));
+          photoDropzone.addEventListener("drop", (event: DragEvent) => {
+            const files = event.dataTransfer?.files;
+            if (!files) return;
+            const file = [...files].find((item) => item.type.startsWith("image/"));
+            if (!file) {
+              photoError.textContent = "Seleccioná un archivo de imagen.";
+              return;
+            }
+            selectedPhoto = file;
+            photoRemoved = false;
+            if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+            photoObjectUrl = URL.createObjectURL(file);
+            showPhoto(photoObjectUrl, file.name);
+            scheduleSave();
+          });
+        }
         photoInput.addEventListener("change", () => {
           const file = photoInput.files[0];
           if (!file) return;
@@ -2381,7 +2383,6 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         [locationNameInput, locationAddressInput, latitudeInput, longitudeInput].forEach((input) => input.addEventListener("input", () => { renderLocation(); scheduleSave(); }));
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
         document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
-        galleryDropzone.addEventListener("click", () => galleryInput.click());
         document.querySelector("#upload-gallery-r2").addEventListener("click", async () => {
           const batchItems = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
           if (!batchItems.length) return showToast("No hay fotos pendientes para subir.");
@@ -2441,12 +2442,15 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         });
         [document.querySelector("#close-presentation-image-dialog"), document.querySelector("#cancel-presentation-image")].forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
-        ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
-        ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
-        galleryDropzone.addEventListener("drop", (event: DragEvent) => {
-          if (!event.dataTransfer) return;
-          addTemporaryGalleryFiles(event.dataTransfer.files);
-        });
+        if (galleryDropzone) {
+          galleryDropzone.addEventListener("click", () => galleryInput.click());
+          ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
+          ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
+          galleryDropzone.addEventListener("drop", (event: DragEvent) => {
+            if (!event.dataTransfer) return;
+            addTemporaryGalleryFiles(event.dataTransfer.files);
+          });
+        }
         renderDraftCards();
       })();
     </script>
