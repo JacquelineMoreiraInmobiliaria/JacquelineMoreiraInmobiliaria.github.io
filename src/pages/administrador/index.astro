@@ -294,7 +294,6 @@ const mediaInventory = Object.fromEntries(await Promise.all(
                 </div>
               </section>
             </section>
-            </div>
             <div class="form-actions">
               <button id="property-back" class="button button-quiet" type="button">Atrás</button>
               <button id="property-save-exit" class="button button-secondary" type="button">Guardar y salir</button>
@@ -1350,11 +1349,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         };
         const openPresentationImageSelector = (key) => {
           const items = availableGalleryImages(); if (!items.length) return showToast("Primero necesitás al menos una imagen disponible.");
-          selectingPresentationImage = key; pendingPresentationImageId = presentationImages[key] || items[0].id;
+          selectingPresentationImage = key; pendingPresentationImageId = presentationImages[key] && items.some((item) => item.id === presentationImages[key]) ? presentationImages[key] : null;
           presentationImageOptions.replaceChildren(...items.map((item, index) => {
-            const card = document.createElement("button"); card.type = "button"; card.className = "gallery-editor-card"; card.innerHTML = '<span class="gallery-thumb"></span><span class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span>' + (item.visible === false ? "No se muestra en la galería" : "Visible en la galería") + '</span></span>';
+            const card = document.createElement("button"); card.type = "button"; card.className = "gallery-editor-card presentation-image-option"; card.setAttribute("aria-pressed", String(item.id === pendingPresentationImageId)); card.innerHTML = '<span class="gallery-thumb"></span><span class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="selection-state">' + (item.id === pendingPresentationImageId ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen")) + '</span></span>';
             const img = document.createElement("img"); img.src = itemSource(item); img.alt = item.description || "Foto " + (index + 1); card.querySelector(".gallery-thumb").appendChild(img);
-            card.classList.toggle("selected", item.id === pendingPresentationImageId); card.addEventListener("click", () => { pendingPresentationImageId = item.id; [...presentationImageOptions.children].forEach((element) => element.classList.toggle("selected", element === card)); }); return card;
+            const mark = (selected) => { card.classList.toggle("selected", selected); card.setAttribute("aria-pressed", String(selected)); card.querySelector(".selection-state").textContent = selected ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen"); };
+            mark(item.id === pendingPresentationImageId); card.addEventListener("click", () => { pendingPresentationImageId = item.id; [...presentationImageOptions.children].forEach((element) => { const selected = element === card; element.classList.toggle("selected", selected); element.setAttribute("aria-pressed", String(selected)); const state = element.querySelector(".selection-state"); if (state) state.textContent = selected ? "✓ Seleccionada" : "Elegir esta imagen"; }); }); return card;
           })); presentationImageDialog.showModal();
         };
         const normalizePresentationImages = () => { Object.keys(presentationImages).forEach((key) => { if (presentationImages[key] && !availableGalleryImages().some((item) => item.id === presentationImages[key])) presentationImages[key] = null; }); };
@@ -2366,10 +2366,10 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { document.querySelector("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => document.querySelector("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; document.querySelector("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { document.querySelector("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
         document.querySelector("#confirm-presentation-image").addEventListener("click", () => {
-          if (!selectingPresentationImage || !pendingPresentationImageId) return;
+          if (!selectingPresentationImage || !pendingPresentationImageId) { showToast("Elegí una imagen primero."); return; }
           presentationImages[selectingPresentationImage] = pendingPresentationImageId;
           if (selectingPresentationImage === "cover") selectedFutureCoverId = pendingPresentationImageId;
-          presentationImageDialog.close(); renderGallery(); scheduleSave();
+          presentationImageDialog.close(); renderGallery(); saveDraft();
         });
         [document.querySelector("#close-presentation-image-dialog"), document.querySelector("#cancel-presentation-image")].forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
         galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
