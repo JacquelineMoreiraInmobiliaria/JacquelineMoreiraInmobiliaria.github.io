@@ -520,9 +520,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const preparationDialog = document.querySelector("#preparation-dialog");
         const preparationIntro = document.querySelector("#preparation-intro");
         const preparationFields = document.querySelector("#preparation-fields");
-        const preparationCoverInput = document.querySelector("#preparation-cover-input");
-        const preparationGalleryInput = document.querySelector("#preparation-gallery-input");
-        const preparationVideoInput = document.querySelector("#preparation-video-input");
+        const preparationCoverInput = document.querySelector<HTMLInputElement>("#preparation-cover-input");
+        const preparationGalleryInput = document.querySelector<HTMLInputElement>("#preparation-gallery-input");
+        const preparationVideoInput = document.querySelector<HTMLInputElement>("#preparation-video-input");
         const preparationCoverStatus = document.querySelector("#preparation-cover-status");
         const preparationGalleryStatus = document.querySelector("#preparation-gallery-status");
         const preparationVideoStatus = document.querySelector("#preparation-video-status");
@@ -545,7 +545,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const galleryDetectedList = document.querySelector("#gallery-detected-list");
         const galleryEmptyNote = document.querySelector("#gallery-empty-note");
         const originalGalleryNote = document.querySelector("#original-gallery-note");
-        const galleryInput = document.querySelector("#gallery-input");
+        const galleryInput = document.querySelector<HTMLInputElement>("#gallery-input");
         const galleryDropzone = document.querySelector<HTMLElement>("#gallery-dropzone");
         const galleryList = document.querySelector("#gallery-list");
         const galleryWarning = document.querySelector("#gallery-warning");
@@ -564,7 +564,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const propertyDescriptionInput = document.querySelector("#property-description");
         const nameError = document.querySelector("#name-error");
         const coverDescription = document.querySelector("#cover-description");
-        const photoInput = document.querySelector("#cover-photo-input");
+        const photoInput = document.querySelector<HTMLInputElement>("#cover-photo-input");
         const photoDropzone = document.querySelector<HTMLElement>("#photo-dropzone");
         const photoEmpty = document.querySelector("#photo-empty");
         const photoPreview = document.querySelector("#photo-preview");
@@ -572,7 +572,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const photoName = document.querySelector("#photo-name");
         const photoError = document.querySelector("#photo-error");
         const videoField = document.querySelector("#video-field");
-        const videoInput = document.querySelector("#cover-video-input");
+        const videoInput = document.querySelector<HTMLInputElement>("#cover-video-input");
         const videoEmpty = document.querySelector("#video-empty");
         const videoSelected = document.querySelector("#video-selected");
         const videoName = document.querySelector("#video-name");
@@ -954,7 +954,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           photoObjectUrl = null;
           selectedPhoto = null;
           photoRemoved = true;
-          photoInput.value = "";
+          photoInput?.value = "";
           photoPreviewImage.removeAttribute("src");
           photoName.textContent = "";
           photoPreview.hidden = true;
@@ -973,7 +973,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const clearVideo = () => {
           selectedVideo = null;
           videoRemoved = true;
-          videoInput.value = "";
+          videoInput?.value = "";
           videoName.textContent = "";
           videoSelected.hidden = true;
           videoEmpty.hidden = false;
@@ -1828,7 +1828,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           packageCoverFile = packageUsesExternalMedia ? null : (isJpegFile(selectedPhoto) ? selectedPhoto : null);
           packageVideoFile = packageUsesExternalMedia ? null : (isMp4File(selectedVideo) ? selectedVideo : null);
           packageGalleryFiles = [];
-          preparationCoverInput.value = ""; preparationGalleryInput.value = ""; preparationVideoInput.value = "";
+          if (preparationCoverInput) preparationCoverInput.value = "";
+          if (preparationGalleryInput) preparationGalleryInput.value = "";
+          if (preparationVideoInput) preparationVideoInput.value = "";
           preparationFields.hidden = false;
           preparationIntro.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "La multimedia ya está subida. Se preparará únicamente el archivo de datos con sus referencias.") : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
           applyFutureCover();
@@ -2158,12 +2160,35 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#prepare-presentation").addEventListener("click", () => { saveDraft(); openPreparation(); });
         document.querySelector("#close-preparation").addEventListener("click", closePreparation);
         document.querySelector("#preparation-cancel").addEventListener("click", closePreparation);
-        document.querySelector("#preparation-cover-select").addEventListener("click", () => preparationCoverInput.click());
-        document.querySelector("#preparation-gallery-select").addEventListener("click", () => preparationGalleryInput.click());
-        document.querySelector("#preparation-video-select").addEventListener("click", () => preparationVideoInput.click());
-        preparationCoverInput.addEventListener("change", () => { const file = preparationCoverInput.files[0]; if (!file) return; if (!isJpegFile(file)) { showToast("Usá una imagen JPG o JPEG."); preparationCoverInput.value = ""; return; } packageCoverFile = file; refreshPackageSummary(); });
-        preparationGalleryInput.addEventListener("change", () => { const files = [...preparationGalleryInput.files]; if (files.some((file) => !isJpegFile(file))) { showToast("Usá una imagen JPG o JPEG."); preparationGalleryInput.value = ""; return; } packageGalleryFiles = files; applyFutureCover(); renderPackageGallery(); refreshPackageSummary(); });
-        preparationVideoInput.addEventListener("change", () => { const file = preparationVideoInput.files[0]; if (!file) return; if (!isMp4File(file)) { showToast("El video seleccionado no es MP4."); preparationVideoInput.value = ""; return; } packageVideoFile = file; refreshPackageSummary(); });
+        const preparationCoverSelect = document.querySelector<HTMLButtonElement>("#preparation-cover-select");
+        const preparationGallerySelect = document.querySelector<HTMLButtonElement>("#preparation-gallery-select");
+        const preparationVideoSelect = document.querySelector<HTMLButtonElement>("#preparation-video-select");
+        if (preparationCoverInput) {
+          preparationCoverSelect?.addEventListener("click", () => preparationCoverInput.click());
+          preparationCoverInput.addEventListener("change", () => {
+            const file = preparationCoverInput.files?.[0];
+            if (!file) return;
+            if (!isJpegFile(file)) { showToast("Usá una imagen JPG o JPEG."); preparationCoverInput.value = ""; return; }
+            packageCoverFile = file; refreshPackageSummary();
+          });
+        }
+        if (preparationGalleryInput) {
+          preparationGallerySelect?.addEventListener("click", () => preparationGalleryInput.click());
+          preparationGalleryInput.addEventListener("change", () => {
+            const files = [...(preparationGalleryInput.files || [])];
+            if (files.some((file) => !isJpegFile(file))) { showToast("Usá una imagen JPG o JPEG."); preparationGalleryInput.value = ""; return; }
+            packageGalleryFiles = files; applyFutureCover(); renderPackageGallery(); refreshPackageSummary();
+          });
+        }
+        if (preparationVideoInput) {
+          preparationVideoSelect?.addEventListener("click", () => preparationVideoInput.click());
+          preparationVideoInput.addEventListener("change", () => {
+            const file = preparationVideoInput.files?.[0];
+            if (!file) return;
+            if (!isMp4File(file)) { showToast("El video seleccionado no es MP4."); preparationVideoInput.value = ""; return; }
+            packageVideoFile = file; refreshPackageSummary();
+          });
+        }
         downloadPackage.addEventListener("click", downloadPreparedPackage);
         continuePublication.addEventListener("click", openPublicationGuide);
         document.querySelector("#close-publication").addEventListener("click", closePublicationGuide);
@@ -2269,7 +2294,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
-        const choosePhoto = () => photoInput.click();
+        const choosePhoto = () => photoInput?.click();
         document.querySelector("#select-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
         document.querySelector("#change-photo").addEventListener("click", (event) => { event.stopPropagation(); choosePhoto(); });
         document.querySelector("#remove-photo").addEventListener("click", (event) => { event.stopPropagation(); clearPhoto(); });
@@ -2305,22 +2330,24 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             scheduleSave();
           });
         }
-        photoInput.addEventListener("change", () => {
-          const file = photoInput.files[0];
-          if (!file) return;
-          selectedPhoto = file;
-          photoRemoved = false;
-          if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
-          photoObjectUrl = URL.createObjectURL(file);
-          showPhoto(photoObjectUrl, file.name);
-          scheduleSave();
-        });
+        if (photoInput) {
+          photoInput.addEventListener("change", () => {
+            const file = photoInput.files?.[0];
+            if (!file) return;
+            selectedPhoto = file;
+            photoRemoved = false;
+            if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+            photoObjectUrl = URL.createObjectURL(file);
+            showPhoto(photoObjectUrl, file.name);
+            scheduleSave();
+          });
+        }
 
         document.querySelectorAll('input[name="videoEnabled"]').forEach((input) => input.addEventListener("change", () => {
           setVideoEnabled(input.value === "yes");
           scheduleSave();
         }));
-        const chooseVideo = () => videoInput.click();
+        const chooseVideo = () => videoInput?.click();
         document.querySelector("#select-video").addEventListener("click", chooseVideo);
         document.querySelector("#change-video").addEventListener("click", chooseVideo);
         document.querySelector("#remove-video").addEventListener("click", clearVideo);
@@ -2329,7 +2356,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (!file) return;
           if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) {
             videoError.textContent = "Seleccioná un video en formato MP4.";
-            videoInput.value = "";
+            videoInput?.value = "";
             return;
           }
           selectedVideo = file;
@@ -2382,7 +2409,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         document.querySelectorAll('input[name="locationEnabled"]').forEach((input) => input.addEventListener("change", () => { renderLocation(); scheduleSave(); }));
         [locationNameInput, locationAddressInput, latitudeInput, longitudeInput].forEach((input) => input.addEventListener("input", () => { renderLocation(); scheduleSave(); }));
         document.querySelectorAll('input[name="galleryEnabled"]').forEach((input) => input.addEventListener("change", () => { renderGallery(); scheduleSave(); }));
-        document.querySelector("#gallery-select").addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
+        const gallerySelect = document.querySelector<HTMLButtonElement>("#gallery-select");
         document.querySelector("#upload-gallery-r2").addEventListener("click", async () => {
           const batchItems = galleryItems.filter((item) => item.file && (item.status === "pending" || item.status === "error"));
           if (!batchItems.length) return showToast("No hay fotos pendientes para subir.");
@@ -2441,8 +2468,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           presentationImageDialog.close(); renderGallery(); saveDraft();
         });
         [document.querySelector("#close-presentation-image-dialog"), document.querySelector("#cancel-presentation-image")].forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
-        galleryInput.addEventListener("change", () => { addTemporaryGalleryFiles(galleryInput.files); galleryInput.value = ""; });
-        if (galleryDropzone) {
+        if (galleryInput) {
+          gallerySelect?.addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
+          galleryInput.addEventListener("change", () => {
+            if (galleryInput.files) addTemporaryGalleryFiles(galleryInput.files);
+            galleryInput.value = "";
+          });
+        }
+        if (galleryDropzone && galleryInput) {
           galleryDropzone.addEventListener("click", () => galleryInput.click());
           ["dragenter", "dragover"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.add("dragging"); }));
           ["dragleave", "drop"].forEach((name) => galleryDropzone.addEventListener(name, (event) => { event.preventDefault(); galleryDropzone.classList.remove("dragging"); }));
