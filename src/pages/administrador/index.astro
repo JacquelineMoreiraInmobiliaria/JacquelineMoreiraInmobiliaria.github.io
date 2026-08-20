@@ -2,6 +2,7 @@
 import type { Dirent } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { getCollection } from "astro:content";
 
 type MediaInventoryItem = {
   cover: boolean;
@@ -9,6 +10,11 @@ type MediaInventoryItem = {
   video: boolean;
 };
 type MediaInventory = Record<string, MediaInventoryItem>;
+type PublishedPropertyMedia = Record<string, {
+  cover: string;
+  gallery: Array<{ source: string; visible: boolean }>;
+  video: string;
+}>;
 type PresentationImageTarget = "cover" | "property" | "features" | "final";
 type PresentationImages = Record<PresentationImageTarget, string | null>;
 const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "final"];
@@ -21,6 +27,14 @@ const propertyFiles: string[] = await readdir(propertiesRoot).catch((): string[]
 const publishedSlugs: string[] = propertyFiles
   .filter((name) => /\.ya?ml$/i.test(name))
   .map((name) => name.replace(/\.ya?ml$/i, ""));
+const publishedPropertyMedia: PublishedPropertyMedia = Object.fromEntries((await getCollection("properties")).map((entry) => [
+  entry.data.slug,
+  {
+    cover: entry.data.hero.coverImage,
+    gallery: entry.data.gallery.images.map((image) => ({ source: image.source, visible: image.visible })),
+    video: entry.data.hero.video.source || ""
+  }
+]));
 const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
   mediaDirectories
     .filter((entry) => entry.isDirectory())
@@ -486,6 +500,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
     <script is:inline src="/config/r2-upload.js"></script>
     <script id="media-inventory" type="application/json" set:html={JSON.stringify(mediaInventory)}></script>
     <script id="published-properties" type="application/json" set:html={JSON.stringify(publishedSlugs)}></script>
+    <script id="published-property-media" type="application/json" set:html={JSON.stringify(publishedPropertyMedia)}></script>
 
     <script>
       import JSZip from "jszip";
@@ -521,6 +536,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         type PublicationState = { status: "unpublished" | "published"; publishedAt: string; publishedRevision: string };
         type SessionMedia = { photo: File | null; photoUrl: string | null; video: File | null };
         type MediaInventoryItem = { cover: boolean; gallery: string[]; video: boolean };
+        type PublishedMediaItem = { cover: string; gallery: Array<{ source: string; visible: boolean }>; video: string };
         type PropertyDraft = {
           id: string;
           slug: string;
@@ -557,11 +573,26 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           paragraphs: string[];
           featuredData: FeaturedDataItem[];
           updatedAt: string;
+          hero?: { coverImage?: string };
+          media?: { cover?: string };
+          remoteGallery?: GalleryItem[];
         };
         type PropertyRecord = Partial<PropertyDraft>;
         type StoredProperty = PropertyRecord & Pick<PropertyDraft, "id" | "slug" | "name">;
         type R2Config = { workerUrl?: string; maxImageBytes?: number; maxVideoBytes?: number };
         type SignedUpload = { uploadUrl: string; publicUrl: string; key: string };
+        type ResolvedPropertyMediaState = {
+          slug: string;
+          coverAvailable: boolean;
+          coverSource: string;
+          availableGalleryImages: GalleryItem[];
+          visibleGalleryImages: GalleryItem[];
+          videoAvailable: boolean;
+          videoRequired: boolean;
+          galleryRequired: boolean;
+          usesRemoteMedia: boolean;
+          usesLegacyMedia: boolean;
+        };
         type PackageGalleryFile = { file: File; itemId: string };
 
         const requiredElement = <T extends Element = HTMLElement>(selector: string, root: ParentNode = document): T => {
@@ -687,6 +718,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const toast = requiredElement("#toast");
         const detectedMedia = JSON.parse(requiredElement("#media-inventory").textContent || "{}") as Record<string, MediaInventoryItem>;
         const publishedProperties = new Set<string>(JSON.parse(requiredElement("#published-properties").textContent || "[]") as string[]);
+        const publishedMedia = JSON.parse(requiredElement("#published-property-media").textContent || "{}") as Record<string, PublishedMediaItem>;
         const r2Config = ((window as Window & { MOREIRA_R2_UPLOAD?: R2Config }).MOREIRA_R2_UPLOAD || {});
         const r2Configured = Boolean(r2Config.workerUrl);
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
@@ -719,6 +751,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let packageGalleryFiles: File[] = [];
         let packageVideoFile: File | null = null;
         let packageUsesExternalMedia = false;
+        let packageUsesExistingMedia = false;
         let draggedPackageGalleryFile: File | null = null;
         let legacySubtitle = "";
         let publication: PublicationState = { status: "unpublished", publishedAt: "", publishedRevision: "" };
@@ -874,10 +907,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const draftIsReady = (property: PropertyRecord | null | undefined) => {
           const slug = property?.slug || slugify(property?.name || "");
           const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
-          const cover = Boolean(property?.coverPhotoSource || property?.remoteCover?.url || media.cover);
-          const video = !property?.videoEnabled || Boolean(property?.videoSource || property?.remoteVideo?.url || media.video);
-          const galleryItemsSaved = (property?.galleryItems || []).filter((item) => item.status === "uploaded" || item.external || item.remoteUrl);
-          const gallery = property?.galleryEnabled === false || galleryItemsSaved.length > 0 || media.gallery.length > 0;
+          const resolved = resolvePropertyMediaState(property || null, media);
+          const cover = resolved.coverAvailable;
+          const video = resolved.videoAvailable;
+          const gallery = !resolved.galleryRequired || resolved.availableGalleryImages.length > 0;
           const location = property?.locationEnabled !== true || validSavedLocation(property);
           return Boolean(property?.name?.trim()) && cover && video && gallery && location;
         };
@@ -979,28 +1012,108 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           element.classList.toggle("status-warning", !complete);
         };
 
-        const hasRemoteMedia = (property: PropertyRecord | null = null) => {
-          const cover = property ? property.remoteCover : remoteCover;
-          const video = property ? property.remoteVideo : remoteVideo;
-          const items = property ? (property.galleryItems || []) : galleryItems;
-          return Boolean(cover?.url || video?.url || items.some((item) => item.remoteUrl || item.objectKey));
+        const mediaItemSource = (item: GalleryItem, slug: string, inventory: MediaInventoryItem, allowSessionBlob = false): string => {
+          if (item.remoteUrl) return item.remoteUrl;
+          if (item.source && (!item.source.startsWith("blob:") || allowSessionBlob)) return item.source;
+          if (item.external) return "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name;
+          if (inventory.gallery.some((name) => name.toLowerCase() === item.name.toLowerCase())) return "/media/" + slug + "/" + item.name;
+          return "";
         };
-        const isLegacyMediaMode = () => {
+        const resolvePropertyMediaState = (property: PropertyRecord | null, inventory: MediaInventoryItem): ResolvedPropertyMediaState => {
+          const activeEditor = property === null;
+          const savedProperty = activeEditor && editingId ? readDrafts()[editingId] || {} : property || {};
+          const slug = activeEditor ? (slugify(nameInput.value) || savedProperty.slug || "nueva-propiedad") : (property?.slug || slugify(property?.name || "") || "nueva-propiedad");
+          const published = publishedMedia[slug] || { cover: "", gallery: [], video: "" };
+          const original = (activeEditor ? editingId : property?.id) === originalProperty.id;
+          const publishedGallery: GalleryItem[] = published.gallery.map((image, index) => ({
+            id: "published-" + index,
+            name: image.source.split("/").pop() || "foto-" + (index + 1),
+            originalName: image.source.split("/").pop() || "foto-" + (index + 1),
+            status: "uploaded",
+            description: "",
+            visible: image.visible,
+            source: image.source,
+            position: index + 1
+          }));
+          const baseItems = activeEditor
+            ? [...galleryItems, ...publishedGallery]
+            : [...(property?.galleryItems || []), ...(property?.remoteGallery || []), ...publishedGallery];
+          const itemsByName = new Map(baseItems.map((item) => [String(item.name || item.originalName || "").toLowerCase(), item]));
+          const detectedItems: GalleryItem[] = inventory.gallery.map((name, index) => {
+            const saved = itemsByName.get(name.toLowerCase());
+            return {
+              id: saved?.id || "uploaded-" + name,
+              name,
+              originalName: name,
+              status: "uploaded",
+              description: saved?.description || "",
+              visible: saved?.visible !== false,
+              source: "/media/" + slug + "/" + name,
+              position: saved?.position || index + 1
+            };
+          });
+          const detectedNames = new Set(detectedItems.map((item) => item.name.toLowerCase()));
+          const candidates = [...baseItems.filter((item) => !detectedNames.has(item.name.toLowerCase())), ...detectedItems];
+          const seen = new Set<string>();
+          const availableGalleryImages = candidates.filter((item) => {
+            const identity = (item.remoteUrl || item.source || item.name || item.id).toLowerCase();
+            if (seen.has(identity) || !mediaItemSource(item, slug, inventory, activeEditor)) return false;
+            seen.add(identity);
+            return true;
+          });
+          const visibleGalleryImages = availableGalleryImages.filter((item) => item.visible !== false);
+          const activeRemoteCover = activeEditor ? remoteCover : property?.remoteCover;
+          const activeRemoteVideo = activeEditor ? remoteVideo : property?.remoteVideo;
+          const explicitCover = activeEditor && photoRemoved ? "" : (
+            activeRemoteCover?.url
+            || (activeEditor && selectedPhoto ? photoObjectUrl || "" : "")
+            || savedProperty.coverPhotoSource
+            || savedProperty.media?.cover
+            || savedProperty.hero?.coverImage
+            || published.cover
+            || ""
+          );
+          const stableExplicitCover = explicitCover.startsWith("blob:") && !activeEditor ? "" : explicitCover;
+          const chosenCoverId = activeEditor ? presentationImages.cover : property?.presentationImages?.cover;
+          const chosenCover = availableGalleryImages.find((item) => item.id === chosenCoverId);
+          const galleryFallback = chosenCover || visibleGalleryImages[0] || availableGalleryImages[0];
+          const coverSource = stableExplicitCover
+            || (inventory.cover ? "/media/" + slug + "/portada.jpg" : "")
+            || (original ? originalProperty.coverPhotoSource || "" : "")
+            || (galleryFallback ? mediaItemSource(galleryFallback, slug, inventory, activeEditor) : "");
+          const videoRequired = activeEditor ? optionalInputValue('input[name="videoEnabled"]:checked') === "yes" : property?.videoEnabled === true;
+          const videoSource = activeEditor && videoRemoved ? "" : activeRemoteVideo?.url || savedProperty.videoSource || published.video || "";
+          const videoAvailable = !videoRequired || Boolean(videoSource || inventory.video || original);
+          const galleryRequired = activeEditor ? currentGalleryEnabled() : property?.galleryEnabled !== false;
+          const usesRemoteMedia = Boolean(activeRemoteCover?.url || activeRemoteVideo?.url || /^https?:\/\//.test(published.cover) || /^https?:\/\//.test(published.video) || availableGalleryImages.some((item) => item.remoteUrl || item.objectKey || /^https?:\/\//.test(item.source || "")));
+          const usesLegacyMedia = original || inventory.cover || inventory.video || inventory.gallery.length > 0 || published.cover.startsWith("/media/") || published.video.startsWith("/media/") || published.gallery.some((item) => item.source.startsWith("/media/"));
+          return {
+            slug,
+            coverAvailable: Boolean(coverSource),
+            coverSource,
+            availableGalleryImages,
+            visibleGalleryImages,
+            videoAvailable,
+            videoRequired,
+            galleryRequired,
+            usesRemoteMedia,
+            usesLegacyMedia
+          };
+        };
+        const currentResolvedMediaState = () => {
           const slug = slugify(nameInput.value) || "nueva-propiedad";
-          const detected = detectedMedia[slug] || { cover: false, gallery: [], video: false };
-          return editingId === originalProperty.id || (!hasRemoteMedia() && (slug === "santa-clara" || detected.cover || detected.video || detected.gallery.length));
+          return resolvePropertyMediaState(null, detectedMedia[slug] || { cover: false, gallery: [], video: false });
+        };
+        const hasRemoteMedia = (property: PropertyRecord | null = null) => {
+          const slug = property?.slug || (property ? slugify(property.name || "") : slugify(nameInput.value)) || "nueva-propiedad";
+          return resolvePropertyMediaState(property, detectedMedia[slug] || { cover: false, gallery: [], video: false }).usesRemoteMedia;
         };
         const updateMediaStatus = () => {
-          const slug = slugify(nameInput.value) || "nueva-propiedad";
-          const detected = detectedMedia[slug] || { cover: false, gallery: [], video: false };
-          const legacyMode = isLegacyMediaMode();
+          const state = currentResolvedMediaState();
+          const slug = state.slug;
+          const legacyMode = state.usesLegacyMedia && !state.usesRemoteMedia;
           const usesExternalOriginal = editingId === originalProperty.id;
-          const remoteGalleryCount = galleryItems.filter((item) => item.remoteUrl || item.objectKey).length;
-          const hasCover = legacyMode ? (detected.cover || usesExternalOriginal) : Boolean(remoteCover?.url);
-          const galleryCount = legacyMode ? Math.max(detected.gallery.length, usesExternalOriginal ? 8 : 0) : remoteGalleryCount;
-          const hasVideo = legacyMode ? (detected.video || usesExternalOriginal) : Boolean(remoteVideo?.url);
-          const videoRequired = optionalInputValue('input[name="videoEnabled"]:checked') === "yes";
-          const galleryRequired = currentGalleryEnabled();
+          const galleryCount = state.availableGalleryImages.length;
           const missing = [];
 
           legacyMediaFolder.hidden = !legacyMode;
@@ -1012,17 +1125,17 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             ? "Las selecciones locales se conservan solo durante esta sesión hasta que los archivos estén disponibles."
             : "Las fotos seleccionadas todavía no están subidas.";
           expectedFolder.textContent = `public/media/${slug}/`;
-          setStatus(statusPhoto, hasCover ? "✓ Subida" : "⚠ No subida", hasCover);
+          setStatus(statusPhoto, state.coverAvailable ? "✓ Subida" : "⚠ No subida", state.coverAvailable);
           statusGallery.textContent = `${galleryCount} ${galleryCount === 1 ? "foto subida" : "fotos subidas"}`;
           statusGallery.classList.toggle("status-success", galleryCount > 0);
           statusGallery.classList.toggle("status-neutral", galleryCount === 0);
 
-          if (!videoRequired) setStatus(statusVideo, "No requerido", true);
-          else setStatus(statusVideo, hasVideo ? "✓ Subido" : "⚠ No subido", hasVideo);
+          if (!state.videoRequired) setStatus(statusVideo, "No requerido", true);
+          else setStatus(statusVideo, state.videoAvailable ? "✓ Subido" : "⚠ No subido", state.videoAvailable);
 
-          if (!hasCover) missing.push(legacyMode ? "portada.jpg" : "foto principal");
-          if (videoRequired && !hasVideo) missing.push(legacyMode ? "video.mp4" : "video");
-          if (galleryRequired && galleryCount === 0) missing.push("al menos una foto de galería");
+          if (!state.coverAvailable) missing.push(legacyMode ? "portada.jpg" : "foto principal");
+          if (state.videoRequired && !state.videoAvailable) missing.push(legacyMode ? "video.mp4" : "video");
+          if (state.galleryRequired && galleryCount === 0) missing.push("al menos una foto de galería");
 
           const complete = missing.length === 0;
           setStatus(statusGeneral, complete ? "✓ Completo" : "⚠ Faltan archivos", complete);
@@ -1475,8 +1588,12 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const uploadR2File = async (kind: UploadKind, file: File, id: string, progress: (value: number) => void) => { activeUploads++; try { const signed = await signedUpload(kind, file, id); await putFile(signed.uploadUrl, file, progress); return signed; } finally { activeUploads--; } };
         window.addEventListener("beforeunload", (event) => { if (activeUploads) { event.preventDefault(); event.returnValue = ""; } });
 
-        const itemSource = (item: GalleryItem | null | undefined) => item?.remoteUrl || item?.source || (item?.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item?.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : "");
-        const availableGalleryImages = () => galleryItems.filter((item) => Boolean(itemSource(item)));
+        const itemSource = (item: GalleryItem | null | undefined) => {
+          if (!item) return "";
+          const slug = slugForGallery();
+          return mediaItemSource(item, slug, detectedMedia[slug] || { cover: false, gallery: [], video: false }, true);
+        };
+        const availableGalleryImages = () => currentResolvedMediaState().availableGalleryImages;
         const selectedPresentationItem = (key: PresentationImageTarget) => availableGalleryImages().find((item) => item.id === presentationImages[key]) || null;
         const fallbackPresentationItem = (key: PresentationImageTarget) => {
           const images = availableGalleryImages(); const cover = selectedPresentationItem("cover");
@@ -1519,26 +1636,28 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
         const renderGallery = () => {
           const slug = slugForGallery();
-          const detected = detectedMedia[slug]?.gallery || [];
+          const mediaState = currentResolvedMediaState();
+          const detected = mediaState.availableGalleryImages;
           galleryFolder.textContent = "public/media/" + slug + "/";
           galleryDetectedCount.textContent = String(detected.length);
-          galleryDetectedList.replaceChildren(...detected.map((name) => { const item = document.createElement("span"); item.textContent = name; return item; }));
+          galleryDetectedList.replaceChildren(...detected.map((image) => { const item = document.createElement("span"); item.textContent = image.name; return item; }));
           galleryEmptyNote.hidden = detected.length > 0 || editingId === originalProperty.id;
           originalGalleryNote.hidden = editingId !== originalProperty.id;
           galleryControls.hidden = !currentGalleryEnabled();
           galleryHiddenNote.hidden = currentGalleryEnabled();
-          const hasRealGallery = detected.length > 0 || editingId === originalProperty.id;
+          const hasRealGallery = mediaState.availableGalleryImages.length > 0;
           galleryWarning.hidden = !(currentGalleryEnabled() && !hasRealGallery);
-          const visibleCount = galleryItems.filter((item) => item.visible !== false).length;
+          const visibleCount = mediaState.visibleGalleryImages.length;
           galleryRecommendation.textContent = visibleCount > 15 ? "Tenés " + visibleCount + " fotos seleccionadas. Podés publicar así, aunque recomendamos elegir las 10–15 más representativas." : visibleCount ? visibleCount + " fotos visibles en la galería." : "";
-          galleryCoverStatus.textContent = (detectedMedia[slug]?.cover || editingId === originalProperty.id) ? "✓ Subida" : "⚠ Falta";
+          galleryCoverStatus.textContent = mediaState.coverAvailable ? "✓ Subida" : "⚠ Falta";
           galleryList.replaceChildren(...galleryItems.map((item, index) => {
             const card = document.createElement("article");
             card.className = "gallery-editor-card";
             card.draggable = true;
             card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>Foto ' + (index + 1) + '</strong><span class="gallery-internal"></span><span class="gallery-status"></span><label class="gallery-visible"><input type="checkbox" /> Mostrar en galería</label><label>Descripción de la imagen <input type="text" placeholder="Ejemplo: Piscina con vista al mar" /></label><p class="example">Sirve para describir la foto si la imagen no puede mostrarse y mejora la accesibilidad.</p></div><div class="gallery-actions"><button type="button" data-cover>Usar como futura portada</button><button type="button" data-up>↑ Subir</button><button type="button" data-down>↓ Bajar</button><button type="button" data-remove>Eliminar</button></div>';
             const thumb = requiredElement(".gallery-thumb", card);
-            if (item.source || item.remoteUrl) { const image = document.createElement("img"); image.src = item.remoteUrl || item.source || ""; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
+            const source = itemSource(item);
+            if (source) { const image = document.createElement("img"); image.src = source; image.alt = item.description || item.name; thumb.appendChild(image); } else thumb.textContent = "⚠";
             requiredElement(".gallery-internal", card).textContent = (index + 1) + " → " + galleryFileName(index);
             const status = requiredElement(".gallery-status", card);
             status.textContent = item.status === "uploading" ? "Subiendo… " + (item.progress || 0) + "%" : item.status === "error" ? "⚠ Error — Reintentar" : item.status === "uploaded" || item.external ? "✓ Subida" : item.status === "missing" ? "⚠ Falta volver a seleccionar" : "Pendiente";
@@ -1751,22 +1870,16 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const reviewStatus = (ok: boolean, positive = "✓ Completa", pending = "⚠ Requiere atención") => '<span class="review-status ' + (ok ? "is-ok" : "is-pending") + '">' + (ok ? positive : pending) + '</span>';
         const reviewOptional = (text: string) => '<span class="review-status is-neutral">○ ' + text + '</span>';
         const getReviewState = () => {
-          const slug = slugify(nameInput.value) || "nueva-propiedad";
-          const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
-          const externalOriginal = editingId === originalProperty.id;
-          const videoEnabled = optionalInputValue('input[name="videoEnabled"]:checked') === "yes";
-          const galleryEnabled = currentGalleryEnabled();
+          const mediaState = currentResolvedMediaState();
+          const slug = mediaState.slug;
+          const videoEnabled = mediaState.videoRequired;
+          const galleryEnabled = mediaState.galleryRequired;
           const locationEnabled = optionalInputValue('input[name="locationEnabled"]:checked') === "yes";
           const distancesEnabled = optionalInputValue('input[name="distancesEnabled"]:checked') === "yes";
-          const coverAvailable = (externalOriginal && !photoRemoved) || media.cover || Boolean(remoteCover?.url);
-          const videoAvailable = (externalOriginal && !videoRemoved) || media.video || Boolean(remoteVideo?.url);
-          const availableGalleryItems = galleryItems.filter((item) => item.status === "uploaded" || item.external);
-          // Revisión usa la misma fuente real del build que el Paso 5. Así nunca
-          // informa cero cuando foto-01.jpg ... foto-XX.jpg ya están publicados.
-          const galleryUploaded = externalOriginal ? availableGalleryItems.length : Math.max(media.gallery.length, availableGalleryItems.length);
-          const galleryAvailable = externalOriginal
-            ? availableGalleryItems.some((item) => item.external || String(item.name || item.originalName || "").toLowerCase() === "foto-01.jpg")
-            : (availableGalleryItems.length > 0 || media.gallery.some((name) => name.toLowerCase() === "foto-01.jpg"));
+          const coverAvailable = mediaState.coverAvailable;
+          const videoAvailable = mediaState.videoAvailable;
+          const galleryUploaded = mediaState.availableGalleryImages.length;
+          const galleryAvailable = galleryUploaded > 0;
           const featureCount = featureItems.filter((item) => item.label.trim()).length;
           const featured = [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
             label: requiredElement<HTMLInputElement>("[data-field='label']", card).value.trim(),
@@ -1784,7 +1897,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (galleryEnabled && !galleryAvailable) pending.push({ text: "La galería está activada pero todavía no tiene fotos", step: 5 });
           if (locationEnabled && !coordinates) pending.push({ text: "La ubicación no tiene coordenadas válidas", step: 7 });
           if (distancesEnabled && !validDistances) pending.push({ text: "No hay distancias completas", step: 8, optional: true });
-          return { slug, videoEnabled, galleryEnabled, locationEnabled, distancesEnabled, coverAvailable, videoAvailable, galleryUploaded, galleryAvailable, featureCount, featuredCount: featured.length, visibleData, validParagraphs, validDistances, coordinates, pending };
+          return { slug, videoEnabled, galleryEnabled, locationEnabled, distancesEnabled, coverAvailable, videoAvailable, galleryUploaded, galleryAvailable, visibleGalleryCount: mediaState.visibleGalleryImages.length, featureCount, featuredCount: featured.length, visibleData, validParagraphs, validDistances, coordinates, pending };
         };
         const renderReview = () => {
           const state = getReviewState();
@@ -1796,7 +1909,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             { step: 2, title: "Portada", status: state.coverAvailable && (!state.videoEnabled || state.videoAvailable) ? reviewStatus(true) : reviewStatus(false), body: '<p><strong>Descripción corta:</strong> ' + (escapeReview(coverDescription.value.trim()) || "No indicada") + '</p><p><strong>Foto principal:</strong> ' + (state.coverAvailable ? "✓ Subida" : "⚠ Falta portada.jpg") + '</p><p><strong>Video:</strong> ' + (!state.videoEnabled ? "No requerido" : state.videoAvailable ? "✓ Subido" : "⚠ Falta video.mp4") + '</p>' },
             { step: 3, title: "La propiedad", status: propertyDescriptionInput.value.trim() ? reviewStatus(true) : reviewOptional("Sin contenido"), body: '<p><strong>Descripción original:</strong> ' + (propertyDescriptionInput.value.trim() ? "✓ Cargada" : "No cargada") + '</p><p><strong>Descripción organizada:</strong> ' + (organizedHeadline || organizedParagraphs.length ? "✓ Disponible" : "No organizada") + '</p><p><strong>Título destacado:</strong> ' + (escapeReview(organizedHeadline) || "No definido") + '</p><p><strong>Párrafos:</strong> ' + (organizedParagraphs.filter((item) => item.text.trim()).length || state.validParagraphs) + '</p>' },
             { step: 4, title: "Datos destacados", status: state.visibleData ? reviewStatus(true) : reviewOptional("Sin datos destacados"), body: state.visibleData ? '<p>' + state.featuredCount + ' datos configurados</p><p>' + state.visibleData + ' visibles</p>' : '<p>Sin datos destacados</p>' },
-            { step: 5, title: "Galería", status: !state.galleryEnabled ? reviewOptional("Desactivada") : state.galleryAvailable ? reviewStatus(true) : reviewStatus(false), body: !state.galleryEnabled ? '<p>Galería: Desactivada</p>' : '<p><strong>Galería:</strong> ' + galleryItems.filter((item) => item.visible !== false).length + ' fotos visibles de ' + availableGalleryImages().length + ' disponibles</p><p><strong>Imágenes de presentación:</strong><br>Portada: ' + (selectedPresentationItem("cover") ? "✓" : "Se usará una imagen automática") + '<br>La propiedad: ' + (selectedPresentationItem("property") ? "✓" : "Se usará una imagen automática") + '<br>Características: ' + (selectedPresentationItem("features") ? "✓" : "Se usará una imagen automática") + '<br>Imagen final: ' + (selectedPresentationItem("final") ? "✓" : "Se usará una imagen automática") + '</p><p>' + (state.galleryAvailable ? "✓ Hay imágenes disponibles" : "⚠ Falta al menos una foto de galería") + '</p>' },
+            { step: 5, title: "Galería", status: !state.galleryEnabled ? reviewOptional("Desactivada") : state.galleryAvailable ? reviewStatus(true) : reviewStatus(false), body: !state.galleryEnabled ? '<p>Galería: Desactivada</p>' : '<p><strong>Galería:</strong> ' + state.visibleGalleryCount + ' fotos visibles de ' + state.galleryUploaded + ' disponibles</p><p><strong>Imágenes de presentación:</strong><br>Portada: ' + (selectedPresentationItem("cover") ? "✓" : "Se usará una imagen automática") + '<br>La propiedad: ' + (selectedPresentationItem("property") ? "✓" : "Se usará una imagen automática") + '<br>Características: ' + (selectedPresentationItem("features") ? "✓" : "Se usará una imagen automática") + '<br>Imagen final: ' + (selectedPresentationItem("final") ? "✓" : "Se usará una imagen automática") + '</p><p>' + (state.galleryAvailable ? "✓ Hay imágenes disponibles" : "⚠ Falta al menos una foto de galería") + '</p>' },
             { step: 6, title: "Características", status: state.featureCount ? reviewStatus(true) : reviewOptional("Sin características cargadas"), body: state.featureCount ? '<p>' + state.featureCount + ' características</p>' : '<p>Sin características cargadas</p>' },
             { step: 7, title: "Ubicación", status: !state.locationEnabled ? reviewOptional("Desactivada") : state.coordinates ? reviewStatus(true) : reviewStatus(false, "✓ Coordenadas válidas", "⚠ Faltan coordenadas válidas"), body: !state.locationEnabled ? '<p>Ubicación: Desactivada</p>' : '<p><strong>Nombre:</strong> ' + (escapeReview(locationNameInput.value.trim()) || "No indicado") + '</p><p><strong>Dirección:</strong> ' + (escapeReview(locationAddressInput.value.trim()) || "No indicada") + '</p><p><strong>Mapa:</strong> ' + (state.coordinates ? "✓ Coordenadas válidas" : "⚠ Faltan coordenadas válidas") + '</p>' },
             { step: 8, title: "Distancias", status: !state.distancesEnabled ? reviewOptional("Desactivadas") : state.validDistances ? reviewStatus(true) : reviewStatus(false, "✓ Configuradas", "⚠ No hay distancias completas"), body: !state.distancesEnabled ? '<p>Distancias: Desactivadas</p>' : '<p><strong>Distancias válidas:</strong> ' + state.validDistances + '</p>' }
@@ -1895,19 +2008,20 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
         const refreshPackageSummary = () => {
           const values = currentValues();
+          const mediaState = currentResolvedMediaState();
           const galleryRequired = values.galleryEnabled;
           const videoRequired = values.videoEnabled;
-          const coverReady = packageUsesExternalMedia || isJpegFile(packageCoverFile);
-          const galleryReady = !galleryRequired || packageUsesExternalMedia || packageGalleryFiles.length > 0;
-          const videoReady = !videoRequired || packageUsesExternalMedia || isMp4File(packageVideoFile);
-          preparationCoverStatus.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza la foto de la presentación original." : "✓ Foto principal ya subida.") : coverReady ? "✓ " + (packageCoverFile?.name || "") + " → portada.jpg" : "Falta seleccionar la foto principal.";
-          preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza fotos de la presentación original." : "✓ Fotos de galería ya subidas.") : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
-          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza el video de la presentación original." : "✓ Video ya subido.") : videoReady ? "✓ " + (packageVideoFile?.name || "") + " → video.mp4" : "Falta seleccionar el video.";
-          preparationGallerySection.hidden = !galleryRequired || packageUsesExternalMedia;
-          preparationVideoSection.hidden = !videoRequired || packageUsesExternalMedia;
+          const coverReady = packageUsesExistingMedia ? mediaState.coverAvailable : isJpegFile(packageCoverFile);
+          const galleryReady = !galleryRequired || (packageUsesExistingMedia ? mediaState.availableGalleryImages.length > 0 : packageGalleryFiles.length > 0);
+          const videoReady = !videoRequired || (packageUsesExistingMedia ? mediaState.videoAvailable : isMp4File(packageVideoFile));
+          preparationCoverStatus.textContent = packageUsesExistingMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza la foto de la presentación original." : "✓ Foto principal ya disponible.") : coverReady ? "✓ " + (packageCoverFile?.name || "") + " → portada.jpg" : "Falta seleccionar la foto principal.";
+          preparationGalleryStatus.textContent = !galleryRequired ? "Galería desactivada." : packageUsesExistingMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza fotos de la presentación original." : "✓ " + mediaState.availableGalleryImages.length + " fotos ya disponibles.") : galleryReady ? "✓ " + packageGalleryFiles.length + " fotos seleccionadas." : "Falta seleccionar al menos una foto.";
+          preparationVideoStatus.textContent = !videoRequired ? "Video no requerido." : packageUsesExistingMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza el video de la presentación original." : "✓ Video ya disponible.") : videoReady ? "✓ " + (packageVideoFile?.name || "") + " → video.mp4" : "Falta seleccionar el video.";
+          preparationGallerySection.hidden = !galleryRequired || packageUsesExistingMedia;
+          preparationVideoSection.hidden = !videoRequired || packageUsesExistingMedia;
           const ready = coverReady && galleryReady && videoReady;
           downloadPackage.disabled = !ready;
-          preparationSummary.innerHTML = '<h3>' + (ready ? "Listo para preparar" : "Faltan archivos por confirmar") + '</h3><p><strong>Propiedad:</strong> ' + escapeReview(values.name) + '</p><p><strong>Foto principal:</strong> ' + (coverReady ? "✓ portada.jpg" : "⚠ Pendiente") + '</p><p><strong>Galería:</strong> ' + (!galleryRequired ? "No incluida" : galleryReady ? "✓ " + (packageUsesExternalMedia ? galleryItems.length : packageGalleryFiles.length) + " fotos" : "⚠ Pendiente") + '</p><p><strong>Video:</strong> ' + (!videoRequired ? "No incluido" : videoReady ? "✓ video.mp4" : "⚠ Pendiente") + '</p><p><strong>Datos:</strong> ✓ propiedad.yaml</p>';
+          preparationSummary.innerHTML = '<h3>' + (ready ? "Listo para preparar" : "Faltan archivos por confirmar") + '</h3><p><strong>Propiedad:</strong> ' + escapeReview(values.name) + '</p><p><strong>Foto principal:</strong> ' + (coverReady ? "✓ Disponible" : "⚠ Pendiente") + '</p><p><strong>Galería:</strong> ' + (!galleryRequired ? "No incluida" : galleryReady ? "✓ " + (packageUsesExistingMedia ? mediaState.availableGalleryImages.length : packageGalleryFiles.length) + " fotos" : "⚠ Pendiente") + '</p><p><strong>Video:</strong> ' + (!videoRequired ? "No incluido" : videoReady ? "✓ Disponible" : "⚠ Pendiente") + '</p><p><strong>Datos:</strong> ✓ propiedad.yaml</p>';
         };
         const renderPackageGallery = () => {
           preparationGalleryList.replaceChildren();
@@ -1937,15 +2051,17 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const openPreparation = () => {
           const requiredPending = getReviewState().pending.filter((item) => !item.optional);
           if (requiredPending.length) { showToast("Todavía hay elementos pendientes antes de preparar la presentación."); renderReview(); return; }
-          packageUsesExternalMedia = editingId === originalProperty.id || Boolean(remoteCover?.url || remoteVideo?.url || galleryItems.some((item) => item.remoteUrl));
-          packageCoverFile = packageUsesExternalMedia ? null : (isJpegFile(selectedPhoto) ? selectedPhoto : null);
-          packageVideoFile = packageUsesExternalMedia ? null : (isMp4File(selectedVideo) ? selectedVideo : null);
+          const mediaState = currentResolvedMediaState();
+          packageUsesExternalMedia = editingId === originalProperty.id || mediaState.usesRemoteMedia;
+          packageUsesExistingMedia = packageUsesExternalMedia || mediaState.usesLegacyMedia;
+          packageCoverFile = packageUsesExistingMedia ? null : (isJpegFile(selectedPhoto) ? selectedPhoto : null);
+          packageVideoFile = packageUsesExistingMedia ? null : (isMp4File(selectedVideo) ? selectedVideo : null);
           packageGalleryFiles = [];
           if (preparationCoverInput) preparationCoverInput.value = "";
           if (preparationGalleryInput) preparationGalleryInput.value = "";
           if (preparationVideoInput) preparationVideoInput.value = "";
           preparationFields.hidden = false;
-          preparationIntro.textContent = packageUsesExternalMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "La multimedia ya está subida. Se preparará únicamente el archivo de datos con sus referencias.") : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
+          preparationIntro.textContent = packageUsesExistingMedia ? (editingId === originalProperty.id ? "Esta propiedad utiliza multimedia de la presentación original. Se preparará únicamente el archivo de datos con esas referencias." : "La multimedia ya está disponible. Se preparará únicamente el archivo de datos con sus referencias.") : "Confirmá los archivos para crear un paquete que podrás descargar en tu computadora.";
           applyFutureCover();
           renderPackageGallery(); refreshPackageSummary();
           if (preparationDialog) preparationDialog.showModal();
@@ -1953,13 +2069,13 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const closePreparation = () => { if (preparationDialog?.open) preparationDialog.close(); };
         const downloadPreparedPackage = async () => {
           const values = currentValues();
-          if (!packageUsesExternalMedia && (!isJpegFile(packageCoverFile) || (values.galleryEnabled && !packageGalleryFiles.length) || (values.videoEnabled && !isMp4File(packageVideoFile)))) { showToast("Falta seleccionar algún archivo necesario."); refreshPackageSummary(); return; }
+          if (!packageUsesExistingMedia && (!isJpegFile(packageCoverFile) || (values.galleryEnabled && !packageGalleryFiles.length) || (values.videoEnabled && !isMp4File(packageVideoFile)))) { showToast("Falta seleccionar algún archivo necesario."); refreshPackageSummary(); return; }
           downloadPackage.disabled = true; preparationProgress.hidden = false; preparationProgress.textContent = "Preparando archivos…";
           try {
             const zip = new JSZip();
             const root = values.slug + "/";
             zip.file(root + values.slug + ".yaml", buildPropertyYaml());
-            if (!packageUsesExternalMedia && packageCoverFile) {
+            if (!packageUsesExistingMedia && packageCoverFile) {
               zip.file(root + "media/portada.jpg", packageCoverFile);
               packageGalleryFiles.forEach((file, index) => zip.file(root + "media/foto-" + String(index + 1).padStart(2, "0") + ".jpg", file));
               if (values.videoEnabled && packageVideoFile) zip.file(root + "media/video.mp4", packageVideoFile);
@@ -2132,7 +2248,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             card.className = "property-card draft-card";
             card.dataset.draftCard = draft.id;
             card.innerHTML = `
-              <div class="draft-thumb" aria-hidden="true">Sin portada</div>
+              <div class="draft-thumb" aria-hidden="true"></div>
               <div class="property-content">
                 <div>
                   <h2></h2>
@@ -2147,6 +2263,16 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
                 </div>
               </div>`;
             requiredElement("h2", card).textContent = draft.name;
+            const draftMedia = resolvePropertyMediaState(draft, detectedMedia[draft.slug] || { cover: false, gallery: [], video: false });
+            const draftThumb = requiredElement<HTMLElement>(".draft-thumb", card);
+            if (draftMedia.coverSource) {
+              const image = document.createElement("img");
+              image.src = draftMedia.coverSource;
+              image.alt = "";
+              draftThumb.appendChild(image);
+            } else {
+              draftThumb.textContent = "Sin portada";
+            }
             requiredElement(".draft-subtitle", card).textContent = draft.subtitle || "Subtítulo sin completar";
             requiredElement(".property-price", card).textContent = draft.price || "Precio sin completar";
             const cardState = publicationCardState(draft); const badge = requiredElement<HTMLElement>(".publication-badge", card); badge.textContent = cardState.label; badge.className = "publication-badge " + cardState.className;
