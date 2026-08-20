@@ -9,6 +9,9 @@ type MediaInventoryItem = {
   video: boolean;
 };
 type MediaInventory = Record<string, MediaInventoryItem>;
+type PresentationImageTarget = "cover" | "property" | "features" | "final";
+type PresentationImages = Record<PresentationImageTarget, string | null>;
+const presentationImageTargets: PresentationImageTarget[] = ["cover", "property", "features", "final"];
 
 const propertyPreviewUrl = "/propiedades/atardecer-y-vides/";
 const mediaRoot = join(process.cwd(), "public", "media");
@@ -517,7 +520,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const reviewGeneral = document.querySelector("#review-general");
         const reviewCards = document.querySelector("#review-cards");
         const reviewPending = document.querySelector("#review-pending");
-        const preparationDialog = document.querySelector("#preparation-dialog");
+        const preparationDialog = document.querySelector<HTMLDialogElement>("#preparation-dialog");
         const preparationIntro = document.querySelector("#preparation-intro");
         const preparationFields = document.querySelector("#preparation-fields");
         const preparationCoverInput = document.querySelector<HTMLInputElement>("#preparation-cover-input");
@@ -533,8 +536,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const preparationProgress = document.querySelector("#preparation-progress");
         const downloadPackage = document.querySelector("#download-package");
         const continuePublication = document.querySelector("#continue-publication");
-        const publicationDialog = document.querySelector("#publication-dialog");
-        const publicationConfirmDialog = document.querySelector("#publication-confirm-dialog");
+        const publicationDialog = document.querySelector<HTMLDialogElement>("#publication-dialog");
+        const publicationConfirmDialog = document.querySelector<HTMLDialogElement>("#publication-confirm-dialog");
         const publicationPropertyName = document.querySelector("#publication-property-name");
         const publicationGuide = document.querySelector("#publication-guide");
         const publicationChecklist = document.querySelector("#publication-checklist");
@@ -553,7 +556,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const galleryCoverStatus = document.querySelector("#gallery-cover-status");
         const galleryRecommendation = document.querySelector("#gallery-recommendation");
         const presentationImageCards = document.querySelector("#presentation-image-cards");
-        const presentationImageDialog = document.querySelector("#presentation-image-dialog");
+        const presentationImageDialog = document.querySelector<HTMLDialogElement>("#presentation-image-dialog");
         const presentationImageOptions = document.querySelector("#presentation-image-options");
         const title = document.querySelector("#editor-title");
         const intro = document.querySelector("#editor-intro");
@@ -582,7 +585,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const legacyGalleryMedia = document.querySelector("#legacy-gallery-media");
         const galleryFormIntro = document.querySelector("#gallery-form-intro");
         const gallerySelectionHelp = document.querySelector("#gallery-selection-help");
-        const deletePropertyDialog = document.querySelector("#delete-property-dialog");
+        const deletePropertyDialog = document.querySelector<HTMLDialogElement>("#delete-property-dialog");
         const deletePropertyMessage = document.querySelector("#delete-property-message");
         const deletePropertyName = document.querySelector("#delete-property-name");
         const deletePropertyPublishedWarning = document.querySelector("#delete-property-published-warning");
@@ -619,9 +622,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let draggedDataCard = null;
         let galleryItems = [];
         let selectedFutureCoverId = null;
-        let presentationImages = { cover: null, property: null, features: null, final: null };
-        let selectingPresentationImage = null;
-        let pendingPresentationImageId = null;
+        let presentationImages: PresentationImages = { cover: null, property: null, features: null, final: null };
+        let selectingPresentationImage: PresentationImageTarget | null = null;
+        let pendingPresentationImageId: string | null = null;
         let draggedGalleryItem = null;
         let featureItems = [];
         let draggedFeatureItem = null;
@@ -1379,15 +1382,18 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
         const itemSource = (item) => item?.remoteUrl || item?.source || (item?.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item?.status === "uploaded" ? "/media/" + slugForGallery() + "/" + item.name : "");
         const availableGalleryImages = () => galleryItems.filter((item) => Boolean(itemSource(item)));
-        const selectedPresentationItem = (key) => availableGalleryImages().find((item) => item.id === presentationImages[key]) || null;
-        const fallbackPresentationItem = (key) => {
+        const selectedPresentationItem = (key: PresentationImageTarget) => availableGalleryImages().find((item) => item.id === presentationImages[key]) || null;
+        const fallbackPresentationItem = (key: PresentationImageTarget) => {
           const images = availableGalleryImages(); const cover = selectedPresentationItem("cover");
-          const withoutCover = images.filter((item) => item !== cover); const position = { property: 0, features: 1, final: 2 }[key] || 0;
+          const withoutCover = images.filter((item) => item !== cover);
+          const positions: Record<PresentationImageTarget, number> = { cover: 0, property: 0, features: 1, final: 2 };
+          const position = positions[key];
           return withoutCover[position] || withoutCover[0] || images[position] || images[0] || null;
         };
         const renderPresentationImages = () => {
-          const labels = { cover: "Portada", property: "Imagen de “La propiedad”", features: "Imagen de “Características”", final: "Imagen final / “Una propiedad excepcional”" };
-          presentationImageCards.replaceChildren(...Object.entries(labels).map(([key, label]) => {
+          const labels: Record<PresentationImageTarget, string> = { cover: "Portada", property: "Imagen de “La propiedad”", features: "Imagen de “Características”", final: "Imagen final / “Una propiedad excepcional”" };
+          presentationImageCards.replaceChildren(...presentationImageTargets.map((key) => {
+            const label = labels[key];
             const item = selectedPresentationItem(key); const fallback = fallbackPresentationItem(key);
             const card = document.createElement("article"); card.className = "gallery-editor-card";
             card.innerHTML = '<div class="gallery-thumb"></div><div class="gallery-item-copy"><strong>' + label + '</strong><span class="gallery-status"></span></div><div class="gallery-actions"><button type="button" data-choose>Elegir imagen</button><button type="button" data-clear>Quitar selección</button></div>';
@@ -1398,7 +1404,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             return card;
           }));
         };
-        const openPresentationImageSelector = (key) => {
+        const openPresentationImageSelector = (key: PresentationImageTarget) => {
+          if (!presentationImageDialog) return;
           const items = availableGalleryImages(); if (!items.length) return showToast("Primero necesitás al menos una imagen disponible.");
           selectingPresentationImage = key; pendingPresentationImageId = presentationImages[key] && items.some((item) => item.id === presentationImages[key]) ? presentationImages[key] : null;
           presentationImageOptions.replaceChildren(...items.map((item, index) => {
@@ -1406,9 +1413,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             const img = document.createElement("img"); img.src = itemSource(item); img.alt = item.description || "Foto " + (index + 1); card.querySelector(".gallery-thumb").appendChild(img);
             const mark = (selected) => { card.classList.toggle("selected", selected); card.setAttribute("aria-pressed", String(selected)); card.querySelector(".selection-state").textContent = selected ? "✓ Seleccionada" : (item.visible === false ? "Disponible aunque no se muestra en la galería" : "Elegir esta imagen"); };
             mark(item.id === pendingPresentationImageId); card.addEventListener("click", () => { pendingPresentationImageId = item.id; [...presentationImageOptions.children].forEach((element) => { const selected = element === card; element.classList.toggle("selected", selected); element.setAttribute("aria-pressed", String(selected)); const state = element.querySelector(".selection-state"); if (state) state.textContent = selected ? "✓ Seleccionada" : "Elegir esta imagen"; }); }); return card;
-          })); presentationImageDialog.showModal();
+          }));
+          presentationImageDialog.showModal();
         };
-        const normalizePresentationImages = () => { Object.keys(presentationImages).forEach((key) => { if (presentationImages[key] && !availableGalleryImages().some((item) => item.id === presentationImages[key])) presentationImages[key] = null; }); };
+        const normalizePresentationImages = () => {
+          presentationImageTargets.forEach((key) => {
+            if (presentationImages[key] && !availableGalleryImages().some((item) => item.id === presentationImages[key])) presentationImages[key] = null;
+          });
+        };
 
         const renderGallery = () => {
           const slug = slugForGallery();
@@ -2461,13 +2473,20 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         document.querySelector("#confirm-publication").addEventListener("click", markPublished);
         [document.querySelector("#close-publication-confirm"), document.querySelector("#cancel-publication-confirm")].forEach((button) => button.addEventListener("click", () => { if (publicationConfirmDialog.open) publicationConfirmDialog.close(); }));
 
-        document.querySelector("#confirm-presentation-image").addEventListener("click", () => {
-          if (!selectingPresentationImage || !pendingPresentationImageId) { showToast("Elegí una imagen primero."); return; }
-          presentationImages[selectingPresentationImage] = pendingPresentationImageId;
-          if (selectingPresentationImage === "cover") selectedFutureCoverId = pendingPresentationImageId;
-          presentationImageDialog.close(); renderGallery(); saveDraft();
-        });
-        [document.querySelector("#close-presentation-image-dialog"), document.querySelector("#cancel-presentation-image")].forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
+        const confirmPresentationImageButton = document.querySelector<HTMLButtonElement>("#confirm-presentation-image");
+        const closePresentationImageButton = document.querySelector<HTMLButtonElement>("#close-presentation-image-dialog");
+        const cancelPresentationImageButton = document.querySelector<HTMLButtonElement>("#cancel-presentation-image");
+        if (presentationImageDialog) {
+          confirmPresentationImageButton?.addEventListener("click", () => {
+            if (!selectingPresentationImage || !pendingPresentationImageId) { showToast("Elegí una imagen primero."); return; }
+            presentationImages[selectingPresentationImage] = pendingPresentationImageId;
+            if (selectingPresentationImage === "cover") selectedFutureCoverId = pendingPresentationImageId;
+            presentationImageDialog.close(); renderGallery(); saveDraft();
+          });
+          [closePresentationImageButton, cancelPresentationImageButton]
+            .filter((button): button is HTMLButtonElement => Boolean(button))
+            .forEach((button) => button.addEventListener("click", () => presentationImageDialog.close()));
+        }
         if (galleryInput) {
           gallerySelect?.addEventListener("click", (event) => { event.stopPropagation(); galleryInput.click(); });
           galleryInput.addEventListener("change", () => {
