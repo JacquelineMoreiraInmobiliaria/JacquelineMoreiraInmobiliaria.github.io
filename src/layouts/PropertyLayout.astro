@@ -4,7 +4,9 @@ import "../styles/master.css";
 const { property, settings } = Astro.props;
 const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
-const statIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
+const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
+const statIcons = { surface: "▣", home: "⌂", bed: "▰", bath: "◌", temperature: "♨", pool: "≈", land: "△", view: "◉", garage: "▱" };
+const statIconFor = (item, index) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : legacyStatIcons[index] || "•";
 const coverImage = property.media?.cover || property.hero.coverImage;
 const galleryImages = property.gallery.images.filter((image) => image.visible !== false);
 const showGallery = property.gallery.enabled && galleryImages.length > 0;
@@ -76,7 +78,7 @@ const mapBounds = showLocation
       <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
     </section>}
 
-    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{statIcons[index] || "•"}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{statIconFor(item, index)}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
