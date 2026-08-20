@@ -25,9 +25,6 @@ summary:
   - label: "Distancia a Minas"
     value: "3 km"
     show: true
-  - label: "Distancia a Ruta 60"
-    value: "800 m"
-    show: true
 
 media:
   cover: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/68c6bb22-1bbd-4d2b-bb62-0023cb1d1066.jpg"
@@ -37,12 +34,11 @@ media:
     final: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-del-sosiego/galeria/abf0ef10-bf63-48ba-8c6d-4c87795f43e5.jpg"
 
 property:
-  headline: "Dos viviendas modernas entre sierras, monte nativo y naturaleza"
+  headline: "Dos viviendas modernas entre sierras."
   paragraphs:
-    - "Chacra Del Sosiego se encuentra en la zona del Valle del Hilo de la Vida, Minas, Lavalleja, en el cruce de Ruta 12 con Ruta 60. Su entrada está a 800 metros de la Ruta 60 y a 3 km de la ciudad de Minas. El predio cuenta con luz y utiliza agua de un pozo vecino."
-    - "En el lugar existen dos construcciones modernas. La casa principal está sobre pilares para aprovechar las vistas panorámicas, con techo liviano, grandes aberturas de aluminio y luz natural durante todo el día. Dispone de living comedor con calefactor a leña, amplia cocina integrada, 2 dormitorios, 2 baños completos —uno de ellos en suite— y un amplio deck exterior de madera."
-    - "La segunda vivienda, también sobre pilares y de construcción liviana, cuenta con amplias aberturas de aluminio, losa radiante, ambiente integrado de living y cocina, 1 dormitorio, 1 baño completo y un amplio deck de madera orientado hacia la panorámica del lugar. Ambas viviendas se venden sin muebles."
-    - "El entorno de las viviendas presenta parque con frutales y árboles ornamentales, monte nativo de sierras, cañadas con cascadas y pozos de agua, además de vistas a las sierras en todas direcciones. Montes de pinos y eucaliptos aportan sombra, privacidad y funcionan como cortinas durante la temporada de vientos. El predio está conectado por caminos internos aptos para caminatas en el campo."
+    - "En el lugar existen dos construcciones modernas. La casa principal está sobre pilares para aprovechar las vistas panorámicas, con techo liviano, grandes aberturas de aluminio y luz natural durante todo el día."
+    - "La segunda vivienda, también sobre pilares y de construcción liviana, cuenta con amplias aberturas de aluminio, losa radiante, ambiente integrado de living y cocina, 1 dormitorio, 1 baño completo y un amplio deck de madera orientado hacia la panorámica del lugar."
+    - "El entorno de las viviendas presenta parque con frutales y árboles ornamentales, monte nativo de sierras, Montes de pinos y eucaliptos aportan sombra, privacidad y funcionan como cortinas durante la temporada de vientos."
 
 gallery:
   enabled: true
@@ -84,12 +80,9 @@ location:
   longitude: -55.21657180786133
 
 distances:
-  enabled: true
+  enabled: false
   items:
-    - destination: "Ruta 60"
-      distance: "800 m"
-    - destination: "Ciudad de Minas"
-      distance: "3 Km"
+    []
 
 contact:
   useDefault: true
