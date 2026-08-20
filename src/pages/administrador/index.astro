@@ -460,6 +460,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button><button id="continue-publication" class="button button-secondary" type="button" hidden>Continuar con publicación manual</button></div>
       </div>
     </dialog>
+    <dialog id="publication-confirm-dialog" class="preparation-dialog" aria-labelledby="publication-confirm-title"><div class="preparation-shell"><button id="close-publication-confirm" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Confirmar publicación</p><h2 id="publication-confirm-title">¿La presentación ya está publicada?</h2><p>Confirmá que ya subiste el archivo de la propiedad a GitHub y que la publicación terminó correctamente.</p></div><div class="form-actions"><button id="cancel-publication-confirm" class="button button-quiet" type="button">Cancelar</button><button id="confirm-publication" class="button button-primary" type="button">Sí, ya está publicada</button></div></div></dialog>
     <dialog id="publication-dialog" class="publication-dialog" aria-labelledby="publication-title">
       <div class="preparation-shell publication-shell">
         <button id="close-publication" class="dialog-close" type="button" aria-label="Cerrar">×</button>
@@ -523,6 +524,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         const downloadPackage = document.querySelector("#download-package");
         const continuePublication = document.querySelector("#continue-publication");
         const publicationDialog = document.querySelector("#publication-dialog");
+        const publicationConfirmDialog = document.querySelector("#publication-confirm-dialog");
         const publicationPropertyName = document.querySelector("#publication-property-name");
         const publicationGuide = document.querySelector("#publication-guide");
         const publicationChecklist = document.querySelector("#publication-checklist");
@@ -621,6 +623,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
         let packageUsesExternalMedia = false;
         let draggedPackageGalleryFile = null;
         let legacySubtitle = "";
+        let publication = { status: "unpublished", publishedAt: "", publishedRevision: "" };
         let legacySectionName = "La propiedad";
         let legacyPropertyHeadline = "";
         let organizedHeadline = "";
@@ -730,6 +733,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           presentationImages: { ...presentationImages },
+          publication: { ...publication },
           features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
           locationEnabled: document.querySelector('input[name="locationEnabled"]:checked')?.value === "yes",
           locationName: locationNameInput.value.trim(),
@@ -756,6 +760,43 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           })),
           updatedAt: new Date().toISOString()
         });
+
+        const publicationFor = (property) => property?.publication?.status === "published" ? property.publication : null;
+        const validSavedLocation = (property) => {
+          const latitude = Number(String(property?.latitude || "").replace(",", "."));
+          const longitude = Number(String(property?.longitude || "").replace(",", "."));
+          return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+        };
+        const draftIsReady = (property) => {
+          const slug = property?.slug || slugify(property?.name || "");
+          const media = detectedMedia[slug] || { cover: false, video: false, gallery: [] };
+          const cover = Boolean(property?.coverPhotoSource || property?.remoteCover?.url || media.cover);
+          const video = !property?.videoEnabled || Boolean(property?.videoSource || property?.remoteVideo?.url || media.video);
+          const galleryItemsSaved = (property?.galleryItems || []).filter((item) => item.status === "uploaded" || item.external || item.remoteUrl);
+          const gallery = property?.galleryEnabled === false || galleryItemsSaved.length > 0 || media.gallery.length > 0;
+          const location = property?.locationEnabled !== true || validSavedLocation(property);
+          return Boolean(property?.name?.trim()) && cover && video && gallery && location;
+        };
+        const publicationCardState = (property, isOriginal = false) => {
+          const published = isOriginal || publicationFor(property);
+          if (!published) return draftIsReady(property) ? { label: "LISTA PARA PUBLICAR", className: "ready" } : { label: "BORRADOR", className: "draft" };
+          const changed = !isOriginal && published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt);
+          return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
+        };
+        const loadPublication = (property, isOriginal = false) => {
+          publication = isOriginal ? { status: "published", publishedAt: "2026-01-01T00:00:00.000Z", publishedRevision: "" } : (property?.publication?.status === "published" ? { ...property.publication } : { status: "unpublished", publishedAt: "", publishedRevision: "" });
+        };
+        const markPublished = () => {
+          const values = saveDraft();
+          publication = { status: "published", publishedAt: values.updatedAt, publishedRevision: values.updatedAt };
+          const drafts = readDrafts();
+          drafts[values.id] = { ...values, publication: { ...publication } };
+          writeDrafts(drafts);
+          renderDraftCards();
+          if (publicationConfirmDialog.open) publicationConfirmDialog.close();
+          if (publicationDialog.open) { renderPublicationGuide(); }
+          showToast("La propiedad quedó marcada como publicada.");
+        };
 
         const saveDraft = () => {
           const values = currentValues();
@@ -1835,7 +1876,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const mediaDestination = usesR2 ? '<div><p class="eyebrow">Multimedia</p><h3>Ya está subida directamente</h3><p>No hace falta subir fotos ni video a GitHub.</p></div>' : '<div><p class="eyebrow">Multimedia</p><h3>Subí las fotos y el video aquí</h3><code class="publication-path">' + mediaPath + '</code><button type="button" data-copy="' + mediaPath + '">Copiar ruta</button></div>';
           const packageContents = usesR2 ? '<strong>' + escapeReview(yamlName) + '</strong>.' : '<strong>' + escapeReview(yamlName) + '</strong> y la carpeta <strong>media</strong>.';
           const mediaStep = usesR2 ? 'La multimedia ya está disponible; solo falta subir el archivo de datos.' : 'Subí el contenido de <strong>media</strong> a <code>' + mediaPath + '</code>.';
-          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div>' + mediaDestination + '</section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar ' + packageContents + '</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>' + mediaStep + '</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
+          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div>' + mediaDestination + '</section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar ' + packageContents + '</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>' + mediaStep + '</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-public-action"><h3>Confirmación final</h3><p>Marcá la propiedad como publicada solamente después de verificar la presentación en GitHub Pages.</p><button id="mark-published" class="button button-primary" type="button">Marcar como publicada</button></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
           const checklistItems = [
             ["unzip", "Descomprimí el ZIP"],
             ["data", "Subí el archivo de la propiedad a src/data/properties/"],
@@ -1858,6 +1899,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           }));
           publicationGuide.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", () => copyPublicationPath(button.dataset.copy)));
           publicationGuide.querySelector("#recheck-preview").addEventListener("click", openExpectedPreview);
+          publicationGuide.querySelector("#mark-published").addEventListener("click", () => publicationConfirmDialog.showModal());
         };
         const openPublicationGuide = () => {
           renderPublicationGuide();
@@ -1913,6 +1955,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             nameInput.value = saved.name || "";
             priceInput.value = saved.price || "";
             legacySubtitle = saved.subtitle || "";
+            loadPublication(saved, editingId === originalProperty.id);
             loadCoverValues({ ...originalProperty, ...saved }, originalProperty.id);
             loadPropertyValues({ ...originalProperty, ...saved });
             loadFeaturedData({ ...originalProperty, ...saved });
@@ -1928,6 +1971,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
             legacySubtitle = "";
             legacySectionName = "La propiedad";
             legacyPropertyHeadline = "";
+            loadPublication(null, false);
             loadCoverValues({ videoEnabled: false });
             loadPropertyValues({ propertyDescription: "", sectionName: "", propertyHeadline: "", paragraphs: [] });
             loadFeaturedData({ featuredData: [] });
@@ -1945,10 +1989,12 @@ const mediaInventory = Object.fromEntries(await Promise.all(
           const drafts = readDrafts();
           const edited = drafts[originalProperty.id];
           const originalCard = document.querySelector('[data-card="atardecer-y-vides"]');
+          if (originalCard && !originalCard.querySelector(".publication-badge")) { const badge = document.createElement("span"); badge.className = "publication-badge published"; badge.textContent = "PUBLICADA"; originalCard.querySelector(".property-content > div").appendChild(badge); }
           if (edited && originalCard) {
             originalCard.querySelector("[data-card-name]").textContent = edited.name || originalProperty.name;
             originalCard.querySelector("[data-card-price]").textContent = edited.price || "Precio sin completar";
             originalCard.querySelector("[data-card-subtitle]").textContent = edited.subtitle || "Subtítulo sin completar";
+            let badge = originalCard.querySelector(".publication-badge"); if (!badge) { badge = document.createElement("span"); badge.className = "publication-badge"; originalCard.querySelector(".property-content > div").appendChild(badge); } const originalStatus = publicationCardState(edited || originalProperty, true); badge.textContent = originalStatus.label; badge.className = "publication-badge " + originalStatus.className;
           }
 
           document.querySelectorAll("[data-draft-card]").forEach((card) => card.remove());
@@ -1962,18 +2008,20 @@ const mediaInventory = Object.fromEntries(await Promise.all(
                 <div>
                   <h2></h2>
                   <p class="draft-subtitle"></p>
-                  <p class="property-price"></p>
+                  <p class="property-price"></p><span class="publication-badge"></span>
                 </div>
                 <div class="card-actions">
                   <button class="button button-secondary" type="button" data-edit-draft>Editar</button>
                   <button class="button button-quiet" type="button" data-duplicate>Duplicar</button>
-                  <button class="button button-quiet" type="button" disabled>Vista previa</button>
+                  <a class="button button-quiet" data-publication-link target="_blank" rel="noopener" hidden>Ver publicación</a>
                   <button class="button button-danger" type="button" data-delete-draft>Eliminar</button>
                 </div>
               </div>`;
             card.querySelector("h2").textContent = draft.name;
             card.querySelector(".draft-subtitle").textContent = draft.subtitle || "Subtítulo sin completar";
             card.querySelector(".property-price").textContent = draft.price || "Precio sin completar";
+            const cardState = publicationCardState(draft); const badge = card.querySelector(".publication-badge"); badge.textContent = cardState.label; badge.className = "publication-badge " + cardState.className;
+            const publicationLink = card.querySelector("[data-publication-link]"); if (cardState.className.includes("published")) { publicationLink.href = "/propiedades/" + draft.slug + "/"; publicationLink.hidden = false; }
             card.querySelector("[data-edit-draft]").addEventListener("click", () => {
               editingId = draft.id;
               listScreen.hidden = true;
@@ -1983,6 +2031,7 @@ const mediaInventory = Object.fromEntries(await Promise.all(
               nameInput.value = draft.name || "";
               priceInput.value = draft.price || "";
               legacySubtitle = draft.subtitle || "";
+              loadPublication(draft, false);
               loadCoverValues(draft, draft.id);
               loadPropertyValues(draft);
               loadFeaturedData(draft);
