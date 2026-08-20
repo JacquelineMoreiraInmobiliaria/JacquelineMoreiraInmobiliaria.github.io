@@ -11,31 +11,37 @@ type SiteSettings = {
   logo: string;
 };
 type Props = { property: PropertyData; settings: SiteSettings };
+type SummaryItem = PropertyData["summary"][number];
 
 const { property, settings } = Astro.props as Props;
 const features = property.features;
 const shownStats = property.summary.filter((item) => item.show);
 const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
 const statIcons = { surface: "▣", home: "⌂", bed: "▰", bath: "◌", temperature: "♨", pool: "≈", land: "△", view: "◉", garage: "▱" };
-const statIconFor = (item, index) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : property.slug === "atardecer-y-vides" ? legacyStatIcons[index] || "•" : "•";
+const statIconFor = (item: SummaryItem, index: number) => item.icon && statIcons[item.icon] ? statIcons[item.icon] : property.slug === "atardecer-y-vides" ? legacyStatIcons[index] || "•" : "•";
 const coverImage = property.media?.cover || property.hero.coverImage;
 const galleryImages = property.gallery.images.filter((image) => image.visible !== false);
 const showGallery = property.gallery.enabled && galleryImages.length > 0;
 const availableImages = property.gallery.images;
 const fallbackImages = availableImages.filter((image) => image.source !== coverImage);
-const fallbackAt = (index) => (fallbackImages[index] || fallbackImages[0] || availableImages[index] || availableImages[0])?.source || coverImage;
+const fallbackAt = (index: number) => (fallbackImages[index] || fallbackImages[0] || availableImages[index] || availableImages[0])?.source || coverImage;
 const sectionImages = property.media?.sections ? {
   property: property.media.sections.property || fallbackAt(0),
   features: property.media.sections.features || fallbackAt(1),
   final: property.media.sections.final || fallbackAt(2)
 } : null;
-const showLocation = property.location.enabled && property.location.latitude !== undefined && property.location.longitude !== undefined;
+const locationCoordinates = property.location.enabled === true &&
+  typeof property.location.latitude === "number" &&
+  typeof property.location.longitude === "number"
+  ? { latitude: property.location.latitude, longitude: property.location.longitude }
+  : null;
+const showLocation = locationCoordinates !== null;
 const showDistances = property.distances.enabled && property.distances.items.length > 0;
 const whatsapp = property.contact.useDefault ? settings.whatsapp : property.contact.whatsapp;
 const email = property.contact.useDefault ? settings.email : property.contact.email;
 const inquiry = encodeURIComponent(`Hola, estoy interesado en la propiedad ${property.name}.`);
-const mapBounds = showLocation
-  ? `${property.location.longitude - 0.04}%2C${property.location.latitude - 0.03}%2C${property.location.longitude + 0.04}%2C${property.location.latitude + 0.03}`
+const mapBounds = locationCoordinates
+  ? `${locationCoordinates.longitude - 0.04}%2C${locationCoordinates.latitude - 0.03}%2C${locationCoordinates.longitude + 0.04}%2C${locationCoordinates.latitude + 0.03}`
   : "";
 ---
 
@@ -117,10 +123,10 @@ const mapBounds = showLocation
       {sectionImages?.features && <div class="features-media"><img src={sectionImages.features} alt={property.name} loading="lazy" /></div>}
     </section>}
 
-    {showLocation && <section id="ubicacion" class="location">
+    {locationCoordinates && <section id="ubicacion" class="location">
       <div class="location-copy"><div class="kicker">Ubicación</div>{property.location.visibleName && <h2>{property.location.visibleName}</h2>}{property.location.address && <p class="copy">{property.location.address}</p>}
-      <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${property.location.latitude},${property.location.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
-      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${property.location.latitude}%2C${property.location.longitude}`}></iframe></div>
+      <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${locationCoordinates.latitude},${locationCoordinates.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
+      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
     </section>}
 
     {showDistances && <section class="section distances"><div class="gallery-head"><div class="kicker">Distancias</div><h2>Todo cerca.</h2></div><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.destination}</strong><span>{item.distance}</span></div>)}</div></section>}
