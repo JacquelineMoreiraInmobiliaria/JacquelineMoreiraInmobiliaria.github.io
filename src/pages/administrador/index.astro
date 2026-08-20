@@ -1938,7 +1938,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             photoPreview.hidden = true;
             photoEmpty.hidden = false;
             photoName.textContent = "";
-            photoDropzone.classList.remove("has-file");
+            photoDropzone?.classList.remove("has-file");
           }
           setVideoEnabled(Boolean(property.videoEnabled));
           if (session?.video) {
@@ -2342,7 +2342,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           event.preventDefault();
           if (!photoName.textContent) {
             photoError.textContent = "Seleccioná una foto principal para continuar.";
-            photoDropzone.focus();
+            photoDropzone?.focus();
             return;
           }
           if (document.querySelector('input[name="videoEnabled"]:checked').value === "yes" && !videoName.textContent) {
