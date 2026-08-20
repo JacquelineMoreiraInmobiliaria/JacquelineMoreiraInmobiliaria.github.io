@@ -799,3 +799,14 @@ form > div:empty {
 .presentation-image-option.selected .selection-state { color: #4d6820; }
 .gallery-visible { grid-template-columns: auto 1fr !important; align-items: center; text-transform: none !important; letter-spacing: 0 !important; }
 .gallery-visible input { width: 20px !important; min-height: 20px !important; padding: 0 !important; accent-color: var(--olive); }
+
+/* Estado de publicación en el menú */
+.publication-badge { display: inline-flex; width: fit-content; margin-top: 10px; padding: 5px 8px; border-radius: 999px; font-size: .64rem; font-weight: 800; letter-spacing: .06em; }
+.publication-badge.draft { color: #735316; background: #fff0d6; }
+.publication-badge.ready { color: #245b36; background: #e4f3e7; }
+.publication-badge.published { color: #fff; background: var(--green); }
+.publication-badge.pending { color: #593c0a; background: #f5dfad; }
+.publication-public-action { margin-top: 22px; padding: 22px; border: 1px solid #cad9a7; border-radius: 12px; background: #f4f8e8; }
+.publication-public-action h3 { margin: 0; color: var(--green); font-size: 1.1rem; }
+.publication-public-action p { margin: 9px 0 0; color: var(--muted); line-height: 1.55; }
+.publication-public-action .button { margin-top: 14px; }
