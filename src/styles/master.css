@@ -162,3 +162,14 @@ footer { background: #11140f; color: #fff; padding: 36px 6vw; display: flex; jus
 .features.has-presentation-media::before { z-index: -1; }
 .contact.has-presentation-media { position: relative; background: linear-gradient(90deg, rgba(0,0,0,.68), rgba(0,0,0,.42)); }
 .contact.has-presentation-media .contact-media { z-index: -1; }
+
+/* Imágenes elegidas para propiedades nuevas */
+.features.has-presentation-media { background: var(--green); }
+.features.has-presentation-media .features-media { display: block; position: absolute; inset: 0; z-index: 0; }
+.features.has-presentation-media .features-media img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.features.has-presentation-media::before { z-index: 1; }
+.features.has-presentation-media .features-copy { z-index: 2; }
+.contact.has-presentation-media { position: relative; overflow: hidden; isolation: isolate; background: var(--green); }
+.contact.has-presentation-media .contact-media { display: block; position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.contact.has-presentation-media::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(5,10,5,.88) 0%, rgba(5,10,5,.72) 48%, rgba(5,10,5,.58) 100%); }
+.contact.has-presentation-media > :not(.contact-media) { position: relative; z-index: 2; text-shadow: 0 2px 16px rgba(0,0,0,.45); }
