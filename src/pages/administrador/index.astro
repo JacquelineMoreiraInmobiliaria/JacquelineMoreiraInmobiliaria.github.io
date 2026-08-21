@@ -1088,9 +1088,9 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               : "";
             publicationConfirmFeedback.innerHTML = '<p><strong>El YAML publicado todavía no coincide con esta versión.</strong></p>' + differences + '<p>Esperá a que GitHub termine el deploy o revisá el YAML subido.</p>';
             publicationConfirmFeedback.hidden = false;
-            publicationConfirmFeedback.focus();
             publicationConfirmationBusy = false;
             confirmPublicationButton.disabled = false;
+            publicationConfirmFeedback.focus();
             return;
           }
           publication = { status: "published", publishedAt: new Date().toISOString(), publishedRevision: comparison.revision || "" };
@@ -3000,6 +3000,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         [closePublicationConfirmButton, cancelPublicationConfirmButton]
           .forEach((button) => button.addEventListener("click", closePublicationConfirmation));
         publicationConfirmDialog.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          closePublicationConfirmation();
+        });
+        publicationConfirmDialog.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
           event.preventDefault();
           closePublicationConfirmation();
         });
