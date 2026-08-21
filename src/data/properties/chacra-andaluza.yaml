@@ -1,0 +1,103 @@
+slug: "chacra-andaluza"
+name: "Chacra Andaluza"
+price: "USD 980.000"
+
+hero:
+  subtitle: "Solís · Maldonado · Uruguay"
+  description: "Diseño arquitectónico y de decoración estilo andaluz."
+  coverImage: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/4b49b1aa-3fcd-4ab9-9dd0-88a00c3bace4.jpg"
+  video:
+    enabled: true
+    source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/video.mp4"
+
+summary:
+  - label: "Superficie"
+    value: "10 hectáreas"
+    icon: surface
+    show: true
+  - label: "Superficie edificada"
+    value: "400 m²"
+    icon: home
+    show: true
+  - label: "Dormitorios principales"
+    value: "3"
+    icon: bed
+    show: true
+  - label: "Baños"
+    value: "2"
+    icon: bath
+    show: true
+  - label: "Garaje"
+    value: "2 Autos"
+    icon: garage
+    show: true
+
+media:
+  cover: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/4b49b1aa-3fcd-4ab9-9dd0-88a00c3bace4.jpg"
+  sections:
+    property: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/6898bb75-5a0f-4e6e-aed4-5eb3a46c358b.jpg"
+    features: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/02184c72-f023-48d9-bfc1-f5175655810c.jpg"
+    distances: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/e968eb0e-b750-442a-b564-568ec242131a.jpg"
+    final: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/fa7b87f9-7995-4449-bbd1-4c2e6ef77698.jpg"
+
+property:
+  headline: "Espíritu andaluz entre bosques y sierras"
+  paragraphs:
+    - "Sobre una fracción de 10 hectáreas se encuentra un casco de estilo andaluz, restaurado a nuevo en 2021, con 400 m² edificados y amplios ambientes. La distribución integra sala comedor con estufa a leña, cocina semi integrada y una espaciosa sala de estar y juegos."
+    - "La propiedad está rodeada de bosques, sierras y un jardín añoso, con las playas del este uruguayo y los servicios de Piriápolis próximos. Cuenta además con casa de caseros, garaje, galpón e instalaciones para el manejo de ganado."
+
+gallery:
+  enabled: true
+  images:
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/4b49b1aa-3fcd-4ab9-9dd0-88a00c3bace4.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/fa7b87f9-7995-4449-bbd1-4c2e6ef77698.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/bf5d19d7-a4a3-4c4c-9dca-75fb5d5d740b.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/936a0004-1f40-4fe0-a819-18fa539fb9dc.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/02184c72-f023-48d9-bfc1-f5175655810c.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/1cbcd727-c5ec-4127-a7e0-e124c7e6af1d.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/67c55c39-a545-4b8a-b17e-f4cf56289b00.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/e968eb0e-b750-442a-b564-568ec242131a.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/767fff5c-3845-4ef4-bd2b-9303a5d512c8.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/6898bb75-5a0f-4e6e-aed4-5eb3a46c358b.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/9b3bbf18-89c3-4896-8eb3-8e2c89d8b5e4.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/chacra-andaluza/galeria/b0c7a5ed-32ed-4406-ae52-15022696634c.jpg"
+
+features:
+  - label: "Casco de estilo andaluz restaurado en 2021"
+    category: structural
+  - label: "Amplia sala comedor con estufa a leña"
+    category: structural
+  - label: "Dormitorio con vestidor"
+    category: structural
+  - label: "Calefacción mediante estufas a leña y radiadores de agua caliente"
+    category: structural
+  - label: "Sala de estar y juegos con mesa de pool"
+    category: structural
+  - label: "Represa y tajamar"
+    category: structural
+  - label: "Casa de caseros independiente"
+    category: structural
+  - label: "Entorno de bosques y sierras"
+    category: structural
+  - label: "Pozo semisurgente con almacenamiento de agua"
+    category: structural
+
+location:
+  enabled: true
+  visibleName: "Solís, Maldonado"
+  address: "Cerros Azules, Ruta 9 a pocos km de Balneario Solís"
+  latitude: -34.76082992553711
+  longitude: -55.35861587524414
+
+distances:
+  enabled: true
+  items:
+    - destination: "Centro de Piriápolis "
+      distance: "15 Min"
+    - destination: "Punta del Este "
+      distance: "30 Min"
+    - destination: "Montevideo"
+      distance: "1 Hora"
+
+contact:
+  useDefault: true
