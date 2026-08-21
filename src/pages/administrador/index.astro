@@ -2991,6 +2991,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         requiredElement("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { requiredElement("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => requiredElement("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; requiredElement("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { requiredElement("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
         confirmPublicationButton.addEventListener("click", markPublished);
+        confirmPublicationButton.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          markPublished();
+        });
         const closePublicationConfirmButton = requiredElement<HTMLButtonElement>("#close-publication-confirm");
         const cancelPublicationConfirmButton = requiredElement<HTMLButtonElement>("#cancel-publication-confirm");
         const closePublicationConfirmation = () => {
