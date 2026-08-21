@@ -1,0 +1,96 @@
+slug: "los-cuarzos"
+name: "Los Cuarzos"
+price: "USD 690.000"
+
+hero:
+  subtitle: "Solanas · Maldonado · Uruguay"
+  description: "Una zona mágica de las Sierras de Maldonado llegando a las Sierras de Minas."
+  coverImage: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/b61c5d90-c44c-4bee-8bb9-a2f4658d40b7.jpg"
+  video:
+    enabled: true
+    source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/video.mp4"
+
+summary:
+  - label: "Superficie Total"
+    value: "5, 10 o 15 Ha"
+    icon: land
+    show: true
+  - label: "Dormitorios principales"
+    value: "3 en suite"
+    icon: bed
+    show: true
+  - label: "Piscina"
+    value: "Con solárium"
+    icon: pool
+    show: true
+
+media:
+  cover: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/b61c5d90-c44c-4bee-8bb9-a2f4658d40b7.jpg"
+  sections:
+    property: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/f0ca2991-f5e7-4e60-afe1-25fd8e26a09d.jpg"
+    features: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/7bb8d0d7-01e6-4e28-b86f-defe3bab542c.jpg"
+    distances: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/2f1692ce-c8d0-4630-bd05-31232e9b549f.jpg"
+    final: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/439fc046-3a8a-459b-9603-060e8175d2de.jpg"
+
+property:
+  headline: "Horizonte serrano entre cuarzos y atardeceres"
+  paragraphs:
+    - "En lo alto de la propiedad, la casa principal se integra al suelo rocoso y ofrece amplios ambientes con vistas a las sierras y al atardecer. El living comedor incorpora cocina con barra, mientras que el subsuelo suma una sala de juegos y un dormitorio de visitas."
+    - "La terraza perimetral se conecta con una amplia barbacoa techada y una piscina con solárium. El conjunto incluye dos casas para personal, invernáculo, huerta, árboles frutales, granero, galpón de herramientas y acceso a una cañada con pequeña laguna."
+
+gallery:
+  enabled: true
+  images:
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/b61c5d90-c44c-4bee-8bb9-a2f4658d40b7.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/f0ca2991-f5e7-4e60-afe1-25fd8e26a09d.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/e8dec2cc-a7a5-46d2-980f-6112267df10b.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/2f1692ce-c8d0-4630-bd05-31232e9b549f.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/9c3379bc-f77f-4231-8c8c-3df4a7adedc2.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/700d4214-3871-4001-bb2e-49d841516ebd.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/8f8b6e53-e44a-4acd-9fa8-9cd538cd35a4.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/2b394ede-7674-4ea0-aa4a-a94aa20a3016.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/7972a964-bc57-4324-ad11-335cf05962ef.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/6f08fa3f-5239-41fe-bad9-f72cc2d5cafc.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/7bb8d0d7-01e6-4e28-b86f-defe3bab542c.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/los-cuarzos/galeria/439fc046-3a8a-459b-9603-060e8175d2de.jpg"
+
+features:
+  - label: "Tres dormitorios con placard y baño en suite"
+    category: structural
+  - label: "Dos casas completas para personal"
+    category: structural
+  - label: "Sala de juegos y dormitorio de visitas en subsuelo"
+    category: structural
+  - label: "Amplia barbacoa techada con parrillero"
+    category: structural
+  - label: "Piscina de grandes dimensiones con solárium"
+    category: structural
+  - label: "Enorme terraza perimetral"
+    category: structural
+  - label: "Calefacción por radiadores a gas y aire acondicionado"
+    category: structural
+  - label: "Invernáculo, huerta y variedad de árboles frutales"
+    category: structural
+  - label: "Cañada con pequeña laguna y monte autóctono"
+    category: structural
+  - label: "Vistas a las sierras y al atardecer"
+    category: structural
+  - label: "Granero y galpón de herramientas y ensillado"
+    category: structural
+  - label: "Agua de pozo con bomba presurizadora y descalcificadora"
+    category: structural
+
+location:
+  enabled: true
+  visibleName: "Solanas, Maldonado"
+  address: "Paso Campamento"
+  latitude: -34.55099868774414
+  longitude: -55.15057754516602
+
+distances:
+  enabled: false
+  items:
+    []
+
+contact:
+  useDefault: true
