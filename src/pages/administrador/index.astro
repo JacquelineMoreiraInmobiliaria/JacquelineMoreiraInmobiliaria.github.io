@@ -492,7 +492,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button><button id="continue-publication" class="button button-secondary" type="button" hidden>Continuar con publicación manual</button></div>
       </div>
     </dialog>
-    <dialog id="publication-confirm-dialog" class="preparation-dialog" aria-labelledby="publication-confirm-title"><div class="preparation-shell"><button id="close-publication-confirm" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Confirmar publicación</p><h2 id="publication-confirm-title">¿La presentación ya está publicada?</h2><p>Confirmá que ya subiste el archivo de la propiedad a GitHub y que la publicación terminó correctamente.</p></div><div class="form-actions"><button id="cancel-publication-confirm" class="button button-quiet" type="button">Cancelar</button><button id="confirm-publication" class="button button-primary" type="button">Sí, ya está publicada</button></div></div></dialog>
+    <dialog id="publication-confirm-dialog" class="preparation-dialog" aria-labelledby="publication-confirm-title"><div class="preparation-shell"><button id="close-publication-confirm" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Confirmar publicación</p><h2 id="publication-confirm-title">¿La presentación ya está publicada?</h2><p>Confirmá que ya reemplazaste el archivo en GitHub y que el deploy terminó correctamente. Solo se finalizará si esta versión ya coincide con el YAML incluido en el inventario.</p></div><div class="form-actions"><button id="cancel-publication-confirm" class="button button-quiet" type="button">Volver</button><button id="confirm-publication" class="button button-primary" type="button">Sí, ya está publicada</button></div></div></dialog>
     <dialog id="publication-dialog" class="publication-dialog" aria-labelledby="publication-title">
       <div class="preparation-shell publication-shell">
         <button id="close-publication" class="dialog-close" type="button" aria-label="Cerrar">×</button>
@@ -530,6 +530,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           objectKey?: string;
           contentType?: string;
           position?: number;
+          presentationOnly?: boolean;
           file?: File;
           progress?: number;
         };
@@ -896,7 +897,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           media: preservedMedia ? { ...preservedMedia, sections: preservedMedia.sections ? { ...preservedMedia.sections } : undefined } : undefined,
           contact: { ...preservedContact },
           galleryEnabled: optionalInputValue('input[name="galleryEnabled"]:checked') !== "no",
-          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", position: index + 1 })),
+          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", presentationOnly: Boolean(item.presentationOnly), position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           presentationImages: { ...presentationImages },
           publication: { ...publication },
@@ -928,6 +929,121 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         });
 
         const publicationFor = (property: PropertyRecord | null | undefined) => property?.publication?.status === "published" ? property.publication : null;
+        const normalizedText = (value: unknown) => typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
+        const canonicalSource = (item: GalleryItem, slug: string) => item.remoteUrl || item.source || (item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.name ? "/media/" + slug + "/" + item.name : "");
+        const canonicalizePublishableDraft = (property: PropertyRecord) => {
+          const slug = property.slug || slugify(property.name || "");
+          const gallery = (property.galleryItems || [])
+            .filter((item) => !item.presentationOnly)
+            .map((item) => ({ source: canonicalSource(item, slug), alt: normalizedText(item.description), visible: item.visible !== false }))
+            .filter((item) => item.source);
+          const imageSourceFor = (key: PresentationImageTarget) => {
+            const id = property.presentationImages?.[key];
+            const selected = (property.galleryItems || []).find((item) => item.id === id);
+            const fromSelection = selected ? canonicalSource(selected, slug) : "";
+            if (fromSelection) return fromSelection;
+            if (key === "cover") return normalizedText(property.coverPhotoSource) || normalizedText(property.remoteCover?.url) || normalizedText(property.media?.cover);
+            return normalizedText(property.media?.sections?.[key as "property" | "features" | "distances" | "final"]);
+          };
+          return {
+            slug,
+            name: normalizedText(property.name),
+            price: normalizedText(property.price),
+            hero: {
+              subtitle: normalizedText(property.subtitle),
+              description: normalizedText(property.coverDescription),
+              coverImage: imageSourceFor("cover"),
+              video: { enabled: property.videoEnabled === true, source: normalizedText(property.remoteVideo?.url) || normalizedText(property.videoSource) }
+            },
+            summary: (property.featuredData || []).filter((item) => item.show && normalizedText(item.label) && normalizedText(item.value)).map((item) => ({ icon: normalizedText(item.icon) || "home", label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
+            media: {
+              cover: imageSourceFor("cover"),
+              sections: {
+                property: imageSourceFor("property"),
+                features: imageSourceFor("features"),
+                distances: imageSourceFor("distances"),
+                final: imageSourceFor("final")
+              }
+            },
+            property: {
+              sectionTitle: normalizedText(property.sectionName),
+              headline: normalizedText(property.propertyHeadline || property.organizedDescription?.headline),
+              paragraphs: (property.paragraphs || property.organizedDescription?.paragraphs || []).map(normalizedText).filter(Boolean)
+            },
+            gallery: { enabled: property.galleryEnabled !== false, images: gallery },
+            features: (property.features || []).filter((item) => normalizedText(item.label)).map((item) => ({ label: normalizedText(item.label), category: item.category })),
+            location: {
+              enabled: property.locationEnabled === true,
+              visibleName: normalizedText(property.locationName),
+              address: normalizedText(property.locationAddress),
+              latitude: normalizedText(property.latitude),
+              longitude: normalizedText(property.longitude)
+            },
+            distances: {
+              enabled: property.distancesEnabled === true,
+              items: (property.distances || []).filter((item) => normalizedText(item.destination) && normalizedText(item.distance)).map((item) => ({ destination: normalizedText(item.destination), distance: normalizedText(item.distance) }))
+            },
+            contact: {
+              useDefault: property.contact?.useDefault !== false,
+              whatsapp: normalizedText(property.contact?.whatsapp),
+              email: normalizedText(property.contact?.email)
+            }
+          };
+        };
+        const canonicalizePublishedProperty = (property: PublishedProperty) => ({
+          slug: property.slug,
+          name: normalizedText(property.name),
+          price: normalizedText(property.price),
+          hero: {
+            subtitle: normalizedText(property.hero.subtitle),
+            description: normalizedText(property.hero.description),
+            coverImage: normalizedText(property.media?.cover) || normalizedText(property.hero.coverImage),
+            video: { enabled: property.hero.video.enabled === true, source: normalizedText(property.hero.video.source) }
+          },
+          summary: property.summary.filter((item) => item.show !== false).map((item) => ({ icon: normalizedText(item.icon) || "home", label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
+          media: {
+            cover: normalizedText(property.media?.cover) || normalizedText(property.hero.coverImage),
+            sections: {
+              property: normalizedText(property.media?.sections?.property),
+              features: normalizedText(property.media?.sections?.features),
+              distances: normalizedText(property.media?.sections?.distances),
+              final: normalizedText(property.media?.sections?.final)
+            }
+          },
+          property: {
+            sectionTitle: normalizedText(property.property.sectionTitle),
+            headline: normalizedText(property.property.headline),
+            paragraphs: property.property.paragraphs.map(normalizedText).filter(Boolean)
+          },
+          gallery: { enabled: property.gallery.enabled === true, images: property.gallery.images.map((item) => ({ source: normalizedText(item.source), alt: normalizedText(item.alt), visible: item.visible !== false })) },
+          features: property.features.map((item) => ({ label: normalizedText(item.label), category: item.category })),
+          location: {
+            enabled: property.location.enabled === true,
+            visibleName: normalizedText(property.location.visibleName),
+            address: normalizedText(property.location.address),
+            latitude: typeof property.location.latitude === "number" ? String(property.location.latitude) : "",
+            longitude: typeof property.location.longitude === "number" ? String(property.location.longitude) : ""
+          },
+          distances: {
+            enabled: property.distances.enabled === true,
+            items: property.distances.items.map((item) => ({ destination: normalizedText(item.destination), distance: normalizedText(item.distance) }))
+          },
+          contact: {
+            useDefault: property.contact.useDefault !== false,
+            whatsapp: normalizedText(property.contact.whatsapp),
+            email: normalizedText(property.contact.email)
+          }
+        });
+        const publishableRevision = (value: unknown) => JSON.stringify(value);
+        const publishedComparison = (property: PropertyRecord) => {
+          const slug = property.slug || "";
+          const published = publishedPropertyInventory[slug];
+          if (!published) return { published: false, matches: false, differences: ["publicación"] };
+          const draftValue = canonicalizePublishableDraft(property);
+          const publishedValue = canonicalizePublishedProperty(published);
+          const differences = Object.keys(draftValue).filter((key) => JSON.stringify(draftValue[key as keyof typeof draftValue]) !== JSON.stringify(publishedValue[key as keyof typeof publishedValue]));
+          return { published: true, matches: differences.length === 0, differences, revision: publishableRevision(publishedValue) };
+        };
         const validSavedLocation = (property: PropertyRecord | null | undefined) => {
           const latitude = Number(String(property?.latitude || "").replace(",", "."));
           const longitude = Number(String(property?.longitude || "").replace(",", "."));
@@ -945,29 +1061,36 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
         const publicationCardState = (property: PropertyRecord, isOriginal = false, isPublished = publishedProperties.has(property.slug || "")) => {
           if (isOriginal) return { label: "PUBLICADA", className: "published" };
+          const comparison = isPublished ? publishedComparison(property) : null;
+          if (comparison?.published) return comparison.matches
+            ? { label: "PUBLICADA", className: "published" }
+            : { label: "PUBLICADA · CAMBIOS PENDIENTES", className: "published pending" };
           const published = publicationFor(property);
-          if (isPublished) {
-            if (!published) return { label: "PUBLICADA · CAMBIOS PENDIENTES", className: "published pending" };
-            const changed = Boolean(published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt));
-            return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
-          }
           if (!published) return draftIsReady(property) ? { label: "LISTA PARA PUBLICAR", className: "ready" } : { label: "BORRADOR", className: "draft" };
-          const changed = Boolean(published.publishedAt && property.updatedAt && new Date(property.updatedAt) > new Date(published.publishedAt));
-          return { label: changed ? "PUBLICADA · CAMBIOS PENDIENTES" : "PUBLICADA", className: changed ? "published pending" : "published" };
+          return { label: "PUBLICADA · CAMBIOS PENDIENTES", className: "published pending" };
         };
         const loadPublication = (property: PropertyRecord | null, isOriginal = false) => {
           publication = isOriginal ? { status: "published", publishedAt: "2026-01-01T00:00:00.000Z", publishedRevision: "" } : (property?.publication?.status === "published" ? { ...property.publication } : { status: "unpublished", publishedAt: "", publishedRevision: "" });
         };
         const markPublished = () => {
-          const values = saveDraft();
-          publication = { status: "published", publishedAt: values.updatedAt, publishedRevision: values.updatedAt };
+          const values = currentValues();
+          const comparison = publishedComparison(values);
+          if (!comparison.published || !comparison.matches) {
+            const details = comparison.differences.length ? ": " + comparison.differences.join(", ") : "";
+            showToast("El YAML publicado todavía no coincide con esta versión" + details + ". Esperá a que termine la actualización o revisá el archivo subido.");
+            return;
+          }
+          publication = { status: "published", publishedAt: new Date().toISOString(), publishedRevision: comparison.revision || "" };
+          const finalized = { ...currentValues(), publication: { ...publication } };
+          editingId = finalized.id;
           const drafts = readDrafts();
-          drafts[values.id] = { ...values, publication: { ...publication } };
+          drafts[finalized.id] = finalized;
           writeDrafts(drafts);
           renderDraftCards();
           if (publicationConfirmDialog?.open) publicationConfirmDialog.close();
-          if (publicationDialog?.open) { renderPublicationGuide(); }
-          showToast("La propiedad quedó marcada como publicada.");
+          if (publicationDialog?.open) publicationDialog.close();
+          showList();
+          showToast("Publicación finalizada.");
         };
 
         const saveDraft = () => {
@@ -2158,7 +2281,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const mediaDestination = usesR2 ? '<div><p class="eyebrow">Multimedia</p><h3>Ya está subida directamente</h3><p>No hace falta subir fotos ni video a GitHub.</p></div>' : '<div><p class="eyebrow">Multimedia</p><h3>Subí las fotos y el video aquí</h3><code class="publication-path">' + mediaPath + '</code><button type="button" data-copy="' + mediaPath + '">Copiar ruta</button></div>';
           const packageContents = usesR2 ? '<strong>' + escapeReview(yamlName) + '</strong>.' : '<strong>' + escapeReview(yamlName) + '</strong> y la carpeta <strong>media</strong>.';
           const mediaStep = usesR2 ? 'La multimedia ya está disponible; solo falta subir el archivo de datos.' : 'Subí el contenido de <strong>media</strong> a <code>' + mediaPath + '</code>.';
-          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div>' + mediaDestination + '</section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar ' + packageContents + '</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>' + mediaStep + '</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-public-action"><h3>Confirmación final</h3><p>Marcá la propiedad como publicada solamente después de verificar la presentación en GitHub Pages.</p><button id="mark-published" class="button button-primary" type="button">Marcar como publicada</button></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
+          publicationGuide.innerHTML = '<section class="publication-destinations"><div><p class="eyebrow">Archivo de datos</p><h3>Subí <code>' + escapeReview(yamlName) + '</code> aquí</h3><code class="publication-path">' + dataPath + '</code><button type="button" data-copy="' + dataPath + '">Copiar ruta</button></div>' + mediaDestination + '</section><section class="publication-steps"><h3>Pasos para publicar manualmente</h3><ol><li>Descomprimí <strong>' + escapeReview(slug) + '-presentacion.zip</strong>.</li><li>Dentro vas a encontrar ' + packageContents + '</li><li>En GitHub abrí el repositorio <strong>JacquelineMoreiraInmobiliaria/JacquelineMoreiraInmobiliaria.github.io</strong>.</li><li>Confirmá que estás en la rama <strong>setup-template-foundation</strong>.<span class="publication-warning">No subas estos archivos a main.</span></li><li>Subí <strong>' + escapeReview(yamlName) + '</strong> a <code>' + dataPath + '</code>.</li><li>' + mediaStep + '</li><li>Después de subirlos, GitHub iniciará automáticamente una nueva vista previa. Esperá unos minutos.</li><li>Abrí la presentación para verificarla.</li></ol></section><section class="publication-public-action"><h3>Confirmación final</h3><p>Marcá la propiedad como publicada solamente después de verificar la presentación en GitHub Pages.</p><button id="mark-published" class="button button-primary" type="button">Finalizar publicación</button></section><section class="publication-preview"><h3>Vista previa esperada</h3><a href="' + previewUrlFor(slug) + '" target="_blank" rel="noreferrer">' + previewUrlFor(slug) + '</a><p>Si todavía no abre, esperá a que termine el nuevo build de GitHub Pages.</p><button id="recheck-preview" class="button button-secondary" type="button">Volver a comprobar</button></section>';
           const checklistItems = [
             ["unzip", "Descomprimí el ZIP"],
             ["data", "Subí el archivo de la propiedad a src/data/properties/"],
@@ -2247,6 +2370,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
                 description: "",
                 source,
                 visible: false,
+                presentationOnly: true,
                 position: galleryItems.length + 1
               });
             });
