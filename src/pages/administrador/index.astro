@@ -492,7 +492,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         <div class="form-actions"><button id="preparation-cancel" class="button button-quiet" type="button">Cancelar</button><button id="download-package" class="button button-primary" type="button">Descargar paquete</button><button id="continue-publication" class="button button-secondary" type="button" hidden>Continuar con publicación manual</button></div>
       </div>
     </dialog>
-    <dialog id="publication-confirm-dialog" class="preparation-dialog" aria-labelledby="publication-confirm-title"><div class="preparation-shell"><button id="close-publication-confirm" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Confirmar publicación</p><h2 id="publication-confirm-title">¿La presentación ya está publicada?</h2><p>Confirmá que ya reemplazaste el archivo en GitHub y que el deploy terminó correctamente. Solo se finalizará si esta versión ya coincide con el YAML incluido en el inventario.</p></div><div class="form-actions"><button id="cancel-publication-confirm" class="button button-quiet" type="button">Volver</button><button id="confirm-publication" class="button button-primary" type="button">Sí, ya está publicada</button></div></div></dialog>
+    <dialog id="publication-confirm-dialog" class="preparation-dialog" aria-labelledby="publication-confirm-title"><div class="preparation-shell"><button id="close-publication-confirm" class="dialog-close" type="button" aria-label="Cerrar">×</button><div class="form-heading"><p class="eyebrow">Confirmar publicación</p><h2 id="publication-confirm-title">¿La presentación ya está publicada?</h2><p>Confirmá que ya reemplazaste el archivo en GitHub y que el deploy terminó correctamente. Solo se finalizará si esta versión ya coincide con el YAML incluido en el inventario.</p></div><div id="publication-confirm-feedback" class="publication-confirm-feedback" role="alert" aria-live="assertive" tabindex="-1" hidden></div><div class="form-actions"><button id="cancel-publication-confirm" class="button button-quiet" type="button">Volver</button><button id="confirm-publication" class="button button-primary" type="button">Sí, ya está publicada</button></div></div></dialog>
     <dialog id="publication-dialog" class="publication-dialog" aria-labelledby="publication-title">
       <div class="preparation-shell publication-shell">
         <button id="close-publication" class="dialog-close" type="button" aria-label="Cerrar">×</button>
@@ -679,6 +679,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const continuePublication = requiredElement<HTMLButtonElement>("#continue-publication");
         const publicationDialog = requiredElement<HTMLDialogElement>("#publication-dialog");
         const publicationConfirmDialog = requiredElement<HTMLDialogElement>("#publication-confirm-dialog");
+        const publicationConfirmFeedback = requiredElement<HTMLElement>("#publication-confirm-feedback");
+        const confirmPublicationButton = requiredElement<HTMLButtonElement>("#confirm-publication");
         const publicationPropertyName = requiredElement("#publication-property-name");
         const publicationGuide = requiredElement("#publication-guide");
         const publicationChecklist = requiredElement("#publication-checklist");
@@ -783,6 +785,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         let draggedPackageGalleryFile: File | null = null;
         let legacySubtitle = "";
         let publication: PublicationState = { status: "unpublished", publishedAt: "", publishedRevision: "" };
+        let publicationConfirmTrigger: HTMLButtonElement | null = null;
+        let publicationConfirmationBusy = false;
         let legacySectionName = "La propiedad";
         let legacyPropertyHeadline = "";
         let organizedHeadline = "";
@@ -1073,11 +1077,20 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           publication = isOriginal ? { status: "published", publishedAt: "2026-01-01T00:00:00.000Z", publishedRevision: "" } : (property?.publication?.status === "published" ? { ...property.publication } : { status: "unpublished", publishedAt: "", publishedRevision: "" });
         };
         const markPublished = () => {
+          if (publicationConfirmationBusy) return;
+          publicationConfirmationBusy = true;
+          confirmPublicationButton.disabled = true;
           const values = currentValues();
           const comparison = publishedComparison(values);
           if (!comparison.published || !comparison.matches) {
-            const details = comparison.differences.length ? ": " + comparison.differences.join(", ") : "";
-            showToast("El YAML publicado todavía no coincide con esta versión" + details + ". Esperá a que termine la actualización o revisá el archivo subido.");
+            const differences = comparison.differences.length
+              ? '<p><strong>Diferencias detectadas:</strong></p><ul>' + comparison.differences.map((difference) => '<li>' + escapeReview(difference) + '</li>').join("") + '</ul>'
+              : "";
+            publicationConfirmFeedback.innerHTML = '<p><strong>El YAML publicado todavía no coincide con esta versión.</strong></p>' + differences + '<p>Esperá a que GitHub termine el deploy o revisá el YAML subido.</p>';
+            publicationConfirmFeedback.hidden = false;
+            publicationConfirmFeedback.focus();
+            publicationConfirmationBusy = false;
+            confirmPublicationButton.disabled = false;
             return;
           }
           publication = { status: "published", publishedAt: new Date().toISOString(), publishedRevision: comparison.revision || "" };
@@ -1089,8 +1102,11 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           renderDraftCards();
           if (publicationConfirmDialog?.open) publicationConfirmDialog.close();
           if (publicationDialog?.open) publicationDialog.close();
+          if (preparationDialog?.open) preparationDialog.close();
           showList();
           showToast("Publicación finalizada.");
+          publicationConfirmationBusy = false;
+          confirmPublicationButton.disabled = false;
         };
 
         const saveDraft = () => {
@@ -2304,7 +2320,13 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           }));
           publicationGuide.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => button.addEventListener("click", () => copyPublicationPath(button.dataset.copy || "")));
           requiredElement<HTMLButtonElement>("#recheck-preview", publicationGuide).addEventListener("click", openExpectedPreview);
-          publicationGuide.querySelector<HTMLButtonElement>("#mark-published")?.addEventListener("click", () => { if (publicationConfirmDialog) publicationConfirmDialog.showModal(); });
+          publicationGuide.querySelector<HTMLButtonElement>("#mark-published")?.addEventListener("click", (event) => {
+            publicationConfirmTrigger = event.currentTarget as HTMLButtonElement;
+            publicationConfirmFeedback.hidden = true;
+            publicationConfirmFeedback.replaceChildren();
+            if (!publicationConfirmDialog.open) publicationConfirmDialog.showModal();
+            confirmPublicationButton.focus();
+          });
         };
         const openPublicationGuide = () => {
           renderPublicationGuide();
@@ -2968,16 +2990,19 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         requiredElement("#upload-cover-r2").addEventListener("click", async () => { if (!selectedPhoto || !isR2Image(selectedPhoto) || selectedPhoto.size > r2ImageLimit) return showToast("Elegí una imagen JPG, PNG o WEBP dentro del tamaño permitido."); try { requiredElement("#cover-upload-progress").textContent = "Subiendo foto…"; const result = await uploadR2File("cover", selectedPhoto, "", (value) => requiredElement("#cover-upload-progress").textContent = "Subiendo foto… " + value + "%"); remoteCover = { url: result.publicUrl, objectKey: result.key, contentType: selectedPhoto.type }; requiredElement("#cover-upload-progress").textContent = "✓ Subida"; updateMediaStatus(); scheduleSave(); } catch { requiredElement("#cover-upload-progress").textContent = "⚠ No se pudo subir la foto."; } });
         requiredElement("#upload-video-r2").addEventListener("click", async () => { if (!selectedVideo || !isMp4File(selectedVideo) || selectedVideo.size > r2VideoLimit) return showToast("Elegí un video MP4 dentro del tamaño permitido."); try { requiredElement("#video-upload-progress").textContent = "Subiendo video…"; const result = await uploadR2File("video", selectedVideo, "", (value) => requiredElement("#video-upload-progress").textContent = "Subiendo video… " + value + "%"); remoteVideo = { url: result.publicUrl, objectKey: result.key, contentType: selectedVideo.type }; requiredElement("#video-upload-progress").textContent = "✓ Subido"; updateMediaStatus(); scheduleSave(); } catch { requiredElement("#video-upload-progress").textContent = "⚠ No se pudo subir el video."; } });
         r2Notice();
-        requiredElement("#confirm-publication").addEventListener("click", markPublished);
+        confirmPublicationButton.addEventListener("click", markPublished);
         const closePublicationConfirmButton = requiredElement<HTMLButtonElement>("#close-publication-confirm");
         const cancelPublicationConfirmButton = requiredElement<HTMLButtonElement>("#cancel-publication-confirm");
-        if (publicationConfirmDialog) {
-          [closePublicationConfirmButton, cancelPublicationConfirmButton]
-            .filter((button): button is HTMLButtonElement => Boolean(button))
-            .forEach((button) => button.addEventListener("click", () => {
-              if (publicationConfirmDialog.open) publicationConfirmDialog.close();
-            }));
-        }
+        const closePublicationConfirmation = () => {
+          if (publicationConfirmDialog.open) publicationConfirmDialog.close();
+          if (publicationConfirmTrigger?.isConnected) publicationConfirmTrigger.focus();
+        };
+        [closePublicationConfirmButton, cancelPublicationConfirmButton]
+          .forEach((button) => button.addEventListener("click", closePublicationConfirmation));
+        publicationConfirmDialog.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          closePublicationConfirmation();
+        });
 
         const confirmPresentationImageButton = requiredElement<HTMLButtonElement>("#confirm-presentation-image");
         const closePresentationImageButton = requiredElement<HTMLButtonElement>("#close-presentation-image-dialog");

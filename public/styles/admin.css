@@ -718,6 +718,20 @@ form > div:empty {
   border-radius: 16px;
   background: #f7f9f4;
 }
+.publication-confirm-feedback {
+  margin: 22px 0 4px;
+  padding: 18px 20px;
+  border: 1px solid #d6a24a;
+  border-radius: 12px;
+  color: #68420d;
+  background: #fff7e7;
+  line-height: 1.55;
+}
+.publication-confirm-feedback p { margin: 0; }
+.publication-confirm-feedback p + p,
+.publication-confirm-feedback ul + p { margin-top: 12px; }
+.publication-confirm-feedback ul { margin: 8px 0 0; padding-left: 22px; }
+.publication-confirm-feedback:focus { outline: 3px solid rgba(184, 118, 28, .28); outline-offset: 3px; }
 .chatgpt-workflow-heading h3 { margin: 0; color: var(--green); font-size: 1.25rem; }
 .chatgpt-workflow-heading > p:last-child { max-width: 680px; margin: 10px 0 0; color: var(--muted); line-height: 1.65; }
 .chatgpt-steps { display: grid; gap: 14px; margin: 24px 0; padding: 0; list-style: none; }
