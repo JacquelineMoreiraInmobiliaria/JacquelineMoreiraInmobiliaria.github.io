@@ -752,6 +752,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const r2ImageLimit = Number(r2Config.maxImageBytes) || 25 * 1024 * 1024;
         const r2VideoLimit = Number(r2Config.maxVideoBytes) || 250 * 1024 * 1024;
         let editingId: string | null = null;
+        let editingSlug: string | null = null;
         let saveTimer: number | null = null;
         let selectedPhoto: File | null = null;
         let selectedVideo: File | null = null;
@@ -886,7 +887,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const descriptionParagraphs = (description: string) => description.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
         const currentValues = (): PropertyDraft => ({
           id: editingId || ("draft-" + Date.now()),
-          slug: slugify(nameInput.value) || "nueva-propiedad",
+          slug: editingSlug || slugify(nameInput.value) || "nueva-propiedad",
           name: nameInput.value.trim(),
           price: priceInput.value.trim(),
           subtitle: subtitleFromLocation(),
@@ -901,7 +902,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           media: preservedMedia ? { ...preservedMedia, sections: preservedMedia.sections ? { ...preservedMedia.sections } : undefined } : undefined,
           contact: { ...preservedContact },
           galleryEnabled: optionalInputValue('input[name="galleryEnabled"]:checked') !== "no",
-          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", presentationOnly: Boolean(item.presentationOnly), position: index + 1 })),
+          galleryItems: galleryItems.map((item, index) => ({ id: item.id, name: item.name, originalName: item.originalName, source: itemSource(item), status: item.status === "temporary" ? "missing" : item.status, external: Boolean(item.external), description: item.description || "", visible: item.visible !== false, remoteUrl: item.remoteUrl || "", objectKey: item.objectKey || "", presentationOnly: Boolean(item.presentationOnly), position: index + 1 })),
           futureCoverId: selectedFutureCoverId,
           presentationImages: { ...presentationImages },
           publication: { ...publication },
@@ -1042,7 +1043,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const publishedComparison = (property: PropertyRecord) => {
           const slug = property.slug || "";
           const published = publishedPropertyInventory[slug];
-          if (!published) return { published: false, matches: false, differences: ["publicación"] };
+          if (!published) return { published: false, matches: false, differences: ["slug"] };
           const draftValue = canonicalizePublishableDraft(property);
           const publishedValue = canonicalizePublishedProperty(published);
           const differences = Object.keys(draftValue).filter((key) => JSON.stringify(draftValue[key as keyof typeof draftValue]) !== JSON.stringify(publishedValue[key as keyof typeof publishedValue]));
@@ -2448,6 +2449,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
         const loadExistingDraft = (draft: PropertyRecord, isOriginal = false) => {
           editingId = draft.id || null;
+          editingSlug = draft.slug || slugify(draft.name || "") || null;
           title.textContent = "Editar propiedad";
           intro.textContent = "Revisá y actualizá la información básica.";
           nameInput.value = draft.name || "";
@@ -2479,6 +2481,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             loadExistingDraft(requested.slug === originalProperty.slug ? { ...originalProperty, ...saved } : saved, requested.slug === originalProperty.slug);
           } else {
             editingId = null;
+            editingSlug = null;
             title.textContent = "Nueva propiedad";
             intro.textContent = "Completá la información básica para empezar.";
             form.reset();
