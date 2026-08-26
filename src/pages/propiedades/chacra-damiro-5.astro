@@ -3,7 +3,11 @@ import "../../styles/damiro-compact.css";
 
 const media = "/media/chacra-damiro-5/";
 const images = {
-  panorama: media + "damiro-5-panorama.jpg",
+  hero: media + "damiro-5-hero.jpg",
+  seaView: media + "damiro-5-vista-mar.jpg",
+  rockView: media + "damiro-5-mirador-rocas.jpg",
+  deck: media + "damiro-5-mirador-deck.jpg",
+  deckDonkey: media + "damiro-5-mirador-deck-burro.jpg",
   croquis: media + "damiro-5-croquis.jpg"
 };
 const whatsapp = "59891905566";
@@ -28,7 +32,7 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
     </nav>
     <main>
       <section class="damiro-hero">
-        <img src={images.panorama} alt="Vista aérea del conjunto con Chacra 5 destacada" />
+        <img src={images.hero} alt="Vista aérea del conjunto con Chacra 5 destacada" />
         <div class="damiro-hero-shade"></div>
         <div class="damiro-hero-copy">
           <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
@@ -56,7 +60,7 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
       </section>
 
       <section id="propiedad" class="damiro-split">
-        <div class="damiro-split-media"><img src={images.panorama} alt="Vista aérea de la fracción y el entorno" loading="lazy" /></div>
+        <div class="damiro-split-media"><img src={images.seaView} alt="Vista panorámica del entorno de Monte Nativo hacia el mar" loading="lazy" /></div>
         <div class="damiro-split-copy">
           <p class="damiro-kicker">MONTE NATIVO</p>
           <h2>Una fracción para<br />imaginar lo propio.</h2>
@@ -85,12 +89,13 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
       </section>
 
       <section class="damiro-gallery" aria-label="Galería de Monte Nativo">
-        <img class="damiro-gallery-wide" src={images.panorama} alt="Panorámica del paisaje serrano" loading="lazy" />
-        <img class="damiro-gallery-wide" src={images.croquis} alt="Croquis de la fracción" loading="lazy" />
+        <img class="damiro-gallery-wide" src={images.rockView} alt="Vista del paisaje serrano entre las formaciones de roca" loading="lazy" />
+        <img src={images.deck} alt="Deck de madera y paisaje natural de Monte Nativo" loading="lazy" />
+        <img src={images.deckDonkey} alt="Deck de madera integrado al entorno natural" loading="lazy" />
       </section>
 
       <section id="contacto" class="damiro-cta">
-        <img src={images.panorama} alt="" loading="lazy" />
+        <img src={images.hero} alt="" loading="lazy" />
         <div class="damiro-cta-shade"></div>
         <div class="damiro-cta-copy">
           <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
@@ -106,3 +111,4 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
     </main>
   </body>
 </html>
+
