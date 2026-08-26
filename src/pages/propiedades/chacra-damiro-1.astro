@@ -1,0 +1,112 @@
+---
+import "../../styles/damiro-compact.css";
+
+const media = "/media/chacra-damiro-1/";
+const images = {
+  agape: media + "damiro-1-agape.jpg",
+  agapeInterior: media + "damiro-1-agape-interior.jpg",
+  casero: media + "damiro-1-casero.jpg",
+  croquis: media + "damiro-1-croquis.jpg"
+};
+const whatsapp = "59891905566";
+const email = "jacqueline@moreirainmobiliaria.com.uy";
+const inquiry = encodeURIComponent("Hola, me interesa Ágape, Chacra 1 de Chacras de Damiro.");
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ágape, Chacra 1 de Chacras de Damiro en Piriápolis." />
+    <title>Ágape | Chacras de Damiro | Moreira Inmobiliaria</title>
+  </head>
+  <body class="damiro-page">
+    <nav class="damiro-nav">
+      <a href="https://www.moreirainmobiliaria.com.uy/" target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <a class="damiro-nav-contact" href="#contacto">CONSULTAR</a>
+    </nav>
+    <main>
+      <section class="damiro-hero">
+        <img src={images.agape} alt="Exterior de la cabaña Ágape" />
+        <div class="damiro-hero-shade"></div>
+        <div class="damiro-hero-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 1</p>
+          <h1>Ágape</h1>
+          <p class="damiro-place">Piriápolis · Ruta 37 · Uruguay</p>
+          <h2>Dos espacios, una misma calma.</h2>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONSULTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href="#propiedad">VER DETALLES</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-intro">
+        <div class="damiro-intro-copy">
+          <p>Dentro de Chacras de Damiro, esta fracción reúne Ágape y una casa de casero, dos construcciones listas para habitar.</p>
+          <p>Su cercanía al acceso por Ruta 37 propone una combinación flexible para uso propio y renta.</p>
+        </div>
+        <div class="damiro-stat-grid" aria-label="Datos destacados">
+          <div><span class="damiro-icon">⌂</span><strong>Ágape<br />38 m²</strong></div>
+          <div><span class="damiro-icon">⌂</span><strong>Casa de casero<br />65 m²</strong></div>
+          <div><span class="damiro-icon">□</span><strong>3.003<br />m²</strong></div>
+          <div><span class="damiro-icon">↗</span><strong>2<br />construcciones</strong></div>
+        </div>
+      </section>
+
+      <section id="propiedad" class="damiro-split">
+        <div class="damiro-split-media"><img src={images.casero} alt="Casa de casero de Chacra 1" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">ÁGAPE</p>
+          <h2>Una chacra pensada<br />para habitar y compartir.</h2>
+          <ul>
+            <li>Cabaña Ágape de 38 m²</li>
+            <li>Un dormitorio y baño</li>
+            <li>Comedor y cocina integrados</li>
+            <li>Casa de casero de 65 m²</li>
+            <li>Dos dormitorios, baño y lavadero</li>
+            <li>Pozo de 47 m y depósito contenedor</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="damiro-split damiro-connection">
+        <div class="damiro-split-media"><img src={images.croquis} alt="Croquis aéreo de Chacra 1 dentro de Chacras de Damiro" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">CONEXIÓN Y ENTORNO</p>
+          <h2>El acceso más próximo,<br />dentro del conjunto.</h2>
+          <div class="damiro-location-cards">
+            <div><strong>Ruta 37</strong><span>Salida más cercana</span></div>
+            <div><strong>Acceso principal</strong><span>Entrada con portero eléctrico</span></div>
+            <div><strong>Piriápolis</strong><span>A cinco minutos del centro</span></div>
+            <div><strong>Servicios</strong><span>Agua y luz subterráneos</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-gallery" aria-label="Galería de Ágape">
+        <img class="damiro-gallery-wide" src={images.agape} alt="Fachada de Ágape" loading="lazy" />
+        <img src={images.agapeInterior} alt="Interior de Ágape" loading="lazy" />
+        <img src={images.casero} alt="Segunda construcción de Chacra 1" loading="lazy" />
+      </section>
+
+      <section id="contacto" class="damiro-cta">
+        <img src={images.agape} alt="" loading="lazy" />
+        <div class="damiro-cta-shade"></div>
+        <div class="damiro-cta-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 1</p>
+          <h2>¿Te interesa Ágape?</h2>
+          <p>Coordiná una visita y conocé sus dos espacios.</p>
+          <strong>USD 380.000</strong>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href={"mailto:" + email + "?subject=" + encodeURIComponent("Ágape · Chacras de Damiro")}>ENVIAR EMAIL</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
