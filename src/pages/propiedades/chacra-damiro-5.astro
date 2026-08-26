@@ -3,7 +3,6 @@ import "../../styles/damiro-compact.css";
 
 const media = "/media/chacra-damiro-5/";
 const images = {
-  monte: media + "damiro-5-monte.jpg",
   panorama: media + "damiro-5-panorama.jpg",
   croquis: media + "damiro-5-croquis.jpg"
 };
@@ -29,7 +28,7 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
     </nav>
     <main>
       <section class="damiro-hero">
-        <img src={images.monte} alt="Vista aérea de Chacra 5 y el Cerro Pan de Azúcar" />
+        <img src={images.panorama} alt="Vista aérea de Chacra 5 y el Cerro Pan de Azúcar" />
         <div class="damiro-hero-shade"></div>
         <div class="damiro-hero-copy">
           <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
@@ -86,13 +85,12 @@ const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de 
       </section>
 
       <section class="damiro-gallery" aria-label="Galería de Monte Nativo">
-        <img class="damiro-gallery-wide" src={images.monte} alt="Vista aérea de Chacra 5" loading="lazy" />
-        <img src={images.panorama} alt="Panorámica del paisaje serrano" loading="lazy" />
-        <img src={images.croquis} alt="Croquis de la fracción" loading="lazy" />
+        <img class="damiro-gallery-wide" src={images.panorama} alt="Panorámica del paisaje serrano" loading="lazy" />
+        <img class="damiro-gallery-wide" src={images.croquis} alt="Croquis de la fracción" loading="lazy" />
       </section>
 
       <section id="contacto" class="damiro-cta">
-        <img src={images.monte} alt="" loading="lazy" />
+        <img src={images.panorama} alt="" loading="lazy" />
         <div class="damiro-cta-shade"></div>
         <div class="damiro-cta-copy">
           <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
