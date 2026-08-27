@@ -45,9 +45,7 @@ h1, h2 { font-family: "Cormorant Garamond", serif; font-weight: 500; }
 h1 { font-size: clamp(3.5rem, 8vw, 6.75rem); line-height: .86; margin: 20px 0 28px; }
 h2 { font-size: clamp(2.8rem, 4vw, 3.6rem); line-height: 1; margin: 20px 0 28px; }
 .hero-sub { font-size: 1.1rem; max-width: 650px; line-height: 1.75; }
-.hero-stats { display: flex; flex-wrap: wrap; gap: 38px; margin-top: 40px; }
-.hero-stat strong { display: block; font-family: "Cormorant Garamond", serif; font-size: 1.9rem; }
-.hero-stat span, .statbox span { font-size: .72rem; line-height: 1.5; letter-spacing: 1.4px; text-transform: uppercase; }
+.statbox span { display: block; font-size: .72rem; line-height: 1.5; letter-spacing: 1.4px; text-transform: uppercase; }
 .button { display: inline-flex; align-items: center; justify-content: center; margin-top: 36px; border: 0; font-size: .76rem; letter-spacing: 1.2px; }
 
 .split, .location { display: grid; grid-template-columns: 1fr 1fr; }
@@ -59,7 +57,7 @@ h2 { font-size: clamp(2.8rem, 4vw, 3.6rem); line-height: 1; margin: 20px 0 28px;
 .statbox { padding: 36px 14px; text-align: center; border-right: 1px solid var(--line); }
 .stat-icon { min-height: 38px; margin-bottom: 12px; color: var(--green-2); font-size: 1.8rem; line-height: 1; }
 .stat-icon svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
-.statbox strong { display: block; font-family: "Cormorant Garamond", serif; font-size: 1.75rem; }
+.statbox strong { display: block; margin-top: 7px; font-family: "Cormorant Garamond", serif; font-size: 1.75rem; line-height: 1.15; overflow-wrap: anywhere; }
 .section { padding: 100px 6vw; }
 .gallery, .features { background: var(--green); color: #fff; }
 .gallery-head { text-align: center; margin-bottom: 48px; }
@@ -142,8 +140,6 @@ footer { background: #11140f; color: #fff; padding: 36px 6vw; display: flex; jus
   .hero-content { width: 86%; padding-bottom: 5vh; }
   h1 { font-size: clamp(3rem, 16vw, 4.4rem); line-height: .9; }
   h2 { font-size: 2.65rem; }
-  .hero-stats { gap: 24px 30px; }
-  .hero-stat { min-width: 110px; }
   .grid, .checks { grid-template-columns: 1fr; }
   .tile { aspect-ratio: 1.25; }
   .section { padding: 72px 7vw; }

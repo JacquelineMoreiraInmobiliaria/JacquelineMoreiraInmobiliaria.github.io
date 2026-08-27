@@ -82,7 +82,6 @@ const mapBounds = locationCoordinates
         {property.hero.subtitle && <div class="eyebrow">{property.hero.subtitle}</div>}
         <h1>{property.name}</h1>
         {property.hero.description && <div class="hero-sub">{property.hero.description}</div>}
-        {shownStats.length > 0 && <div class="hero-stats">{shownStats.map((item) => <div class="hero-stat"><strong>{item.value}</strong><span>{item.label}</span></div>)}</div>}
         <a class="button" href="#propiedad">CONOCER LA PROPIEDAD ↓</a>
       </div>
     </header>
@@ -97,7 +96,7 @@ const mapBounds = locationCoordinates
       <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
     </section>}
 
-    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><strong>{item.value}</strong><span>{item.label}</span></div>)}</section>}
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><span>{item.label}</span><strong>{item.value}</strong></div>)}</section>}
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>

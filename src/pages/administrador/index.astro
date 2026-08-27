@@ -861,6 +861,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           .trim()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "");
+        const currentPropertySlug = () => editingSlug || slugify(nameInput.value) || "nueva-propiedad";
 
         const readDrafts = (): Record<string, StoredProperty> => {
           try {
@@ -887,7 +888,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const descriptionParagraphs = (description: string) => description.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
         const currentValues = (): PropertyDraft => ({
           id: editingId || ("draft-" + Date.now()),
-          slug: editingSlug || slugify(nameInput.value) || "nueva-propiedad",
+          slug: currentPropertySlug(),
           name: nameInput.value.trim(),
           price: priceInput.value.trim(),
           subtitle: subtitleFromLocation(),
@@ -936,8 +937,8 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const publicationFor = (property: PropertyRecord | null | undefined) => property?.publication?.status === "published" ? property.publication : null;
         const normalizedText = (value: unknown) => typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
         const canonicalSource = (item: GalleryItem, slug: string) => item.remoteUrl || item.source || (item.external ? "https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/" + item.name : item.name ? "/media/" + slug + "/" + item.name : "");
-        const canonicalizePublishableDraft = (property: PropertyRecord) => {
-          const slug = property.slug || slugify(property.name || "");
+        const canonicalizePublishableDraft = (property: PropertyRecord, stableSlug = "") => {
+          const slug = stableSlug || property.slug || slugify(property.name || "");
           const gallery = (property.galleryItems || [])
             .filter((item) => !item.presentationOnly)
             .map((item) => ({ source: canonicalSource(item, slug), alt: normalizedText(item.description), visible: item.visible !== false }))
@@ -1042,12 +1043,22 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const publishableRevision = (value: unknown) => JSON.stringify(value);
         const publishedComparison = (property: PropertyRecord) => {
           const slug = property.slug || "";
-          const published = publishedPropertyInventory[slug];
-          if (!published) return { published: false, matches: false, differences: ["slug"] };
-          const draftValue = canonicalizePublishableDraft(property);
+          let published = publishedPropertyInventory[slug];
+          if (!published) {
+            const matchingName = Object.values(publishedPropertyInventory).filter((candidate) => normalizedText(candidate.name).toLocaleLowerCase("es") === normalizedText(property.name).toLocaleLowerCase("es"));
+            if (matchingName.length === 1) {
+              const candidate = matchingName[0];
+              const candidateDraft = canonicalizePublishableDraft(property, candidate.slug);
+              const candidatePublished = canonicalizePublishedProperty(candidate);
+              const contentDifferences = Object.keys(candidateDraft).filter((key) => key !== "slug" && JSON.stringify(candidateDraft[key as keyof typeof candidateDraft]) !== JSON.stringify(candidatePublished[key as keyof typeof candidatePublished]));
+              if (contentDifferences.length === 0) published = candidate;
+            }
+          }
+          if (!published) return { published: false, matches: false, differences: ["slug"], slug: "" };
+          const draftValue = canonicalizePublishableDraft(property, published.slug);
           const publishedValue = canonicalizePublishedProperty(published);
           const differences = Object.keys(draftValue).filter((key) => JSON.stringify(draftValue[key as keyof typeof draftValue]) !== JSON.stringify(publishedValue[key as keyof typeof publishedValue]));
-          return { published: true, matches: differences.length === 0, differences, revision: publishableRevision(publishedValue) };
+          return { published: true, matches: differences.length === 0, differences, revision: publishableRevision(publishedValue), slug: published.slug };
         };
         const validSavedLocation = (property: PropertyRecord | null | undefined) => {
           const latitude = Number(String(property?.latitude || "").replace(",", "."));
@@ -1094,6 +1105,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             publicationConfirmFeedback.focus();
             return;
           }
+          editingSlug = comparison.slug || values.slug;
           publication = { status: "published", publishedAt: new Date().toISOString(), publishedRevision: comparison.revision || "" };
           const finalized = { ...currentValues(), publication: { ...publication } };
           editingId = finalized.id;
@@ -1130,6 +1142,10 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             saveState.classList.remove("saved");
           }, 1800);
           return values;
+        };
+
+        const lockPropertySlug = () => {
+          if (!editingSlug) editingSlug = slugify(nameInput.value);
         };
 
         const scheduleSave = () => {
@@ -1196,7 +1212,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const resolvePropertyMediaState = (property: PropertyRecord | null, inventory: MediaInventoryItem): ResolvedPropertyMediaState => {
           const activeEditor = property === null;
           const savedProperty = activeEditor && editingId ? readDrafts()[editingId] || {} : property || {};
-          const slug = activeEditor ? (slugify(nameInput.value) || savedProperty.slug || "nueva-propiedad") : (property?.slug || slugify(property?.name || "") || "nueva-propiedad");
+          const slug = activeEditor ? (editingSlug || savedProperty.slug || slugify(nameInput.value) || "nueva-propiedad") : (property?.slug || slugify(property?.name || "") || "nueva-propiedad");
           const published = publishedMedia[slug] || { cover: "", gallery: [], video: "" };
           const original = (activeEditor ? editingId : property?.id) === originalProperty.id;
           const publishedGallery: GalleryItem[] = published.gallery.map((image, index) => ({
@@ -1275,7 +1291,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           };
         };
         const currentResolvedMediaState = () => {
-          const slug = slugify(nameInput.value) || "nueva-propiedad";
+          const slug = currentPropertySlug();
           return resolvePropertyMediaState(null, detectedMedia[slug] || { cover: false, gallery: [], video: false });
         };
         const hasRemoteMedia = (property: PropertyRecord | null = null) => {
@@ -1652,7 +1668,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
 
         const currentGalleryEnabled = () => optionalInputValue('input[name="galleryEnabled"]:checked') !== "no";
         const galleryFileName = (index: number) => "foto-" + String(index + 1).padStart(2, "0") + ".jpg";
-        const slugForGallery = () => slugify(nameInput.value) || "nueva-propiedad";
+        const slugForGallery = currentPropertySlug;
         const detectedGalleryItems = (): GalleryItem[] => {
           const slug = slugForGallery();
           const detected = detectedMedia[slug]?.gallery || [];
@@ -1749,7 +1765,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
         const signedUpload = async (kind: UploadKind, file: File, id: string): Promise<SignedUpload> => {
           if (!r2Config.workerUrl) throw new Error("La carga directa no está configurada.");
-          const response = await fetch(r2Config.workerUrl.replace(/\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugify(nameInput.value) || "nueva-propiedad", kind, contentType: file.type, id }) });
+          const response = await fetch(r2Config.workerUrl.replace(/\/$/, "") + "/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: currentPropertySlug(), kind, contentType: file.type, id }) });
           if (!response.ok) throw new Error("No se pudo solicitar permiso de carga.");
           return response.json() as Promise<SignedUpload>;
         };
@@ -2674,7 +2690,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         requiredElement<HTMLButtonElement>("[data-edit='atardecer-y-vides']").addEventListener("click", () => openEditor("edit", originalProperty));
         document.querySelectorAll("[data-duplicate]").forEach((button) => button.addEventListener("click", () => showToast("La duplicación estará disponible en una próxima etapa.")));
         requiredElement("#cancel").addEventListener("click", showList);
-        requiredElement("#save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
+        requiredElement("#save-exit").addEventListener("click", () => { lockPropertySlug(); saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         requiredElement("#cover-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         requiredElement("#property-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
         requiredElement("#data-save-exit").addEventListener("click", () => { saveDraft(); showList(); showToast("La propiedad quedó guardada como borrador."); });
@@ -2756,6 +2772,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               setStep(1);
               nameInput.focus();
             } else {
+              lockPropertySlug();
               saveDraft();
               setStep(2);
             }
@@ -2823,6 +2840,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             nameInput.focus();
             return;
           }
+          lockPropertySlug();
           saveDraft();
           setStep(2);
           window.scrollTo({ top: 0, behavior: "smooth" });
