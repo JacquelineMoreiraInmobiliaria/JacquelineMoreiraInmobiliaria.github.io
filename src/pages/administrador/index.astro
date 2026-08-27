@@ -511,6 +511,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
     <script>
       import JSZip from "jszip";
       import { buildChatGptDescriptionPrompt, normalizeSuggestion, parseChatGptDescriptionResponse } from "../../scripts/chatgpt-description-workflow.js";
+      import { normalizeFeatureCategory, normalizeSummaryIconId } from "../../scripts/publication-normalization.js";
       (() => {
         type PresentationImageTarget = "cover" | "property" | "features" | "distances" | "final";
         type PresentationImages = Record<PresentationImageTarget, string | null>;
@@ -907,7 +908,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           futureCoverId: selectedFutureCoverId,
           presentationImages: { ...presentationImages },
           publication: { ...publication },
-          features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: item.category, order: index + 1 })),
+          features: featureItems.map((item, index) => ({ id: item.id, label: item.label || "", category: normalizeFeatureCategory(item.category), order: index + 1 })),
           locationEnabled: optionalInputValue('input[name="locationEnabled"]:checked') === "yes",
           locationName: locationNameInput.value.trim(),
           locationAddress: locationAddressInput.value.trim(),
@@ -926,7 +927,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           propertyHeadline: organizedHeadline.trim() || legacyPropertyHeadline,
           paragraphs: organizedParagraphs.map((item) => item.text.trim()).filter(Boolean).length ? organizedParagraphs.map((item) => item.text.trim()).filter(Boolean) : descriptionParagraphs(propertyDescriptionInput.value),
           featuredData: [...featuredDataList.querySelectorAll(".data-card")].map((card) => ({
-            icon: (card as HTMLElement).dataset.icon || "home",
+            icon: normalizeSummaryIconId((card as HTMLElement).dataset.icon),
             label: requiredElement<HTMLInputElement>("[data-field='label']", card).value.trim(),
             value: requiredElement<HTMLInputElement>("[data-field='value']", card).value.trim(),
             show: card.querySelector<HTMLInputElement>("input[type='radio']:checked")?.value !== "no"
@@ -961,7 +962,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               coverImage: imageSourceFor("cover"),
               video: { enabled: property.videoEnabled === true, source: normalizedText(property.remoteVideo?.url) || normalizedText(property.videoSource) }
             },
-            summary: (property.featuredData || []).filter((item) => item.show && normalizedText(item.label) && normalizedText(item.value)).map((item) => ({ icon: normalizedText(item.icon) || "home", label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
+            summary: (property.featuredData || []).filter((item) => item.show && normalizedText(item.label) && normalizedText(item.value)).map((item) => ({ icon: normalizeSummaryIconId(item.icon), label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
             media: {
               cover: imageSourceFor("cover"),
               sections: {
@@ -977,14 +978,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               paragraphs: (property.paragraphs || property.organizedDescription?.paragraphs || []).map(normalizedText).filter(Boolean)
             },
             gallery: { enabled: property.galleryEnabled !== false, images: gallery },
-            features: (property.features || []).filter((item) => normalizedText(item.label)).map((item) => ({ label: normalizedText(item.label), category: item.category })),
-            location: {
-              enabled: property.locationEnabled === true,
+            features: (property.features || []).filter((item) => normalizedText(item.label)).map((item) => ({ label: normalizedText(item.label), category: normalizeFeatureCategory(item.category) })),
+            location: property.locationEnabled === true ? {
+              enabled: true,
               visibleName: normalizedText(property.locationName),
               address: normalizedText(property.locationAddress),
               latitude: normalizedText(property.latitude),
               longitude: normalizedText(property.longitude)
-            },
+            } : { enabled: false },
             distances: {
               enabled: property.distancesEnabled === true,
               items: (property.distances || []).filter((item) => normalizedText(item.destination) && normalizedText(item.distance)).map((item) => ({ destination: normalizedText(item.destination), distance: normalizedText(item.distance) }))
@@ -1006,7 +1007,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             coverImage: normalizedText(property.media?.cover) || normalizedText(property.hero.coverImage),
             video: { enabled: property.hero.video.enabled === true, source: normalizedText(property.hero.video.source) }
           },
-          summary: property.summary.filter((item) => item.show !== false).map((item) => ({ icon: normalizedText(item.icon) || "home", label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
+          summary: property.summary.filter((item) => item.show !== false).map((item) => ({ icon: normalizeSummaryIconId(item.icon), label: normalizedText(item.label), value: normalizedText(item.value), show: true })),
           media: {
             cover: normalizedText(property.media?.cover) || normalizedText(property.hero.coverImage),
             sections: {
@@ -1022,14 +1023,14 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             paragraphs: property.property.paragraphs.map(normalizedText).filter(Boolean)
           },
           gallery: { enabled: property.gallery.enabled === true, images: property.gallery.images.map((item) => ({ source: normalizedText(item.source), alt: normalizedText(item.alt), visible: item.visible !== false })) },
-          features: property.features.map((item) => ({ label: normalizedText(item.label), category: item.category })),
-          location: {
-            enabled: property.location.enabled === true,
+          features: property.features.map((item) => ({ label: normalizedText(item.label), category: normalizeFeatureCategory(item.category) })),
+          location: property.location.enabled === true ? {
+            enabled: true,
             visibleName: normalizedText(property.location.visibleName),
             address: normalizedText(property.location.address),
             latitude: typeof property.location.latitude === "number" ? String(property.location.latitude) : "",
             longitude: typeof property.location.longitude === "number" ? String(property.location.longitude) : ""
-          },
+          } : { enabled: false },
           distances: {
             enabled: property.distances.enabled === true,
             items: property.distances.items.map((item) => ({ destination: normalizedText(item.destination), distance: normalizedText(item.distance) }))
@@ -1571,7 +1572,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           const card = document.createElement("article");
           card.className = "data-card";
           card.draggable = false;
-          card.dataset.icon = data.icon || "home";
+          card.dataset.icon = normalizeSummaryIconId(data.icon);
           card.innerHTML = `
             <header class="data-card-header">
               <div class="drag-handle" title="Arrastrar para cambiar el orden" aria-label="Arrastrar para cambiar el orden">
@@ -1652,7 +1653,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           });
 
           featuredDataList.appendChild(card);
-          selectDataIcon(card, data.icon || "home");
+          selectDataIcon(card, normalizeSummaryIconId(data.icon));
           renumberDataCards();
           return card;
         };
@@ -1952,7 +1953,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         };
         const loadFeatures = (property: PropertyRecord) => {
           const saved = Array.isArray(property.features) ? property.features : [];
-          featureItems = saved.map((item, index) => ({ id: item.id || "feature-loaded-" + index, label: item.label || "", category: item.category === "exterior" ? "exterior" : "structural" }));
+          featureItems = saved.map((item, index) => ({ id: item.id || "feature-loaded-" + index, label: item.label || "", category: normalizeFeatureCategory(item.category) }));
           renderFeatures();
         };
 
@@ -2160,7 +2161,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           lines.push("", "summary:");
           if (visibleData.length) visibleData.forEach((item) => {
             lines.push("  - label: " + yamlText(item.label), "    value: " + yamlText(item.value));
-            if (item.icon) lines.push("    icon: " + item.icon);
+            lines.push("    icon: " + normalizeSummaryIconId(item.icon));
             lines.push("    show: true");
           });
           else lines.push("  []");
@@ -2180,7 +2181,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
           if (gallery.length) gallery.forEach((item) => { lines.push("    - source: " + yamlText(item.source)); if (item.alt) lines.push("      alt: " + yamlText(item.alt)); if (item.visible === false) lines.push("      visible: false"); });
           else lines.push("    []");
           lines.push("", "features:");
-          if (features.length) features.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    category: " + item.category));
+          if (features.length) features.forEach((item) => lines.push("  - label: " + yamlText(item.label), "    category: " + normalizeFeatureCategory(item.category)));
           else lines.push("  []");
           lines.push("", "location:", "  enabled: " + (values.locationEnabled ? "true" : "false"));
           if (values.locationEnabled) {
@@ -2440,7 +2441,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
               final: findImageId(sections.final)
             },
             publication: { status: "published", publishedAt: now, publishedRevision: property.yamlPath },
-            features: property.features.map((item, index) => ({ id: "published-feature-" + index, label: item.label, category: item.category, order: index + 1 })),
+            features: property.features.map((item, index) => ({ id: "published-feature-" + index, label: item.label, category: normalizeFeatureCategory(item.category), order: index + 1 })),
             locationEnabled: property.location.enabled,
             locationName: property.location.visibleName || "",
             locationAddress: property.location.address || "",
@@ -2455,7 +2456,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             sectionName: property.property.sectionTitle || "",
             propertyHeadline: property.property.headline || "",
             paragraphs: [...property.property.paragraphs],
-            featuredData: property.summary.map((item) => ({ icon: item.icon || "home", label: item.label, value: item.value, show: item.show !== false })),
+            featuredData: property.summary.map((item) => ({ icon: normalizeSummaryIconId(item.icon), label: item.label, value: item.value, show: item.show !== false })),
             updatedAt: now,
             hero: { coverImage: property.hero.coverImage },
             media: property.media ? { cover: property.media.cover, sections: { ...sections } } : undefined,
