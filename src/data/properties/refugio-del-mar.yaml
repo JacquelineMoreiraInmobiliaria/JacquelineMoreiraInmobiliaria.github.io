@@ -18,6 +18,10 @@ summary:
     value: "Valle y bosque"
     icon: land
     show: true
+  - label: "Piscina"
+    value: "Exterior"
+    icon: pool
+    show: true
   - label: "Lago"
     value: "Con puente"
     icon: view
@@ -69,6 +73,8 @@ features:
   - label: "Mini cancha de fútbol"
     category: structural
   - label: "Agua de pozo propio"
+    category: structural
+  - label: "Superficie ampliable hasta 20 hectáreas. Consultar precio."
     category: structural
 
 location:
