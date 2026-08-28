@@ -4,7 +4,7 @@ price: USD 850.000
 
 hero:
   subtitle: Piriápolis · Maldonado · Uruguay
-  description: 10 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.
+  description: 5 hectáreas de privacidad, naturaleza y una imponente vista panorámica de 180° sobre el mar.
   coverImage: https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/hero.jpg
   video:
     enabled: true
@@ -12,7 +12,7 @@ hero:
 
 summary:
   - label: Superficie total
-    value: 10 ha
+    value: 5 ha
     show: true
   - label: Residencia
     value: 1 planta
