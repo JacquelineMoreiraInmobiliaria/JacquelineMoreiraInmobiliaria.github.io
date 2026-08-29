@@ -1,0 +1,182 @@
+---
+import type { CollectionEntry } from "astro:content";
+import "../styles/master.css";
+
+type PropertyData = CollectionEntry<"properties">["data"];
+type SiteSettings = {
+  company: string;
+  website: string;
+  whatsapp: string;
+  email: string;
+  logo: string;
+};
+type Props = { property: PropertyData; settings: SiteSettings };
+type SummaryItem = PropertyData["summary"][number];
+
+const { property, settings } = Astro.props as Props;
+const features = property.features;
+const shownStats = property.summary.filter((item) => item.show);
+const legacyStatIcons = ["⌂", "⌂", "▣", "◌", "≈", "♨"];
+const statIconFor = (item: SummaryItem) => item.icon || "home";
+const legacyStatIconFor = (index: number) => legacyStatIcons[index] || "•";
+const coverImage = property.media?.cover || property.hero.coverImage;
+const galleryImages = property.gallery.images.filter((image) => image.visible !== false);
+const showGallery = property.gallery.enabled && galleryImages.length > 0;
+const availableImages = property.gallery.images;
+const fallbackImages = availableImages.filter((image) => image.source !== coverImage);
+const fallbackAt = (index: number) => (fallbackImages[index] || fallbackImages[0] || availableImages[index] || availableImages[0])?.source || coverImage;
+const sectionImages = property.media?.sections ? {
+  property: property.media.sections.property || fallbackAt(0),
+  features: property.media.sections.features || fallbackAt(1),
+  distances: property.media.sections.distances || fallbackAt(2),
+  final: property.media.sections.final || fallbackAt(2)
+} : null;
+const locationCoordinates = property.location.enabled === true &&
+  typeof property.location.latitude === "number" &&
+  typeof property.location.longitude === "number"
+  ? { latitude: property.location.latitude, longitude: property.location.longitude }
+  : null;
+const showLocation = locationCoordinates !== null;
+const distanceImage = property.media?.sections?.distances || fallbackAt(2);
+const showDistances = property.distances.enabled && property.distances.items.length > 0;
+const whatsapp = property.contact.useDefault ? settings.whatsapp : property.contact.whatsapp;
+const email = property.contact.useDefault ? settings.email : property.contact.email;
+const inquiry = encodeURIComponent(`Hola, estoy interesado en la propiedad ${property.name}.`);
+const mapBounds = locationCoordinates
+  ? `${locationCoordinates.longitude - 0.04}%2C${locationCoordinates.latitude - 0.03}%2C${locationCoordinates.longitude + 0.04}%2C${locationCoordinates.latitude + 0.03}`
+  : "";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={property.property.headline || property.name} />
+    <title>{property.name} | Moreira Inmobiliaria</title>
+  </head>
+  <body>
+    <nav class="nav">
+      <a href={settings.website} target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img class="brand-logo" src={settings.logo} alt="Moreira Inmobiliaria" />
+      </a>
+      <div class="navlinks">
+        <a href="#propiedad">LA PROPIEDAD</a>
+        {showGallery && <a href="#galeria">GALERÍA</a>}
+        {features.length > 0 && <a href="#caracteristicas">CARACTERÍSTICAS</a>}
+        {showLocation && <a href="#ubicacion">UBICACIÓN</a>}
+        <a href="#contacto">CONTACTO</a>
+        {whatsapp && <a class="wa" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">WHATSAPP</a>}
+      </div>
+    </nav>
+
+    <header class="hero">
+      {property.hero.video.enabled && property.hero.video.source ? (
+        <video autoplay muted loop playsinline>
+          <source src={property.hero.video.source} type="video/mp4" />
+        </video>
+      ) : (
+        <img class="hero-image" src={coverImage} alt={property.name} />
+      )}
+      <div class="hero-content">
+        {property.hero.subtitle && <div class="eyebrow">{property.hero.subtitle}</div>}
+        <h1>{property.name}</h1>
+        {property.hero.description && <div class="hero-sub">{property.hero.description}</div>}
+        <a class="button" href="#propiedad">CONOCER LA PROPIEDAD ↓</a>
+      </div>
+    </header>
+
+    {(property.property.sectionTitle || property.property.headline || property.property.paragraphs.length > 0) && <section id="propiedad" class="split">
+      <div class="split-copy">
+        {property.property.sectionTitle && <div class="kicker">{property.property.sectionTitle}</div>}
+        {property.property.headline && <h2>{property.property.headline}</h2>}
+        {property.property.paragraphs.map((paragraph) => <p class="copy property-description">{paragraph}</p>)}
+        {showGallery && <a class="button" href="#galeria">VER GALERÍA ↗</a>}
+      </div>
+      <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
+    </section>}
+
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><span>{item.label}</span><strong>{item.value}</strong></div>)}</section>}
+
+    {showGallery && <section id="galeria" class="section gallery">
+      <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
+      <div class="grid">{galleryImages.map((image, index) => (
+        <button class="tile" type="button" data-gallery-index={index} aria-label={`Ampliar imagen ${index + 1} de ${property.gallery.images.length}: ${image.alt || property.name}`}>
+          <img src={image.source} alt={image.alt || property.name} loading="lazy" />
+        </button>
+      ))}</div>
+    </section>}
+
+    {showGallery && <dialog class="lightbox" aria-label={`Galería ampliada de ${property.name}`}>
+      <div class="lightbox-frame">
+        <button class="lightbox-control lightbox-close" type="button" aria-label="Cerrar imagen ampliada">×</button>
+        <button class="lightbox-control lightbox-previous" type="button" aria-label="Ver imagen anterior">‹</button>
+        <figure>
+          <img class="lightbox-image" src="" alt="" />
+          <figcaption class="lightbox-caption" aria-live="polite"></figcaption>
+        </figure>
+        <button class="lightbox-control lightbox-next" type="button" aria-label="Ver imagen siguiente">›</button>
+      </div>
+    </dialog>}
+
+    {features.length > 0 && <section id="caracteristicas" class:list={["features", { "has-presentation-media": Boolean(sectionImages?.features) }]}>
+      <div class="features-copy"><div class="kicker">Características</div><h2>Confort, diseño y naturaleza.</h2><div class="checks">{features.map((feature) => <div class="check">{feature.label}</div>)}</div></div>
+      {sectionImages?.features && <div class="features-media"><img src={sectionImages.features} alt={property.name} loading="lazy" /></div>}
+    </section>}
+
+    {locationCoordinates && <section id="ubicacion" class="location">
+      <div class="location-copy"><div class="kicker">Ubicación</div>{property.location.visibleName && <h2>{property.location.visibleName}</h2>}{property.location.address && <p class="copy">{property.location.address}</p>}
+      <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${locationCoordinates.latitude},${locationCoordinates.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
+      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
+    </section>}
+
+    {showDistances && <section class:list={["distances", { "has-presentation-media": Boolean(distanceImage) }]}>{distanceImage && <div class="distances-media"><img src={distanceImage} alt="" loading="lazy" /></div>}<div class="distances-copy"><div class="kicker">Distancias</div><h2>Todo cerca.</h2><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.distance}</strong><span>{item.destination}</span></div>)}</div></div></section>}
+
+    <section id="contacto" class:list={["contact", { "has-presentation-media": Boolean(sectionImages?.final) }]}>{sectionImages?.final && <img class="contact-media" src={sectionImages.final} alt="" loading="lazy" />}<div class="kicker">Una propiedad excepcional</div><h2>¿Te interesa<br />{property.name}?</h2>{property.price && <div class="price">{property.price}</div>}<div class="contact-buttons">{whatsapp && <a class="button" href={`https://wa.me/${whatsapp}?text=${inquiry}`} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>}{email && <a class="button outline" href={`mailto:${email}?subject=${encodeURIComponent(property.name)}`}>ENVIAR EMAIL</a>}</div></section>
+    <footer><div><strong>{settings.company}</strong></div><div>Presentación digital de la propiedad</div></footer>
+    {showGallery && <script define:vars={{ galleryImages, propertyName: property.name }}>
+      const dialog = document.querySelector(".lightbox");
+      const image = dialog?.querySelector(".lightbox-image");
+      const caption = dialog?.querySelector(".lightbox-caption");
+      const closeButton = dialog?.querySelector(".lightbox-close");
+      let currentIndex = 0;
+      let touchStartX = 0;
+
+      const showImage = (index) => {
+        currentIndex = (index + galleryImages.length) % galleryImages.length;
+        const selected = galleryImages[currentIndex];
+        image.src = selected.source;
+        image.alt = selected.alt || propertyName;
+        caption.textContent = `${currentIndex + 1} de ${galleryImages.length} · ${selected.alt || propertyName}`;
+      };
+
+      document.querySelectorAll("[data-gallery-index]").forEach((button) => {
+        button.addEventListener("click", () => {
+          showImage(Number(button.dataset.galleryIndex));
+          dialog.showModal();
+          document.body.classList.add("lightbox-open");
+          closeButton.focus();
+        });
+      });
+
+      closeButton?.addEventListener("click", () => dialog.close());
+      dialog?.querySelector(".lightbox-previous")?.addEventListener("click", () => showImage(currentIndex - 1));
+      dialog?.querySelector(".lightbox-next")?.addEventListener("click", () => showImage(currentIndex + 1));
+      dialog?.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      dialog?.addEventListener("close", () => document.body.classList.remove("lightbox-open"));
+      dialog?.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") showImage(currentIndex - 1);
+        if (event.key === "ArrowRight") showImage(currentIndex + 1);
+      });
+      dialog?.addEventListener("touchstart", (event) => {
+        touchStartX = event.changedTouches[0].clientX;
+      }, { passive: true });
+      dialog?.addEventListener("touchend", (event) => {
+        const distance = event.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(distance) > 50) showImage(currentIndex + (distance < 0 ? 1 : -1));
+      }, { passive: true });
+    </script>}
+  </body>
+</html>

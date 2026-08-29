@@ -1,0 +1,113 @@
+---
+import "../../styles/damiro-compact.css";
+
+const media = "/media/chacra-damiro-3/";
+const images = {
+  cabin: media + "damiro-3-cabin.jpg",
+  living: media + "damiro-3-living.jpg",
+  dining: media + "damiro-3-dining.jpg",
+  croquis: media + "damiro-3-croquis.jpg"
+};
+const whatsapp = "59891905566";
+const email = "jacqueline@moreirainmobiliaria.com.uy";
+const inquiry = encodeURIComponent("Hola, me interesa La Barbacoa, Chacra 3 de Chacras de Damiro.");
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="La Barbacoa, Chacra 3 de Chacras de Damiro en Piriápolis." />
+    <title>La Barbacoa | Chacras de Damiro | Moreira Inmobiliaria</title>
+  </head>
+  <body class="damiro-page">
+    <nav class="damiro-nav">
+      <a href="https://www.moreirainmobiliaria.com.uy/" target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <a class="damiro-nav-contact" href="#contacto">CONSULTAR</a>
+    </nav>
+
+    <main>
+      <section class="damiro-hero">
+        <img src={images.cabin} alt="Exterior de La Barbacoa" />
+        <div class="damiro-hero-shade"></div>
+        <div class="damiro-hero-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 3</p>
+          <h1>La Barbacoa</h1>
+          <p class="damiro-place">Piriápolis · Ruta 37 · Uruguay</p>
+          <h2>Una cabaña abierta al paisaje</h2>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONSULTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href="#propiedad">VER DETALLES</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-intro">
+        <div class="damiro-intro-copy">
+          <p class="damiro-property-description">Dentro de Chacras de Damiro, esta fracción se distingue por albergar La Barbacoa, la cabaña de mayor escala del conjunto.</p>
+          <p class="damiro-property-description">Sus 3.047 m² reúnen caminería, monte nativo y panorámicas hacia el Cerro Pan de Azúcar, a cinco minutos del centro de Piriápolis.</p>
+        </div>
+        <div class="damiro-stat-grid" aria-label="Datos destacados">
+          <div><span class="damiro-icon">⌂</span><strong>Cabaña<br />Barbacoa</strong></div>
+          <div><span class="damiro-icon">□</span><strong>60 m²<br />construidos</strong></div>
+          <div><span class="damiro-icon">▰</span><strong>2<br />dormitorios</strong></div>
+          <div><span class="damiro-icon">↗</span><strong>2<br />plantas</strong></div>
+        </div>
+      </section>
+
+      <section id="propiedad" class="damiro-split">
+        <div class="damiro-split-media"><img src={images.living} alt="Interior de La Barbacoa" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">LA BARBACOA</p>
+          <h2>Una cabaña amplia<br />para vivir el paisaje.</h2>
+          <ul>
+            <li>Cabaña “Barbacoa” de 60 m²</li>
+            <li>Dos plantas y dos dormitorios</li>
+            <li>Cocina semi integrada</li>
+            <li>Living con estufa a leña</li>
+            <li>Baño completo y aire acondicionado</li>
+            <li>Pozo de agua de 64 m</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="damiro-split damiro-connection">
+        <div class="damiro-split-media"><img src={images.croquis} alt="Croquis aéreo de Chacra 3 dentro de Chacras de Damiro" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">CONEXIÓN Y ENTORNO</p>
+          <h2>Todo lo esencial,<br />junto a las sierras.</h2>
+          <div class="damiro-location-cards">
+            <div><strong>Ruta 37</strong><span>Sobre el acceso</span></div>
+            <div><strong>Piriápolis</strong><span>A cinco minutos del centro</span></div>
+            <div><strong>Cerro Pan de Azúcar</strong><span>Vistas panorámicas</span></div>
+            <div><strong>Monte nativo</strong><span>Caminería y entorno natural</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-gallery" aria-label="Galería de La Barbacoa">
+        <img class="damiro-gallery-wide" src={images.cabin} alt="Fachada de La Barbacoa" loading="lazy" />
+        <img src={images.living} alt="Living de la cabaña" loading="lazy" />
+        <img src={images.dining} alt="Comedor y estufa a leña de la cabaña" loading="lazy" />
+      </section>
+
+      <section id="contacto" class="damiro-cta">
+        <img src={images.cabin} alt="" loading="lazy" />
+        <div class="damiro-cta-shade"></div>
+        <div class="damiro-cta-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 3</p>
+          <h2>¿Te interesa La Barbacoa?</h2>
+          <p>Coordiná una visita y conocé el entorno de primera mano.</p>
+          <strong>USD 290.000</strong>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href={"mailto:" + email + "?subject=" + encodeURIComponent("La Barbacoa · Chacras de Damiro")}>ENVIAR EMAIL</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

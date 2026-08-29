@@ -1,0 +1,112 @@
+---
+import "../../styles/damiro-compact.css";
+
+const media = "/media/chacra-damiro-2/";
+const images = {
+  marina: media + "damiro-2-marina.jpg",
+  alpina: media + "damiro-2-alpina.jpg",
+  marinaInterior: media + "damiro-2-marina-interior.jpg",
+  croquis: media + "damiro-2-croquis.jpg"
+};
+const whatsapp = "59891905566";
+const email = "jacqueline@moreirainmobiliaria.com.uy";
+const inquiry = encodeURIComponent("Hola, me interesa Alpina & Marina, Chacra 2 de Chacras de Damiro.");
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Alpina & Marina, Chacra 2 de Chacras de Damiro en Piriápolis." />
+    <title>Alpina & Marina | Chacras de Damiro | Moreira Inmobiliaria</title>
+  </head>
+  <body class="damiro-page">
+    <nav class="damiro-nav">
+      <a href="https://www.moreirainmobiliaria.com.uy/" target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <a class="damiro-nav-contact" href="#contacto">CONSULTAR</a>
+    </nav>
+    <main>
+      <section class="damiro-hero">
+        <img src={images.marina} alt="Exterior de la cabaña Marina" />
+        <div class="damiro-hero-shade"></div>
+        <div class="damiro-hero-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 2</p>
+          <h1>Alpina &amp; Marina</h1>
+          <p class="damiro-place">Piriápolis · Ruta 37 · Uruguay</p>
+          <h2>Dos unidades listas para disfrutar.</h2>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONSULTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href="#propiedad">VER DETALLES</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-intro">
+        <div class="damiro-intro-copy">
+          <p class="damiro-property-description">Dentro de Chacras de Damiro, Alpina y Marina conviven de forma completamente independiente, entre monte nativo y privacidad.</p>
+          <p class="damiro-property-description">Dos cabañas de 56 m² abren una opción flexible para residencia inmediata o rentabilidad.</p>
+        </div>
+        <div class="damiro-stat-grid" aria-label="Datos destacados">
+          <div><span class="damiro-icon">⌂</span><strong>2<br />cabañas</strong></div>
+          <div><span class="damiro-icon">□</span><strong>56 m²<br />cada una</strong></div>
+          <div><span class="damiro-icon">↗</span><strong>3.000<br />m²</strong></div>
+          <div><span class="damiro-icon">⌂</span><strong>2 unidades<br />independientes</strong></div>
+        </div>
+      </section>
+
+      <section id="propiedad" class="damiro-split">
+        <div class="damiro-split-media"><img src={images.alpina} alt="Exterior de la cabaña Alpina" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">ALPINA &amp; MARINA</p>
+          <h2>Dos cabañas<br />para elegir el ritmo.</h2>
+          <ul>
+            <li>Dos unidades de 56 m²</li>
+            <li>Living comedor con estufa a leña y parrillero</li>
+            <li>Cocinas integradas y baño</li>
+            <li>Dormitorio matrimonial y altillo</li>
+            <li>Aire acondicionado</li>
+            <li>Agua suministrada por Chacra La Bodega</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="damiro-split damiro-connection">
+        <div class="damiro-split-media"><img src={images.croquis} alt="Croquis aéreo de Chacra 2 dentro de Chacras de Damiro" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">CONEXIÓN Y ENTORNO</p>
+          <h2>Privacidad compartida<br />con el paisaje.</h2>
+          <div class="damiro-location-cards">
+            <div><strong>Dos unidades</strong><span>Completamente independientes</span></div>
+            <div><strong>Monte nativo</strong><span>Entorno de privacidad</span></div>
+            <div><strong>Ruta 37</strong><span>Acceso al conjunto</span></div>
+            <div><strong>Piriápolis</strong><span>A cinco minutos del centro</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-gallery" aria-label="Galería de Alpina y Marina">
+        <img class="damiro-gallery-wide" src={images.marina} alt="Fachada de Marina" loading="lazy" />
+        <img src={images.alpina} alt="Fachada de Alpina" loading="lazy" />
+        <img src={images.marinaInterior} alt="Interior de Marina" loading="lazy" />
+      </section>
+
+      <section id="contacto" class="damiro-cta">
+        <img src={images.alpina} alt="" loading="lazy" />
+        <div class="damiro-cta-shade"></div>
+        <div class="damiro-cta-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 2</p>
+          <h2>¿Te interesan Alpina y Marina?</h2>
+          <p>Coordiná una visita y conocé sus dos unidades.</p>
+          <strong>USD 320.000</strong>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href={"mailto:" + email + "?subject=" + encodeURIComponent("Alpina & Marina · Chacras de Damiro")}>ENVIAR EMAIL</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
