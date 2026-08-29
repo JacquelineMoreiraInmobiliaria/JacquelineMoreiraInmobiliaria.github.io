@@ -90,7 +90,7 @@ const mapBounds = locationCoordinates
       <div class="split-copy">
         {property.property.sectionTitle && <div class="kicker">{property.property.sectionTitle}</div>}
         {property.property.headline && <h2>{property.property.headline}</h2>}
-        {property.property.paragraphs.map((paragraph) => <p class="copy">{paragraph}</p>)}
+        {property.property.paragraphs.map((paragraph) => <p class:list={["copy", { "property-description": property.slug !== "atardecer-y-vides" }]}>{paragraph}</p>)}
         {showGallery && <a class="button" href="#galeria">VER GALERÍA ↗</a>}
       </div>
       <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
