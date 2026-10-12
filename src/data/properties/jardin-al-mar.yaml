@@ -12,32 +12,32 @@ summary:
   -
     label: "Superficie de terreno"
     value: "830 m²"
-    icon: "land"
+    icon: "stat-land"
     show: true
   -
     label: "Superficie edificada"
     value: "280 m²"
-    icon: "surface"
+    icon: "stat-built"
     show: true
   -
     label: "Terrazas y decks"
     value: "130 m²"
-    icon: "home"
+    icon: "stat-floors"
     show: true
   -
     label: "Dormitorios en suite"
     value: "5"
-    icon: "bed"
+    icon: "stat-suite"
     show: true
   -
     label: "Baños"
     value: "6"
-    icon: "bath"
+    icon: "stat-bath"
     show: true
   -
     label: "Costa directa sobre la playa"
     value: "28 metros"
-    icon: "view"
+    icon: "stat-beach"
     show: true
 property:
   sectionTitle: "La propiedad"
@@ -82,7 +82,12 @@ gallery:
       visible: true
 media:
   cover: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-2687c50e-24f8-4478-b416-e1bc4a595fb2"
-  sections: {}
+  sections:
+    final: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-0d75c8bc-ecca-40fe-a156-8f483452bd7f"
+    distances: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-e49febc5-8fe5-4073-a22e-357692747fd3"
+    location: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-cdcf3608-901f-459c-9650-69dff8aa5ce7"
+    features: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-fa60991d-54da-46de-9864-09844308deab"
+    property: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-fcac9f22-0292-41f5-9de2-38eb1884d7e7"
 features:
   -
     label: "Residencia en dos plantas"
