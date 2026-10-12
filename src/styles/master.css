@@ -177,3 +177,34 @@ footer { background: #11140f; color: #fff; padding: 36px 6vw; display: flex; jus
 .contact.has-presentation-media .contact-media { display: block; position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .contact.has-presentation-media::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(5,10,5,.88) 0%, rgba(5,10,5,.72) 48%, rgba(5,10,5,.58) 100%); }
 .contact.has-presentation-media > :not(.contact-media) { position: relative; z-index: 2; text-shadow: 0 2px 16px rgba(0,0,0,.45); }
+
+
+
+/* Location and distances share editorial spacing, with alternating photographs. */
+.location.location-editorial {grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);background:var(--cream);align-items:stretch}
+.location-editorial .location-media {grid-column:2;grid-row:1;position:relative;min-height:640px;overflow:hidden;background:var(--green)}
+.location-editorial .location-media img {width:100%;height:100%;position:absolute;inset:0;object-fit:cover}
+.location-editorial .location-details {grid-column:1;grid-row:1;padding:clamp(48px,6vw,88px);display:flex;flex-direction:column;justify-content:center;gap:32px;min-width:0}
+.location-editorial .location-copy {padding:0;display:block}
+.location-editorial .location-copy h2 {margin:14px 0 20px;overflow-wrap:anywhere}
+.location-editorial .location-copy .copy {margin:0;font-size:1rem;line-height:1.7}
+.location-editorial .location-copy .button {margin-top:24px;align-self:flex-start}
+.location-editorial .map {min-height:280px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:0 12px 30px rgba(36,53,31,.07)}
+.location-editorial .map iframe {display:block;min-height:0;height:300px;width:100%;border:0}
+.distances.distances-editorial {grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);background:#fff;min-height:560px}
+.distances-editorial .distances-media {position:relative;min-height:560px;overflow:hidden;background:var(--green)}
+.distances-editorial .distances-media img {position:absolute;inset:0;width:100%;height:100%;min-height:0;object-fit:cover}
+.distances-editorial .distances-copy {padding:clamp(48px,6vw,88px);min-width:0}
+.distances-editorial .distances-copy h2 {margin:14px 0 32px}
+.distances-editorial .distance-list {grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:0;border-top:1px solid var(--line)}
+.distances-editorial .distance-list div {padding:26px 22px 26px 0;border:0;border-bottom:1px solid var(--line)}
+.distances-editorial .distance-list strong {font-size:clamp(1.8rem,3vw,2.45rem);line-height:1.12;overflow-wrap:anywhere}
+.distances-editorial .distance-list span {margin-top:10px;font-size:.9rem;line-height:1.55;overflow-wrap:anywhere}
+@media(max-width:900px){
+ .location.location-editorial,.distances.distances-editorial {grid-template-columns:1fr}
+ .location-editorial .location-media {grid-column:1;grid-row:auto;min-height:clamp(260px,60vw,460px)}
+ .location-editorial .location-details {grid-column:1;grid-row:auto;padding:56px 8vw;gap:28px}
+ .distances-editorial .distances-media {min-height:clamp(260px,60vw,460px)}
+ .distances-editorial .distances-copy {padding:56px 8vw}
+}
+@media(max-width:600px){.location-editorial .map iframe{height:260px}.location-editorial .map{min-height:260px}.distances-editorial .distance-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
