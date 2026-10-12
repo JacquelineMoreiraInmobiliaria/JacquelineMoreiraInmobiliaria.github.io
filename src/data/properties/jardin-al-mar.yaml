@@ -6,7 +6,8 @@ hero:
   description: "Residencia contemporánea sobre la playa en Balneario Las Flores, Piriápolis. Sus ambientes interiores, terrazas y jardín se integran al paisaje costero."
   coverImage: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-2687c50e-24f8-4478-b416-e1bc4a595fb2"
   video:
-    enabled: false
+    enabled: true
+    source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bda1aa87-65c9-4322-9752-12ee1d3087ed"
 summary:
   -
     label: "Superficie de terreno"
