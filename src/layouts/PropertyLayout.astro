@@ -89,7 +89,7 @@ const mapBounds = locationCoordinates
       <div class="split-media"><img src={sectionImages?.property || coverImage} alt={property.name} /></div>
     </section>}
 
-    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><span>{item.label}</span><strong>{item.value}</strong></div>)}</section>}
+    {shownStats.length > 0 && <section class="stats">{shownStats.map((item, index) => <div class="statbox"><div class="stat-icon" aria-hidden="true">{property.slug === "atardecer-y-vides" && !item.icon?.startsWith("stat-") ? legacyStatIconFor(index) : <svg viewBox="0 0 24 24" focusable="false"><use href={`/icons/summary-icons.svg#${statIconFor(item)}`}></use></svg>}</div><span>{item.label}</span><strong>{item.value}</strong></div>)}</section>}
 
     {showGallery && <section id="galeria" class="section gallery">
       <div class="gallery-head"><div class="kicker">Galería</div><h2>Una propiedad para descubrir.</h2></div>
@@ -118,12 +118,12 @@ const mapBounds = locationCoordinates
     </section>}
 
     {locationCoordinates && <section id="ubicacion" class="location location-editorial">
-      {sectionImages.location && <div class="location-media"><img src={sectionImages.location} alt={property.name} loading="lazy" /></div>}
-      <div class="location-details">
-      <div class="location-copy"><div class="kicker">Ubicación</div>{property.location.visibleName && <h2>{property.location.visibleName}</h2>}{property.location.address && <p class="copy">{property.location.address}</p>}
-      <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${locationCoordinates.latitude},${locationCoordinates.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
-      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
+      <div class="location-photo-panel">
+        {sectionImages.location && <img class="location-photo" src={sectionImages.location} alt="" loading="lazy" />}
+        <div class="location-copy"><div class="kicker">Ubicación</div>{property.location.visibleName && <h2>{property.location.visibleName}</h2>}{property.location.address && <p class="copy">{property.location.address}</p>}
+        <a class="button" href={`https://www.google.com/maps/search/?api=1&query=${locationCoordinates.latitude},${locationCoordinates.longitude}`} target="_blank" rel="noopener">ABRIR EN GOOGLE MAPS ↗</a></div>
       </div>
+      <div class="map"><iframe loading="lazy" title={`Mapa de ${property.name}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBounds}&layer=mapnik&marker=${locationCoordinates.latitude}%2C${locationCoordinates.longitude}`}></iframe></div>
     </section>}
 
     {showDistances && <section class:list={["distances", "distances-editorial", { "has-presentation-media": Boolean(distanceImage) }]}>{distanceImage && <div class="distances-media"><img src={distanceImage} alt="" loading="lazy" /></div>}<div class="distances-copy"><div class="kicker">Distancias</div><h2>Todo cerca.</h2><div class="distance-list">{property.distances.items.map((item) => <div><strong>{item.distance}</strong><span>{item.destination}</span></div>)}</div></div></section>}

@@ -11,3 +11,7 @@ test('few photos alternate without immediate repeats and empty/cover-only galler
 test('existing saved section choices remain intact',()=>{
  const p=property(['cover','one','two','three','four','five'],{property:'saved-property',features:'saved-features',distances:'saved-distances',final:'saved-final'});const images=sectionImagesFor(p);assert.equal(images.property,'saved-property');assert.equal(images.features,'saved-features');assert.equal(images.distances,'saved-distances');assert.equal(images.final,'saved-final');assert.notEqual(images.location,'cover');
 });
+
+test('manual location overrides only that section; removing it restores the automatic sequence',()=>{
+ const p=property(['cover','one','two','three','four','five']);const gallery=structuredClone(p.gallery.images);p.media.sections.location='five';assert.equal(sectionImagesFor(p).location,'five');assert.deepEqual(p.gallery.images,gallery);delete p.media.sections.location;assert.equal(sectionImagesFor(p).location,'three');
+});

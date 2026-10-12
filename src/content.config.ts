@@ -24,7 +24,7 @@ const properties = defineCollection({
     summary: z.array(z.object({
       label: z.string().min(1),
       value: z.string().min(1),
-      icon: z.enum(["surface", "home", "bed", "bath", "temperature", "pool", "land", "view", "garage"]).optional(),
+      icon: z.enum(["surface", "home", "bed", "bath", "temperature", "pool", "land", "view", "garage", "stat-land", "stat-built", "stat-bed", "stat-bath", "stat-floors", "stat-garage", "stat-suite", "stat-pool", "stat-bbq", "stat-sea", "stat-green", "stat-front", "stat-orientation", "stat-beach", "stat-heating", "stat-ac", "stat-lift"]).optional(),
       show: z.boolean().default(true)
     })).default([]),
     property: z.object({
@@ -45,6 +45,7 @@ const properties = defineCollection({
       sections: z.object({
         property: z.string().min(1).optional(),
         features: z.string().min(1).optional(),
+        location: z.string().min(1).optional(),
         distances: z.string().min(1).optional(),
         final: z.string().min(1).optional()
       }).default({})
@@ -73,3 +74,4 @@ const properties = defineCollection({
 });
 
 export const collections = { properties };
+

@@ -1,7 +1,7 @@
 type Image = { source: string; visible?: boolean };
 type ImageInput = {
   hero: { coverImage: string };
-  media?: { cover?: string; sections?: { property?: string; features?: string; distances?: string; final?: string } };
+  media?: { cover?: string; sections?: { property?: string; features?: string; location?: string; distances?: string; final?: string } };
   gallery: { images: Image[] };
 };
 
@@ -20,7 +20,7 @@ export function sectionImagesFor(property: ImageInput) {
   return {
     property: pick(property.media?.sections?.property),
     features: pick(property.media?.sections?.features),
-    location: pick(),
+    location: pick(property.media?.sections?.location),
     distances: pick(property.media?.sections?.distances),
     final: pick(property.media?.sections?.final)
   };
