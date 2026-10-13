@@ -1,0 +1,112 @@
+---
+import "../../styles/damiro-compact.css";
+
+const media = "/media/chacra-damiro-4/";
+const images = {
+  rustica: media + "damiro-4-rustica.jpg",
+  oficina: media + "damiro-4-oficina.jpg",
+  piscina: media + "damiro-4-piscina.jpg",
+  croquis: media + "damiro-4-croquis.jpg"
+};
+const whatsapp = "59891905566";
+const email = "jacqueline@moreirainmobiliaria.com.uy";
+const inquiry = encodeURIComponent("Hola, me interesa Rústica & La Oficina, Chacra 4 de Chacras de Damiro.");
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Rústica & La Oficina, Chacra 4 de Chacras de Damiro en Piriápolis." />
+    <title>Rústica & La Oficina | Chacras de Damiro | Moreira Inmobiliaria</title>
+  </head>
+  <body class="damiro-page">
+    <nav class="damiro-nav">
+      <a href="https://www.moreirainmobiliaria.com.uy/" target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <a class="damiro-nav-contact" href="#contacto">CONSULTAR</a>
+    </nav>
+    <main>
+      <section class="damiro-hero">
+        <img src={images.rustica} alt="Exterior de la cabaña Rústica" />
+        <div class="damiro-hero-shade"></div>
+        <div class="damiro-hero-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 4</p>
+          <h1>Rústica &amp;<br />La Oficina</h1>
+          <p class="damiro-place">Piriápolis · Ruta 37 · Uruguay</p>
+          <h2>Más espacio para vivir el entorno.</h2>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONSULTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href="#propiedad">VER DETALLES</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-intro">
+        <div class="damiro-intro-copy">
+          <p class="damiro-property-description">Dentro de Chacras de Damiro, esta fracción se distingue por reunir la mayor infraestructura del conjunto, con dos cabañas y dos piscinas.</p>
+          <p class="damiro-property-description">Al pie del Cerro Pan de Azúcar, combina espacios para habitar, disfrutar y mirar el paisaje.</p>
+        </div>
+        <div class="damiro-stat-grid" aria-label="Datos destacados">
+          <div><span class="damiro-icon">⌂</span><strong>Rústica<br />56 m²</strong></div>
+          <div><span class="damiro-icon">⌂</span><strong>La Oficina<br />30 m²</strong></div>
+          <div><span class="damiro-icon">□</span><strong>3.025<br />m²</strong></div>
+          <div><span class="damiro-icon">○</span><strong>2<br />piscinas</strong></div>
+        </div>
+      </section>
+
+      <section id="propiedad" class="damiro-split">
+        <div class="damiro-split-media"><img src={images.oficina} alt="Exterior de La Oficina" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">RÚSTICA &amp; LA OFICINA</p>
+          <h2>Una chacra con<br />más posibilidades.</h2>
+          <ul>
+            <li>Cabaña Rústica de 56 m²</li>
+            <li>La Oficina de 30 m²</li>
+            <li>Piscina exterior y piscina techada con jacuzzi</li>
+            <li>Climatización con paneles solares y caldera a leña</li>
+            <li>Acceso al cerro y mirador de madera</li>
+            <li>Agua suministrada por Chacra La Bodega</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="damiro-split damiro-connection">
+        <div class="damiro-split-media"><img src={images.croquis} alt="Croquis aéreo de Chacra 4 dentro de Chacras de Damiro" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">CONEXIÓN Y ENTORNO</p>
+          <h2>El cerro como<br />parte de la experiencia.</h2>
+          <div class="damiro-location-cards">
+            <div><strong>Cerro Pan de Azúcar</strong><span>Al pie del paisaje serrano</span></div>
+            <div><strong>Mirador</strong><span>Acceso desde la chacra</span></div>
+            <div><strong>Ruta 37</strong><span>Acceso al conjunto</span></div>
+            <div><strong>Piriápolis</strong><span>A cinco minutos del centro</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-gallery" aria-label="Galería de Rústica y La Oficina">
+        <img class="damiro-gallery-wide" src={images.rustica} alt="Fachada de Rústica" loading="lazy" />
+        <img src={images.oficina} alt="Fachada de La Oficina" loading="lazy" />
+        <img src={images.piscina} alt="Piscina exterior de Chacra 4" loading="lazy" />
+      </section>
+
+      <section id="contacto" class="damiro-cta">
+        <img src={images.piscina} alt="" loading="lazy" />
+        <div class="damiro-cta-shade"></div>
+        <div class="damiro-cta-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 4</p>
+          <h2>¿Te interesan Rústica y La Oficina?</h2>
+          <p>Coordiná una visita y conocé una chacra para vivir el entorno.</p>
+          <strong>USD 480.000</strong>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href={"mailto:" + email + "?subject=" + encodeURIComponent("Rústica & La Oficina · Chacras de Damiro")}>ENVIAR EMAIL</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

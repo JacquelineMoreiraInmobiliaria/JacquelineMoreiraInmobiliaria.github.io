@@ -1,0 +1,1 @@
+{"name":"moreira-r2-upload-signer","private":true,"type":"module","scripts":{"dev":"wrangler dev","deploy":"wrangler deploy"},"dependencies":{"aws4fetch":"^1.0.20"},"devDependencies":{"wrangler":"^4.0.0"}}
