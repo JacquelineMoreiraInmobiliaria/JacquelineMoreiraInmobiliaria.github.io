@@ -2128,6 +2128,16 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
         const isMp4File = (file: File | null): file is File => file !== null && (file.type === "video/mp4" || /\.mp4$/i.test(file.name));
         const yamlText = (value: unknown) => JSON.stringify(String(value));
         const buildPropertyYaml = () => {
+          // Managed Sites media must be edited/published through Moreira Herramientas.
+          // Keep the traditional /media/<slug>/ and external-media flow unchanged.
+          const managedDraft = JSON.stringify(currentValues());
+          let decodedManagedDraft = managedDraft;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try { const decoded = decodeURIComponent(decodedManagedDraft); if (decoded === decodedManagedDraft) break; decodedManagedDraft = decoded; } catch { break; }
+          }
+          if (/\/media\/presentations\/pm-[0-9a-f-]{36}/i.test(decodedManagedDraft)) {
+            throw new Error("Esta presentación utiliza multimedia gestionada por Moreira Herramientas. Editala y publicala desde el Site; el administrador anterior no puede exportar estas referencias.");
+          }
           const values = currentValues();
           const slug = values.slug;
           const external = packageUsesExternalMedia;
@@ -2282,7 +2292,7 @@ const mediaInventory: MediaInventory = Object.fromEntries(await Promise.all(
             preparationProgress.textContent = "✓ Paquete descargado.";
             continuePublication.hidden = false;
           } catch (error) {
-            preparationProgress.textContent = "No se pudo preparar el archivo.";
+            preparationProgress.textContent = error instanceof Error ? error.message : "No se pudo preparar el archivo.";
           } finally {
             downloadPackage.disabled = false;
           }
