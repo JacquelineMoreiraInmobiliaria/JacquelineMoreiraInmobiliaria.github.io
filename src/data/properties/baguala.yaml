@@ -1,0 +1,262 @@
+slug: "baguala"
+name: "BAGUALA"
+price: "USD 560.000"
+hero:
+  subtitle: "Piriápolis, Las Flores "
+  description: "Chacra de 1,6 hectáreas en Balneario Las Flores, con dos viviendas independientes, piscina, jacuzzi y amplios espacios verdes. Ubicada en un terreno elevado con vistas al mar y a los cerros, a 10 cuadras de la playa."
+  coverImage: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-4282d5f9-2a47-4bf8-a017-69893372e368"
+  video:
+    enabled: true
+    source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-0d0dc050-15c4-4df9-b1ac-d98005329f88"
+summary:
+  -
+    label: "Superficie del terreno"
+    value: "1,6 hectáreas"
+    icon: "stat-land"
+    show: true
+  -
+    label: "Viviendas"
+    value: "2 independientes"
+    icon: "stat-built"
+    show: true
+  -
+    label: "Dormitorios"
+    value: "4 + espacio adicional"
+    icon: "stat-bed"
+    show: true
+  -
+    label: "Baños"
+    value: "4 completos"
+    icon: "stat-bath"
+    show: true
+  -
+    label: "Piscina"
+    value: "8 x 4 m"
+    icon: "stat-pool"
+    show: true
+  -
+    label: "Calefacción"
+    value: "Losa radiante a gas"
+    icon: "stat-heating"
+    show: true
+property:
+  sectionTitle: "La propiedad"
+  headline: "Baguala: Chacra con dos casas y vista al mar"
+  paragraphs:
+    - "Baguala es una chacra de 1,6 hectáreas ubicada al norte de Balneario Las Flores, cerca del Castillo Pittamiglio, a 10 cuadras de la playa y a pocos minutos de Piriápolis. Su terreno elevado ofrece vistas al mar y a los cerros, en un entorno de jardines, monte nativo con coronillas y otras especies autóctonas. La propiedad cuenta con dos viviendas con accesos independientes desde la calle. La casa principal, desarrollada en una planta, dispone de un amplio living comedor con salida a un deck con pérgola, cocina semiintegrada con muebles bajo mesada y aéreos, dos dormitorios, el principal con vestidor y baño en suite, otro baño completo y un espacio que puede utilizarse como oficina o tercer dormitorio. También incorpora una sala de microcine con proyector Biosonic, pantalla de 150 pulgadas y sistema de sonido Home Theater, además de un proyector instalado en el living. Su construcción incluye paredes de ticholo, techo Isopanel con cielorrasos de yeso y aislación, pisos flotantes, aberturas de aluminio con doble vidrio hermético, losa radiante y agua caliente alimentadas a gas. El acceso principal dispone de portera automatizada y portero eléctrico con cámara y control a distancia."
+    - "En el exterior se encuentra una amplia barbacoa con cocina, baño completo, deck y sector de comedor bajo techo de quincho. La piscina abierta de 8 x 4 metros y el jacuzzi independiente, climatizado a gas, cuentan con cloradores de sal. La propiedad también dispone de cochera, depósito, canil, invernáculo, huerta y árboles frutales. La segunda vivienda, denominada La Choza, tiene acceso propio desde la calle y ofrece living comedor con cocina integrada, dos dormitorios y baño completo, con construcción mayoritariamente tradicional, techo Isopanel y pisos cerámicos. El predio está completamente cercado con alambrado de siete hilos y malla electrosoldada, y gran parte cuenta con riego automatizado abastecido por un pozo semisurgente de 48 metros de profundidad. Ambas casas disponen de conexión a OSE, UTE con cableado subterráneo y fibra óptica, y se venden con amoblamiento básico. La ubicación se encuentra a aproximadamente 40 km de Punta del Este y 80 km de Montevideo. Se contempla la posibilidad de permuta, con condiciones a consultar."
+gallery:
+  enabled: true
+  images:
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-4282d5f9-2a47-4bf8-a017-69893372e368"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-2d0bbb3d-74f9-48c4-bdca-05e3799c2757"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-c6d686ad-7b64-4d29-a73a-f103d9b5ede6"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-d9d5329d-11b5-43f1-ad3a-85041f32ea45"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-fd73dcd2-bd9d-4e2a-b4ab-dc0dd0648068"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-637de40b-3345-4ba1-a687-f4085c9429b5"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-ae414f8f-6be0-4438-9d90-4a33ebc2b61c"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-9ac88933-05c1-470b-9393-8e9b15648a31"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-94a67a14-dc5a-40d3-8997-e95380213e0c"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-39139b28-dd90-4d53-a35d-2f344f1c3b2b"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6d5c2809-541f-40dd-836d-f374f7e182ab"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-19770506-0290-4d55-8919-7aed5f85862d"
+      alt: ""
+      visible: true
+media:
+  cover: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-4282d5f9-2a47-4bf8-a017-69893372e368"
+  sections:
+    property: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-4282d5f9-2a47-4bf8-a017-69893372e368"
+    features: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-c6d686ad-7b64-4d29-a73a-f103d9b5ede6"
+    location: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-19770506-0290-4d55-8919-7aed5f85862d"
+    distances: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6d5c2809-541f-40dd-836d-f374f7e182ab"
+    final: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-2d0bbb3d-74f9-48c4-bdca-05e3799c2757"
+features:
+  -
+    label: "Dos viviendas independientes"
+    category: "structural"
+  -
+    label: "Casa principal en una planta"
+    category: "structural"
+  -
+    label: "Dos dormitorios en casa principal"
+    category: "structural"
+  -
+    label: "Dormitorio principal con vestidor"
+    category: "structural"
+  -
+    label: "Baño en suite"
+    category: "structural"
+  -
+    label: "Vista al mar"
+    category: "structural"
+  -
+    label: "Vista a los cerros"
+    category: "structural"
+  -
+    label: "Accesos independientes desde la calle"
+    category: "structural"
+  -
+    label: "Espacio para oficina o tercer dormitorio"
+    category: "structural"
+  -
+    label: "Cocina semiintegrada"
+    category: "structural"
+  -
+    label: "Living comedor amplio"
+    category: "structural"
+  -
+    label: "Deck con pérgola"
+    category: "structural"
+  -
+    label: "Sala de microcine"
+    category: "structural"
+  -
+    label: "Losa radiante a gas"
+    category: "structural"
+  -
+    label: "Agua caliente a gas"
+    category: "structural"
+  -
+    label: "Aberturas de aluminio con doble vidrio hermético"
+    category: "structural"
+  -
+    label: "Techo Isopanel con aislación"
+    category: "structural"
+  -
+    label: "Pisos flotantes"
+    category: "structural"
+  -
+    label: "Portero eléctrico con cámara"
+    category: "structural"
+  -
+    label: "Control de acceso a distancia"
+    category: "structural"
+  -
+    label: "Barbacoa con cocina"
+    category: "structural"
+  -
+    label: "Baño completo en barbacoa"
+    category: "structural"
+  -
+    label: "Comedor exterior bajo techo de quincho"
+    category: "structural"
+  -
+    label: "Piscina abierta"
+    category: "structural"
+  -
+    label: "Jacuzzi independiente climatizado a gas"
+    category: "structural"
+  -
+    label: "Cochera amplia"
+    category: "structural"
+  -
+    label: "Casa secundaria con dos dormitorios"
+    category: "structural"
+  -
+    label: "Cocina integrada en casa secundaria"
+    category: "structural"
+  -
+    label: "Baño completo en casa secundaria"
+    category: "structural"
+  -
+    label: "Techo Isopanel en casa secundaria"
+    category: "structural"
+  -
+    label: "Pisos cerámicos en casa secundaria"
+    category: "structural"
+  -
+    label: "Jardín"
+    category: "structural"
+  -
+    label: "Monte nativo"
+    category: "structural"
+  -
+    label: "Árboles frutales"
+    category: "structural"
+  -
+    label: "Huerta"
+    category: "structural"
+  -
+    label: "Invernáculo"
+    category: "structural"
+  -
+    label: "Depósito"
+    category: "structural"
+  -
+    label: "Canil"
+    category: "structural"
+  -
+    label: "Riego automatizado"
+    category: "structural"
+  -
+    label: "Pozo semisurgente"
+    category: "structural"
+  -
+    label: "Alambrado de siete hilos y malla electrosoldada"
+    category: "structural"
+  -
+    label: "Conexión a OSE en ambas viviendas"
+    category: "structural"
+  -
+    label: "UTE con cableado subterráneo"
+    category: "structural"
+  -
+    label: "Fibra óptica"
+    category: "structural"
+location:
+  enabled: true
+  visibleName: "Piriápolis, Las Flores "
+  address: "Ruta 71 y camino El Cerro"
+  latitude: -34.80668258666992
+  longitude: -55.32506942749023
+distances:
+  enabled: true
+  items:
+    -
+      destination: "Playa en Balneario Las Flores"
+      distance: "10 Cuadras"
+    -
+      destination: "Piriápolis"
+      distance: "5 Minutos"
+    -
+      destination: "Punta del Este"
+      distance: "40 Km"
+    -
+      destination: "Montevideo"
+      distance: "80 Km"
+contact:
+  useDefault: true
