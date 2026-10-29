@@ -1,0 +1,105 @@
+slug: "vida-de-vagar"
+name: "Vida de Vagar"
+price: "USD 695.000"
+
+hero:
+  subtitle: "Playa Verde · Piriápolis · Uruguay"
+  description: "Una hermosa chacra de 7 hectáreas, ubicada en Playa Verde, a solo 2 km de Playa Lamas."
+  coverImage: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/b4d224c0-528e-4c0d-aa77-539432b9cdae.jpg"
+  video:
+    enabled: true
+    source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/video.mp4"
+
+summary:
+  - label: "Superficie"
+    value: "7 hectáreas"
+    icon: surface
+    show: true
+  - label: "Casas"
+    value: "2 independientes"
+    icon: home
+    show: true
+  - label: "Dormitorios"
+    value: "3"
+    icon: bed
+    show: true
+  - label: "Baños"
+    value: "3"
+    icon: bath
+    show: true
+  - label: "Estufa"
+    value: "A leña"
+    icon: temperature
+    show: true
+
+media:
+  cover: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/b4d224c0-528e-4c0d-aa77-539432b9cdae.jpg"
+  sections:
+    property: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/05109c90-86c7-43b4-befc-bcfca3b79b32.jpg"
+    features: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/2c68a0d3-014b-4143-885a-5f1c52912377.jpg"
+    distances: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/61a11a6a-7426-4734-97a0-829025505f2f.jpg"
+    final: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/8fe43708-15c0-439c-9335-f0fa19a733df.jpg"
+
+property:
+  headline: "Entre el arroyo, las sierras y el mar"
+  paragraphs:
+    - "Vida de Vagar reúne 7 hectáreas de valle en Playa Verde, a 2 km de Playa Lamas, con vistas al mar y las sierras. El campo incluye potreros, monte indígena y 200 metros de costa sobre el arroyo Tarariras."
+    - "La propiedad cuenta con dos casas independientes, cercadas y con accesos individuales. La casa principal ofrece living con estufa a leña, cocina integrada, dos dormitorios, baño y patio techado; la segunda suma amplios ambientes, sector de bar, cocina completa, dormitorio, dos baños y parrillero techado."
+
+gallery:
+  enabled: true
+  images:
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/05109c90-86c7-43b4-befc-bcfca3b79b32.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/b4d224c0-528e-4c0d-aa77-539432b9cdae.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/2c68a0d3-014b-4143-885a-5f1c52912377.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/bfdbdf70-ab7d-4651-a41e-e37bc8f4b85c.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/71439096-63c8-46df-bdc5-f1a3d5b67a56.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/61a11a6a-7426-4734-97a0-829025505f2f.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/4430b723-b18e-4e39-9e99-b6b7715d8b89.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/34682a94-6988-4964-9a98-5c55918e6bb8.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/1e178cf2-8847-429b-bb78-ae3f096b93e9.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/8fe43708-15c0-439c-9335-f0fa19a733df.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/4323e91a-7a56-47ba-9727-1712482f2327.jpg"
+    - source: "https://pub-ccac0aaa62b341adac1842d59f036f45.r2.dev/propiedades/vida-de-vagar/galeria/48ce4ab1-df14-42ec-b959-974b06d65b4f.jpg"
+
+features:
+  - label: "Dos casas con accesos individuales"
+    category: structural
+  - label: "Parrillero y comedor exterior"
+    category: structural
+  - label: "Estufas y horno a leña"
+    category: structural
+  - label: "Gran galpón"
+    category: structural
+  - label: "Sector de bar"
+    category: structural
+  - label: "Baño completo con jacuzzi"
+    category: structural
+  - label: "Agua de OSE e internet de alta velocidad"
+    category: structural
+  - label: "Monte indígena y parque arbolado"
+    category: structural
+  - label: "Huerta y numerosos frutales"
+    category: structural
+  - label: "Vistas al mar y las sierras"
+    category: structural
+
+location:
+  enabled: true
+  visibleName: "Playa Verde, Piriápolis"
+  address: "Ruta 72 casi Ruta 73  o Camino a Las Flores"
+  latitude: -34.81001663208008
+  longitude: -55.31393814086914
+
+distances:
+  enabled: true
+  items:
+    - destination: "Playa Lamas"
+      distance: "2 Km"
+    - destination: "Centro de Piriápolis "
+      distance: "10 Km"
+    - destination: "Punta del Este"
+      distance: "45 Km"
+
+contact:
+  useDefault: true

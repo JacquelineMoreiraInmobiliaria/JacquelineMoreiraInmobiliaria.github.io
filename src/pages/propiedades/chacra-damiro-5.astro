@@ -1,0 +1,112 @@
+---
+import "../../styles/damiro-compact.css";
+
+const media = "/media/chacra-damiro-5/";
+const images = {
+  aerial: media + "damiro-5-hero.jpg",
+  seaView: media + "damiro-5-vista-mar.jpg",
+  rockView: media + "damiro-5-mirador-rocas.jpg",
+  deck: media + "damiro-5-mirador-deck.jpg",
+  deckDonkey: media + "damiro-5-mirador-deck-burro.jpg",
+  croquis: media + "damiro-5-croquis.jpg"
+};
+const whatsapp = "59891905566";
+const email = "jacqueline@moreirainmobiliaria.com.uy";
+const inquiry = encodeURIComponent("Hola, me interesa Monte Nativo, Chacra 5 de Chacras de Damiro.");
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Monte Nativo, Chacra 5 de Chacras de Damiro en Piriápolis." />
+    <title>Monte Nativo | Chacras de Damiro | Moreira Inmobiliaria</title>
+  </head>
+  <body class="damiro-page">
+    <nav class="damiro-nav">
+      <a href="https://www.moreirainmobiliaria.com.uy/" target="_blank" rel="noopener" aria-label="Moreira Inmobiliaria">
+        <img src="https://raw.githubusercontent.com/JacquelineMoreiraInmobiliaria/atardecer-y-vides/main/fotos/logo.png" alt="Moreira Inmobiliaria" />
+      </a>
+      <a class="damiro-nav-contact" href="#contacto">CONSULTAR</a>
+    </nav>
+    <main>
+      <section class="damiro-hero">
+        <img src={images.deck} alt="Deck de madera y paisaje natural de Monte Nativo" />
+        <div class="damiro-hero-shade"></div>
+        <div class="damiro-hero-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
+          <h1>Monte Nativo</h1>
+          <p class="damiro-place">Piriápolis · Ruta 37 · Uruguay</p>
+          <h2>Un lugar para empezar.</h2>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONSULTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href="#propiedad">VER DETALLES</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-intro">
+        <div class="damiro-intro-copy">
+          <p class="damiro-property-description">La única fracción de Chacras de Damiro sin construcciones: una oportunidad para proyectar desde cero en un lugar privilegiado.</p>
+          <p class="damiro-property-description">Al pie del Cerro Pan de Azúcar, combina monte nativo, caminería interna y agua dentro del conjunto.</p>
+        </div>
+        <div class="damiro-stat-grid" aria-label="Datos destacados">
+          <div><span class="damiro-icon">□</span><strong>3.003,1<br />m²</strong></div>
+          <div><span class="damiro-icon">↗</span><strong>Caminería<br />interna</strong></div>
+          <div><span class="damiro-icon">⌂</span><strong>Sin<br />construcciones</strong></div>
+          <div><span class="damiro-icon">○</span><strong>Monte<br />nativo</strong></div>
+        </div>
+      </section>
+
+      <section id="propiedad" class="damiro-split">
+        <div class="damiro-split-media"><img src={images.seaView} alt="Vista panorámica del entorno de Monte Nativo hacia el mar" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">MONTE NATIVO</p>
+          <h2>Una fracción para<br />imaginar lo propio.</h2>
+          <ul>
+            <li>Chacra de 3.003,1 m²</li>
+            <li>Sin construcciones existentes</li>
+            <li>Monte nativo y paisaje serrano</li>
+            <li>Caminería interna hasta la mitad del cerro</li>
+            <li>Agua suministrada por Chacras de La Bodega</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="damiro-split damiro-connection">
+        <div class="damiro-split-media"><img src={images.croquis} alt="Croquis de ubicación de Chacra 5 dentro de Chacras de Damiro" loading="lazy" /></div>
+        <div class="damiro-split-copy">
+          <p class="damiro-kicker">CONEXIÓN Y ENTORNO</p>
+          <h2>El paisaje como<br />punto de partida.</h2>
+          <div class="damiro-location-cards">
+            <div><strong>Cerro Pan de Azúcar</strong><span>Al pie del entorno serrano</span></div>
+            <div><strong>Monte nativo</strong><span>Un marco natural propio</span></div>
+            <div><strong>Caminería</strong><span>Hasta la mitad del cerro</span></div>
+            <div><strong>Ruta 37</strong><span>Acceso al conjunto</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="damiro-gallery" aria-label="Galería de Monte Nativo">
+        <img class="damiro-gallery-wide" src={images.rockView} alt="Vista del paisaje serrano entre las formaciones de roca" loading="lazy" />
+        <img class="damiro-gallery-wide" src={images.aerial} alt="Vista aérea del conjunto con Chacra 5 destacada" loading="lazy" />
+      </section>
+
+      <section id="contacto" class="damiro-cta">
+        <img src={images.deckDonkey} alt="" loading="lazy" />
+        <div class="damiro-cta-shade"></div>
+        <div class="damiro-cta-copy">
+          <p class="damiro-kicker">CHACRAS DE DAMIRO · CHACRA 5</p>
+          <h2>¿Te interesa Monte Nativo?</h2>
+          <p>Coordiná una visita y recorré el entorno de primera mano.</p>
+          <strong>USD 138.000</strong>
+          <div class="damiro-actions">
+            <a class="damiro-button damiro-button-primary" href={"https://wa.me/" + whatsapp + "?text=" + inquiry} target="_blank" rel="noopener">CONTACTAR POR WHATSAPP</a>
+            <a class="damiro-button damiro-button-outline" href={"mailto:" + email + "?subject=" + encodeURIComponent("Monte Nativo · Chacras de Damiro")}>ENVIAR EMAIL</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

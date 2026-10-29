@@ -1,0 +1,9 @@
+name = "moreira-r2-upload-signer"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+# Configurar como secretos con wrangler secret put:
+# R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+# R2_BUCKET_NAME, R2_PUBLIC_BASE_URL
+[vars]
+ALLOWED_ORIGINS = "https://jacquelinemoreirainmobiliaria.github.io,http://localhost:4321"

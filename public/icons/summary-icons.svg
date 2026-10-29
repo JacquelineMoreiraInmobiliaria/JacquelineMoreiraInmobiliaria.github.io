@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">
+  <symbol id="surface" viewBox="0 0 24 24"><path d="M4 20V8l8-5 8 5v12H4Z"/><path d="M8 20v-7h8v7M2 22h20"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></symbol>
+  <symbol id="bed" viewBox="0 0 24 24"><path d="M3 19v-8h18v8M3 15h18M6 11V7h5a3 3 0 0 1 3 3v1M3 21v-2M21 21v-2"/></symbol>
+  <symbol id="bath" viewBox="0 0 24 24"><path d="M4 13h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM7 13V6a3 3 0 0 1 6 0M4 22l2-3M20 22l-2-3"/></symbol>
+  <symbol id="temperature" viewBox="0 0 24 24"><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z"/><path d="M10 5v11M8 18h4"/></symbol>
+  <symbol id="pool" viewBox="0 0 24 24"><path d="M2 16c2 0 2 1.5 4 1.5S8 16 10 16s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M2 20c2 0 2 1.5 4 1.5S8 20 10 20s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M7 16V5a3 3 0 0 1 6 0M7 9h6"/></symbol>
+  <symbol id="land" viewBox="0 0 24 24"><path d="m3 18 5-7 4 4 3-5 6 8H3Z"/><path d="M3 21h18M18 4v6M15 7h6"/></symbol>
+  <symbol id="view" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="garage" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M6 21v-9h12v9M6 16h12"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></symbol>
+  <symbol id="stat-land" viewBox="0 0 24 24"><path d="M3 6h18v12H3z M3 6l18 12 M21 6L3 18"/></symbol>
+  <symbol id="stat-built" viewBox="0 0 24 24"><path d="M4 20V8l8-5 8 5v12z M8 20v-7h8v7"/></symbol>
+  <symbol id="stat-bed" viewBox="0 0 24 24"><path d="M3 19v-8h18v8 M3 15h18 M6 11V7h5v4 M3 21v-2 M21 21v-2"/></symbol>
+  <symbol id="stat-bath" viewBox="0 0 24 24"><path d="M4 13h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z M7 13V6a3 3 0 0 1 6 0"/></symbol>
+  <symbol id="stat-floors" viewBox="0 0 24 24"><path d="M4 21h16V3H4z M4 9h16 M4 15h16 M9 3v18"/></symbol>
+  <symbol id="stat-garage" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13 M6 21v-9h12v9 M6 16h12"/></symbol>
+  <symbol id="stat-suite" viewBox="0 0 24 24"><path d="M3 19v-7h12v7 M3 15h12 M6 12V8h6v4 M18 6h4v6h-4z"/></symbol>
+  <symbol id="stat-pool" viewBox="0 0 24 24"><path d="M2 17q3-3 6 0t6 0t6 0 M2 21q3-3 6 0t6 0t6 0 M7 16V5a3 3 0 0 1 6 0 M7 9h6"/></symbol>
+  <symbol id="stat-bbq" viewBox="0 0 24 24"><path d="M4 11h16l-2 6H6z M8 17l-2 5 M16 17l2 5 M8 3v5 M12 2v6 M16 3v5"/></symbol>
+  <symbol id="stat-sea" viewBox="0 0 24 24"><path d="M2 18q3-3 6 0t6 0t6 0 M2 22q3-3 6 0t6 0t6 0 M7 10a5 5 0 0 1 10 0 M2 12h20"/></symbol>
+  <symbol id="stat-green" viewBox="0 0 24 24"><path d="M2 20l7-13 5 8 3-5 5 10z M7 4h4"/></symbol>
+  <symbol id="stat-front" viewBox="0 0 24 24"><path d="M3 6v14 M21 6v14 M3 14h18 M3 14l4-4 M3 14l4 4 M21 14l-4-4 M21 14l-4 4"/></symbol>
+  <symbol id="stat-orientation" viewBox="0 0 24 24"><path d="M12 2l4 10-4 10-4-10z M2 12h5 M17 12h5"/></symbol>
+  <symbol id="stat-beach" viewBox="0 0 24 24"><path d="M3 18h18 M12 3v15 M5 9q7-10 14 0H5z M3 22q3-3 6 0t6 0t6 0"/></symbol>
+  <symbol id="stat-heating" viewBox="0 0 24 24"><path d="M5 21V4h14v17z M8 17q-1-4 4-8q5 4 4 8z M3 22h18"/></symbol>
+  <symbol id="stat-ac" viewBox="0 0 24 24"><path d="M4 4h16v8H4z M7 8h10 M7 15v6 M12 15v7 M17 15v6"/></symbol>
+  <symbol id="stat-lift" viewBox="0 0 24 24"><path d="M4 2h16v20H4z M12 2v20 M7 8l2-2 2 2 M13 16l2 2 2-2"/></symbol>
+</svg>
+
