@@ -1,0 +1,193 @@
+slug: "chacra-del-sol"
+name: "Chacra del Sol"
+price: "USD 620.000"
+hero:
+  subtitle: ""
+  description: "Chacra de 5.5 hectáreas en Piriápolis, próxima a Playa Hermosa y Playa Grande, con dos casas, piscina climatizada y vistas al mar y los cerros. Un entorno de campo con monte nativo, tajamares y amplios espacios para disfrutar de la naturaleza."
+  coverImage: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
+  video:
+    enabled: false
+summary:
+  -
+    label: "Superficie del terreno"
+    value: "5.5 hectáreas"
+    icon: "stat-land"
+    show: true
+  -
+    label: "Viviendas"
+    value: "2"
+    icon: "stat-built"
+    show: true
+  -
+    label: "Casa principal"
+    value: "250 m²"
+    icon: "stat-built"
+    show: true
+  -
+    label: "Dormitorios totales"
+    value: "7"
+    icon: "stat-bed"
+    show: true
+  -
+    label: "Baños totales"
+    value: "5"
+    icon: "stat-bath"
+    show: true
+  -
+    label: "Casa secundaria"
+    value: "110 m²"
+    icon: "stat-built"
+    show: true
+property:
+  sectionTitle: "La propiedad"
+  headline: "Chacra del Sol,  Dos casas en Piriápolis"
+  paragraphs:
+    - "Chacra del Sol se encuentra en una pradera elevada de 5.5 hectáreas en Piriápolis, a unas 20 cuadras de Playa Hermosa y Playa Grande. La propiedad ofrece vistas al mar y los cerros, con acceso por camino de ripio y una ubicación a aproximadamente 5 minutos de la rambla de Playa Hermosa. Cuenta con dos viviendas de diseño, integradas al entorno mediante grandes aberturas que permiten aprovechar las vistas y la luz natural. La casa principal tiene 250 m² edificados en dos plantas. En planta baja dispone de amplio living comedor con estufa a leña, cocina, dos dormitorios y dos baños, uno de ellos en suite. En planta alta se encuentran otros dos dormitorios amplios y un baño completo."
+    - "La segunda vivienda, de 110 m² y construida mediante técnicas de bioconstrucción, cuenta con living comedor, cocina, tres dormitorios y dos baños. En el exterior se destacan una piscina climatizada con sistema de salinización, barbacoa techada, monte nativo, monte de eucaliptos y dos tajamares. La chacra también dispone de dos caballerizas, gallinero, galpón de 12 m², alambrados en perfecto estado y pozo de agua de 60 metros de profundidad con un rendimiento informado de 1.200 litros por hora. Una propiedad que combina viviendas amplias, instalaciones complementarias y un entorno natural próximo a la costa de Piriápolis."
+gallery:
+  enabled: true
+  images:
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-3a74b06d-3192-4eca-928e-7c2198e0c0c7"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-43b1d4c2-780d-4846-988a-01c15c0c8848"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-520a4891-a06a-4f0e-a999-cc576cb74b10"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-730c1a18-6987-4f21-9d78-75e4290c9e58"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bdb172b6-3211-43a0-88c0-1994744c732d"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6844cb9f-8bce-4c47-a79d-9968bd62f627"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-dbc6dc58-9020-42f9-846b-f1ee5217ee19"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-7bcbe5a8-e9ce-46a6-a9eb-90598443281b"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-1354a99e-a9f2-4108-9887-ae8328f27270"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-557a0fc3-5d2e-48ec-acf1-bb317c77d2ff"
+      alt: ""
+      visible: true
+    -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-46bb94f7-5c44-4c7c-985e-9a92dea61807"
+      alt: ""
+      visible: true
+media:
+  cover: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
+  sections:
+    property: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-43b1d4c2-780d-4846-988a-01c15c0c8848"
+    features: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-520a4891-a06a-4f0e-a999-cc576cb74b10"
+    location: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-557a0fc3-5d2e-48ec-acf1-bb317c77d2ff"
+    distances: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-3a74b06d-3192-4eca-928e-7c2198e0c0c7"
+    final: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-1354a99e-a9f2-4108-9887-ae8328f27270"
+features:
+  -
+    label: "Dos viviendas"
+    category: "structural"
+  -
+    label: "Casa principal de dos plantas"
+    category: "structural"
+  -
+    label: "Casa secundaria de bioconstrucción"
+    category: "structural"
+  -
+    label: "Vistas al mar"
+    category: "structural"
+  -
+    label: "Vistas a los cerros"
+    category: "structural"
+  -
+    label: "Piscina climatizada"
+    category: "structural"
+  -
+    label: "Piscina con sistema de salinización"
+    category: "structural"
+  -
+    label: "Barbacoa techada"
+    category: "structural"
+  -
+    label: "Estufa a leña"
+    category: "structural"
+  -
+    label: "Dormitorio en suite"
+    category: "structural"
+  -
+    label: "Grandes aberturas"
+    category: "structural"
+  -
+    label: "Cocina en ambas viviendas"
+    category: "structural"
+  -
+    label: "Living comedor en ambas viviendas"
+    category: "structural"
+  -
+    label: "Pradera elevada"
+    category: "structural"
+  -
+    label: "Monte nativo"
+    category: "structural"
+  -
+    label: "Monte de eucaliptos"
+    category: "structural"
+  -
+    label: "Dos tajamares"
+    category: "structural"
+  -
+    label: "Dos caballerizas"
+    category: "structural"
+  -
+    label: "Gallinero"
+    category: "structural"
+  -
+    label: "Galpón"
+    category: "structural"
+  -
+    label: "Pozo de agua"
+    category: "structural"
+  -
+    label: "Alambrados en perfecto estado"
+    category: "structural"
+  -
+    label: "Acceso por camino de ripio"
+    category: "structural"
+  -
+    label: "Próxima a Playa Hermosa y Playa Grande"
+    category: "structural"
+location:
+  enabled: false
+  visibleName: ""
+  address: ""
+distances:
+  enabled: true
+  items:
+    -
+      destination: "Playa Hermosa"
+      distance: "5 Minutos"
+    -
+      destination: "Playa Grande"
+      distance: "5 Minutos"
+contact:
+  useDefault: true
