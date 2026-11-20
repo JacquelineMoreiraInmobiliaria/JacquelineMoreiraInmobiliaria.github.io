@@ -4,7 +4,7 @@ price: "USD 620.000"
 hero:
   subtitle: ""
   description: "Chacra de 5.5 hectáreas en Piriápolis, próxima a Playa Hermosa y Playa Grande, con dos casas, piscina climatizada y vistas al mar y los cerros. Un entorno de campo con monte nativo, tajamares y amplios espacios para disfrutar de la naturaleza."
-  coverImage: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
+  coverImage: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bdb172b6-3211-43a0-88c0-1994744c732d"
   video:
     enabled: false
 summary:
@@ -48,6 +48,10 @@ gallery:
   enabled: true
   images:
     -
+      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bdb172b6-3211-43a0-88c0-1994744c732d"
+      alt: ""
+      visible: true
+    -
       source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
       alt: ""
       visible: true
@@ -65,10 +69,6 @@ gallery:
       visible: true
     -
       source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-730c1a18-6987-4f21-9d78-75e4290c9e58"
-      alt: ""
-      visible: true
-    -
-      source: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bdb172b6-3211-43a0-88c0-1994744c732d"
       alt: ""
       visible: true
     -
@@ -96,7 +96,7 @@ gallery:
       alt: ""
       visible: true
 media:
-  cover: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-6839f798-529b-4bcc-ac0d-7d9cb46c640c"
+  cover: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-bdb172b6-3211-43a0-88c0-1994744c732d"
   sections:
     property: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-43b1d4c2-780d-4846-988a-01c15c0c8848"
     features: "https://moreira-herramientas.lucas720.chatgpt.site/media/presentations/pm-520a4891-a06a-4f0e-a999-cc576cb74b10"
